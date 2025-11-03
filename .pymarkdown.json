@@ -1,0 +1,29 @@
+{
+  "plugins": {
+    "line-length": {
+      "enabled": false,
+      "line_length": 120
+    },
+    "heading-style": {
+      "enabled": true,
+      "style": "atx"
+    },
+    "ul-style": {
+      "enabled": true,
+      "style": "dash"
+    },
+    "ol-prefix": {
+      "enabled": true,
+      "style": "ordered"
+    },
+    "no-inline-html": {
+      "enabled": false
+    },
+    "no-bare-urls": {
+      "enabled": false
+    },
+    "first-line-heading": {
+      "enabled": false
+    }
+  }
+}
