@@ -1,13 +1,13 @@
 <!--
 Sync Impact Report
-Version change: previous → 2.0.0
-Modified principles: replaced all with new set (see below)
-Added sections: Issue-First Workflow, Code Quality, Testing, PR Checklist, Definition of Done
-Removed sections: Library-First, CLI Interface, Observability, etc.
+Version change: 2.0.0 → 2.1.0
+Modified principles: Issue-First Workflow updated to include mandatory label verification before issue creation
+Added sections: (none)
+Removed sections: (none)
 Templates requiring updates:
-- plan-template.md ✅
-- spec-template.md ✅
-- tasks-template.md ✅
+- plan-template.md ✅ (no change required)
+- spec-template.md ✅ (no change required)
+- tasks-template.md ✅ (no change required)
 Follow-up TODOs:
 - TODO(RATIFICATION_DATE): Original ratification date unknown, please supply if available.
 -->
@@ -32,6 +32,10 @@ Feature branches must be deleted after merge (local and remote). Branch naming f
 Write tests before implementation. All business logic must have unit tests (80% minimum coverage). Integration tests required for cross-module interactions. Bug fixes must include a test that would have caught the bug.
 
 ## Issue-First Workflow
+
+Issue Labels (MANDATORY)
+- Before creating an issue, verify that the required label(s) already exist in the repository.
+- If a needed label is missing, create the label first, then create the issue with that label.
 
 1. Create Issue → 2. Create Branch → 3. Write Code → 4. Open PR → 5. Review → 6. Merge → 7. Close Issue → 8. Delete Branch
 
@@ -82,4 +86,4 @@ Work is complete when:
 - Versioning follows semantic rules: MAJOR for principle changes, MINOR for additions, PATCH for clarifications.
 - Compliance review is mandatory for every merge.
 
-**Version**: 2.0.0 | **Ratified**: TODO(RATIFICATION_DATE): Original ratification date unknown | **Last Amended**: 2025-11-03
+**Version**: 2.1.0 | **Ratified**: TODO(RATIFICATION_DATE): Original ratification date unknown | **Last Amended**: 2025-11-03

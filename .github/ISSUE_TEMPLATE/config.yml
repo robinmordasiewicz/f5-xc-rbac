@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation or Process Questions
+    url: https://github.com/robinmordasiewicz/f5-xc-rbac#readme
+    about: Review the README and Constitution for workflow and quality gates
