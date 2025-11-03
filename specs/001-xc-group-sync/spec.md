@@ -77,35 +77,78 @@ As an operator, when the CSV includes an optional members column, I can reconcil
 
 ### Functional Requirements
 
-- **FR-001**: The tool MUST read a CSV with at least the column group_name; optional columns include description, members (semicolon-separated), namespace.
-- **FR-002**: The tool MUST validate the CSV schema and reject duplicates for group_name before making API calls.
-- **FR-003**: The tool MUST authenticate to F5 XC using an API token (or certificate) and fail fast with a clear message on auth failure.
-- **FR-004**: The tool MUST list existing user groups in the target namespace(s) and compute the diff vs CSV to determine create/update/no-op (and optional delete).
-- **FR-005**: The tool MUST create groups absent in XC and optionally update descriptions for existing groups when changed.
-- **FR-006**: The tool MUST be idempotent: a second run with unchanged CSV MUST produce zero changes.
-- **FR-007**: The tool MUST support a dry-run mode that logs intended actions without performing them.
-- **FR-008**: The tool MUST produce a summary report including counts of created, updated, deleted, skipped, and errors.
-- **FR-009**: When cleanup mode is enabled, the tool MUST identify and (on apply) delete groups present in XC but absent from CSV, with explicit confirmation or a non-interactive flag.
-- **FR-010**: The tool SHOULD support optional membership reconciliation when a members column is present: add missing users and, if configured, remove extra users.
-- **FR-011**: The tool MUST implement retry with backoff for transient API failures and respect rate limits.
-- **FR-012**: The tool MUST log errors with sufficient context (group name, operation, status) without exposing secrets.
-- **FR-013**: The tool MUST support configuration via CLI flags and/or config file for base URL, auth, namespace(s), mode, dry-run, logging level, and cleanup behavior.
-- **FR-014**: The tool MUST use HTTPS/TLS for all API calls and avoid printing sensitive tokens.
-- **FR-015**: Destructive operations (deleting groups or removing members) MUST be disabled by default and require explicit opt-in.
-- **FR-016**: The tool SHOULD exit with non-zero status if any operation fails; zero if all succeed.
-- **FR-017**: The tool SHOULD support multi-namespace processing when requested (iterate per namespace field or config).
-
-Unclear items (explicitly limited):
-
-- **FR-018**: Membership reconciliation scope [NEEDS CLARIFICATION: Is membership sync included in initial release or behind a flag for later?]
-- **FR-019**: Cleanup default behavior [NEEDS CLARIFICATION: Should cleanup be entirely disabled by default with no prompts, or allowed with confirmation on interactive runs?]
-- **FR-020**: CSV members delimiter [NEEDS CLARIFICATION: Confirm semicolon (;) as default delimiter for members or prefer comma with quoted cells?]
+- **FR-001**: The tool MUST read the AD export CSV with columns: `User Name`, `Login ID`, `User Display Name`, `Email`, `Entitlement Attribute`, `Entitlement Display Name`, and other metadata fields.
+- **FR-001a**: The tool MUST extract group names by parsing the CN (Common Name) from the `Entitlement Display Name` LDAP DN (e.g., "EADMIN_STD" from "CN=EADMIN_STD,OU=Groups,DC=example,DC=com").
+- **FR-001b**: The tool MUST aggregate all users belonging to each group by grouping rows with the same extracted group name.
+- **FR-002**: The tool MUST validate the CSV schema (required columns present) and fail fast if critical columns are missing.
+- **FR-003**: The tool MUST authenticate to F5 XC using an API token (via `Authorization: APIToken <token>` header) and fail fast with a clear message on auth failure (401/403).
+- **FR-004**: The tool MUST list existing user groups in the "system" namespace via `GET /api/web/custom/namespaces/system/user_groups` and compute the diff vs CSV.
+- **FR-005**: The tool MUST create groups absent in XC via `POST /api/web/custom/namespaces/system/user_groups` with `name`, `display_name`, and `usernames` (user emails from CSV).
+- **FR-006**: The tool MUST update existing groups when membership changes, using `PUT /api/web/custom/namespaces/system/user_groups/{name}` to replace the `usernames` array.
+- **FR-006a**: The tool MUST be idempotent: a second run with unchanged CSV MUST produce zero changes (created=0, updated=0).
+- **FR-007**: The tool MUST support a dry-run mode (`--dry-run` flag) that logs intended actions without performing create/update/delete operations.
+- **FR-008**: The tool MUST produce a summary report including counts of: groups created, groups updated, groups deleted, groups skipped (no change), errors.
+- **FR-009**: When cleanup mode is enabled (`--cleanup` flag), the tool MUST identify groups present in XC but absent from CSV and delete them via `DELETE /api/web/custom/namespaces/system/user_groups/{name}`.
+- **FR-010**: User validation [NEEDS CLARIFICATION: Should the tool verify that all users (emails) exist in F5 XC before adding them to groups, or attempt to add and handle 404 errors?]
+- **FR-011**: The tool MUST implement retry with exponential backoff for transient API failures (5xx errors, rate limit 429) with configurable max retries (default: 3).
+- **FR-012**: The tool MUST log errors with sufficient context (group name, operation, HTTP status, response message) without exposing API tokens in logs.
+- **FR-013**: The tool MUST support configuration via CLI flags for: API base URL, auth token, dry-run, cleanup mode, logging level (debug/info/warn/error), max retries.
+- **FR-014**: The tool MUST use HTTPS/TLS for all API calls (enforce certificate validation) and never print API tokens in logs or stdout.
+- **FR-015**: Destructive operations (deleting groups via `--cleanup`) MUST be disabled by default and require explicit opt-in flag.
+- **FR-016**: The tool MUST exit with status code 0 if all operations succeed; non-zero (1) if any operation fails or validation errors occur.
+- **FR-017**: Multi-namespace support [NEEDS CLARIFICATION: All user groups are in "system" namespace per API docs. Is multi-namespace support needed or can it be deferred?]
+- **FR-018**: Group description field [NEEDS CLARIFICATION: CSV has no description column. Should `display_name` be set to the CN value, or derived from another field like `Application Name`?]
+- **FR-019**: Membership removal behavior [NEEDS CLARIFICATION: When a user appears in XC group but not in CSV for that group, should they be removed? Or only add missing users (append-only)?]
+- **FR-020**: CSV delimiter and quoting [NEEDS CLARIFICATION: Confirm CSV is comma-delimited with double-quote escaping (standard RFC 4180 format)?]
 
 ### Key Entities *(include if feature involves data)*
 
-- **Group**: Identified by name; attributes include description; may include members (user emails); belongs to a namespace.
-- **User**: Identified by email; may be added to groups when membership reconciliation is enabled.
-- **Configuration**: Parameters controlling auth, namespace(s), modes (dry-run, cleanup, membership), and logging.
+#### CSV Structure (Active Directory Export)
+
+Based on the provided `Entitlement_User_Lev_admin.csv`, the input file contains:
+
+**Available Columns**:
+- `User Name`: AD username (e.g., "USER001")
+- `Login ID`: Full LDAP DN (e.g., "CN=USER001,OU=Developers,OU=All Users,DC=example,DC=com")
+- `User Display Name`: Full name (e.g., "Alice Anderson")
+- `Email`: User email address (e.g., "alice.anderson@example.com")
+- `Entitlement Attribute`: Always "memberOf" for group membership
+- `Entitlement Display Name`: Group LDAP DN (e.g., "CN=EADMIN_STD,OU=Groups,DC=example,DC=com")
+- Additional fields: Application Name, Job Title, Manager details, etc.
+
+**Relevant Mapping for F5 XC**:
+- **Group Name**: Extract CN from `Entitlement Display Name` (e.g., "EADMIN_STD" from "CN=EADMIN_STD,OU=Groups,DC=example,DC=com")
+- **User Email**: Use `Email` column directly (F5 XC identifies users by email)
+- **Group Display Name**: Can use the CN value or derive from Application Name
+
+#### F5 XC API Data Model
+
+**User Group Object** (`ves.io.schema.user_group`):
+- `name` (string, required): Internal name/identifier (extracted group CN from LDAP DN)
+- `display_name` (string, optional): Human-readable name
+- `description` (string, optional): Descriptive text
+- `usernames` (array of strings): List of user email addresses
+- `namespace_roles` (array of objects): RBAC role assignments per namespace
+- `namespace`: Always "system" for user groups
+
+**API Endpoints**:
+- Create: `POST /api/web/custom/namespaces/system/user_groups`
+- Update: `PUT /api/web/custom/namespaces/system/user_groups/{name}`
+- List: `GET /api/web/custom/namespaces/system/user_groups`
+- Delete: `DELETE /api/web/custom/namespaces/system/user_groups/{name}`
+- Add users to group: `PUT /api/web/custom/namespaces/system/users/group_add`
+- Remove users from group: `PUT /api/web/custom/namespaces/system/users/group_remove`
+
+**User Management** (`ves.io.schema.user`):
+- Users identified by `email` (username field, e.g., "user1@company.com")
+- User operations via `/api/web/custom/namespaces/system/user_roles`
+- Users must exist in F5 XC before adding to groups
+
+#### Entities
+
+- **Group**: Identified by `name` (extracted CN); attributes: `display_name`, `description`, `usernames` (emails); namespace always "system".
+- **User**: Identified by `email`; must exist in F5 XC tenant before group membership operations.
+- **Configuration**: Parameters controlling auth, target namespace(s), modes (dry-run, cleanup, membership), CSV parsing, and logging.
 - **Run Summary**: Counts of actions (created/updated/deleted/skipped/errors) and per-item outcomes for audit.
 
 ## Success Criteria *(mandatory)*
@@ -118,3 +161,122 @@ Unclear items (explicitly limited):
 - **SC-004**: On transient API errors, the tool retries up to the configured limit and succeeds without manual intervention in at least 95% of such cases.
 - **SC-005**: Error rate during normal operation remains below 1% of total operations; all errors are logged with actionable messages.
 - **SC-006**: Security compliance: no tokens are written to logs; all network calls use TLS.
+
+---
+
+## Clarifications *(session: 2025-11-03)*
+
+### Session Context
+
+This clarification session was initiated after examining the actual AD export CSV structure (`Entitlement_User_Lev_admin.csv`) and the F5 Distributed Cloud API documentation for user and user_group endpoints. The CSV contains LDAP-style data with group memberships expressed as `memberOf` attributes pointing to LDAP Distinguished Names (DNs).
+
+### Outstanding Questions
+
+#### Q1: User Existence Validation (FR-010)
+
+**Context**: F5 XC API requires users to exist in the tenant before adding them to groups. The CSV contains user emails, but we don't know if these users are already provisioned in F5 XC.
+
+**Question**: How should the tool handle users that don't exist in F5 XC?
+
+**Options**:
+1. **Pre-validate**: Query user existence via `GET /api/web/custom/namespaces/system/user_roles` for each unique email before group operations. Skip groups with non-existent users and log warnings.
+2. **Optimistic add**: Attempt to add users to groups and handle 404 errors gracefully (log warning, continue with other groups).
+3. **Auto-create users**: Create missing users via `POST /api/web/custom/namespaces/system/user_roles` with basic info from CSV (email, first_name, last_name, etc.).
+
+**Recommendation**: Option 1 (pre-validate) - safer for initial release, prevents partial group membership.
+
+**Impact**: Affects FR-010, error handling logic, and API call count.
+
+---
+
+#### Q2: Group Display Name Derivation (FR-018)
+
+**Context**: The CSV has no explicit description column. F5 XC groups have both `name` (identifier) and `display_name` (human-readable). The `name` will be the extracted CN from the LDAP DN.
+
+**Question**: What should populate the `display_name` field for user groups?
+
+**Options**:
+1. **Use CN value**: Set `display_name` = `name` (e.g., "EADMIN_STD")
+2. **Derive from Application Name**: Use the `Application Name` column from CSV (e.g., "Active Directory")
+3. **Construct from full DN**: Use full `Entitlement Display Name` (e.g., "CN=EADMIN_STD,OU=Groups,DC=example,DC=com")
+4. **Custom prefix**: e.g., "AD Group: EADMIN_STD"
+5. **Leave blank**: Omit `display_name` field (API allows optional)
+
+**Recommendation**: Option 1 (use CN value) - simple, consistent, human-readable.
+
+**Impact**: Affects FR-018, group creation payload structure.
+
+---
+
+#### Q3: Membership Removal Behavior (FR-019)
+
+**Context**: When updating groups, the F5 XC API replaces the entire `usernames` array. If a user exists in the XC group but their row is missing from the CSV (e.g., user left company, entitlement revoked), should they be removed?
+
+**Question**: Should membership updates remove users not present in the CSV for a given group?
+
+**Options**:
+1. **Full replacement (sync to CSV)**: Replace the entire `usernames` array with users from CSV. Users not in CSV are removed.
+2. **Append-only**: Only add users from CSV that are missing; never remove existing users.
+3. **Configurable via flag**: Default to append-only (`--membership-mode=append`), opt-in to full sync (`--membership-mode=sync`).
+
+**Recommendation**: Option 3 (configurable) - Start with append-only as safe default; allow sync mode for environments needing strict parity.
+
+**Impact**: Affects FR-006, FR-019, update operation logic, and dry-run reporting.
+
+---
+
+#### Q4: CSV Format Validation (FR-020)
+
+**Context**: The provided CSV appears to be standard comma-delimited with double-quote escaping (RFC 4180).
+
+**Question**: Should the tool support only standard CSV format, or also handle variations (semicolon delimiters, no quoting)?
+
+**Options**:
+1. **RFC 4180 only**: Comma delimiter, double-quote escaping, CRLF line endings.
+2. **Auto-detect**: Try to detect delimiter and quoting style.
+3. **Configurable delimiter**: Accept `--csv-delimiter` flag (default: comma).
+
+**Recommendation**: Option 1 (RFC 4180 only) - Simple, predictable. AD exports are typically standard CSV.
+
+**Impact**: Affects FR-001, FR-020, CSV parsing library choice.
+
+---
+
+#### Q5: Multi-Namespace Support (FR-017)
+
+**Context**: Per F5 XC API documentation, all user groups are in the "system" namespace. The CSV has no namespace column.
+
+**Question**: Is multi-namespace support needed for user groups?
+
+**Options**:
+1. **Single namespace (system)**: Hardcode `namespace: "system"` for all group operations.
+2. **Defer to future**: Document as out-of-scope for v1; revisit if API behavior changes.
+
+**Recommendation**: Option 1 - API design dictates system namespace for user groups. No multi-namespace needed.
+
+**Impact**: Simplifies FR-017, configuration, and validation logic.
+
+---
+
+#### Q6: LDAP DN Parsing Edge Cases
+
+**Context**: The tool must parse CNs from LDAP DNs like "CN=EADMIN_STD,OU=Groups,DC=example,DC=com". Some DNs may have special characters, escaping, or multiple CN components.
+
+**Question**: How should the tool handle malformed or complex LDAP DNs?
+
+**Options**:
+1. **Strict parsing**: Use LDAP DN parser library (e.g., `ldap3` in Python, `go-ldap` in Go). Fail on malformed DNs with clear error.
+2. **Simple regex**: Extract CN with regex `CN=([^,]+)`. Log warning if format unexpected.
+3. **Validate against F5 XC naming rules**: After extraction, validate group name against XC constraints (length, allowed characters).
+
+**Recommendation**: Option 1 + 3 - Use proper LDAP parser, then validate against XC API naming rules (see API docs for constraints).
+
+**Impact**: Affects FR-001a, error handling, dependency choices.
+
+---
+
+### Next Steps
+
+1. **Resolve questions Q1-Q6** with stakeholder/user input.
+2. **Update spec** with final decisions and remove `[NEEDS CLARIFICATION]` markers.
+3. **Proceed to planning phase** per speckit workflow.
