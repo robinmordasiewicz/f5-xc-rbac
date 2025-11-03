@@ -26,6 +26,7 @@ gh label create "<label>" \
 ```
 
 Recommended baseline labels:
+
 - bug (#d73a4a)
 - enhancement (#a2eeef)
 - documentation (#0075ca)

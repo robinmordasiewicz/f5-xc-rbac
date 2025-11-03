@@ -1,8 +1,8 @@
 # Feature Specification: Sync AD Groups to F5 XC IAM
 
-**Feature Branch**: `001-xc-group-sync`  
-**Created**: 2025-11-03  
-**Status**: Draft  
+**Feature Branch**: `001-xc-group-sync`
+**Created**: 2025-11-03
+**Status**: Draft
 **Input**: User description: "Automate synchronization of AD group list from CSV into F5 XC IAM via API with idempotent create/update/delete, optional cleanup, dry-run, and detailed logging."
 
 ## User Scenarios & Testing *(mandatory)*
