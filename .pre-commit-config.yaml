@@ -3,7 +3,7 @@
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c  # frozen: v6.0.0
     hooks:
       - id: check-added-large-files
         args: ["--maxkb=500"]
@@ -34,28 +34,28 @@ repos:
         args: ["--branch", "main"]
 
   - repo: https://github.com/jackdewinter/pymarkdown
-    rev: v0.9.23
+    rev: 0b4ac197f67f6ed75e27a10fad70ddc8014cb2e2  # frozen: v0.9.33
     hooks:
       - id: pymarkdown
         args: ["--config", ".pymarkdown.json", "scan"]
         exclude: '(^\.git/|^\.specify/|^\.github/prompts/)'
 
   - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.10.0.1
+    rev: 745eface02aef23e168a8afb6b5737818efbea95  # frozen: v0.11.0.1
     hooks:
       - id: shellcheck
         args: ["-x", "-S", "error"]
         exclude: '(^\.git/|^\.specify/)'
 
   - repo: https://github.com/scop/pre-commit-shfmt
-    rev: v3.8.0-1
+    rev: 2a30809d16bc7a60d9b97353c797f42b510d3368  # frozen: v3.12.0-2
     hooks:
       - id: shfmt
         args: ["-i", "2", "-ci", "-w"]
         exclude: '(^\.git/|^\.specify/)'
 
   - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
-    rev: 2.7.3
+    rev: 62dcf364a52192458d66c0dba3a0a1fdb78e4fbe  # frozen: 3.4.1
     hooks:
       - id: editorconfig-checker
         exclude: '(^\.git/|^\.specify/|^\.github/prompts/|\.csv$)'
