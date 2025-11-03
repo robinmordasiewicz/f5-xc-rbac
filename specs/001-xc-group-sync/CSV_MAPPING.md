@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document maps fields from the Active Directory export CSV (`Entitlement_User_Lev_admin.csv`) to the F5 Distributed Cloud (F5 XC) user_group API schema.
+This document maps fields from the Active Directory export CSV (`User-Database.csv`) to the F5 Distributed Cloud (F5 XC) user_group API schema.
 
 ## CSV Structure
 

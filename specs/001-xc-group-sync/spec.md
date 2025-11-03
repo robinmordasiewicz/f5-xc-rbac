@@ -109,7 +109,7 @@ As an operator, the tool reconciles group membership completely with the CSV as 
 
 #### CSV Structure (Active Directory Export)
 
-Based on the provided `Entitlement_User_Lev_admin.csv`, the input file contains:
+Based on the provided `User-Database.csv`, the input file contains:
 
 **Available Columns**:
 - `User Name`: AD username (e.g., "USER001")
@@ -173,7 +173,7 @@ Based on the provided `Entitlement_User_Lev_admin.csv`, the input file contains:
 
 ### Session Context
 
-This clarification session was initiated after examining the actual AD export CSV structure (`Entitlement_User_Lev_admin.csv`) and the F5 Distributed Cloud API documentation for user and user_group endpoints. The CSV contains LDAP-style data with group memberships expressed as `memberOf` attributes pointing to LDAP Distinguished Names (DNs).
+This clarification session was initiated after examining the actual AD export CSV structure (`User-Database.csv`) and the F5 Distributed Cloud API documentation for user and user_group endpoints. The CSV contains LDAP-style data with group memberships expressed as `memberOf` attributes pointing to LDAP Distinguished Names (DNs).
 
 ### Outstanding Questions
 
