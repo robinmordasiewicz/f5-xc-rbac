@@ -11,11 +11,12 @@ This document maps fields from the Active Directory export CSV (`User-Database.c
 ```csv
 "User Name","Login ID","User Display Name","Cof Account Type","Application Name","Entitlement Attribute","Entitlement Display Name","Related Application","Sox","Job Level ","Job Title","Created Date","Account Locker","Employee Status","Email","Cost Center","Finc Level 4","Manager EID","Manager Name","Manager Email"
 "USER001","CN=USER001,OU=Developers,OU=All Users,DC=example,DC=com","Alice Anderson","User","Active Directory","memberOf","CN=EADMIN_STD,OU=Groups,DC=example,DC=com","Example App","true","50","Lead Software Engineer","2025-09-23 00:00:00","0","A","alice.anderson@example.com","IT Infrastructure","Network Engineering","MGR001","David Wilson","David.Wilson@example.com"
-```
+```text
 
 ### Data Model
 
 Each CSV row represents:
+
 - One **user** (identified by `Email`)
 - One **group membership** (identified by `Entitlement Display Name`)
 
@@ -41,7 +42,7 @@ Multiple rows with the same `Entitlement Display Name` represent multiple users 
   ],
   "sync_id": "string"        // Optional: External sync identifier
 }
-```
+```text
 
 ## Field Mappings
 
@@ -76,17 +77,17 @@ These fields are available in the CSV but not directly used for group sync:
 ## Processing Logic
 
 ### 1. Parse CSV
-```
+```text
 For each row in CSV:
   1. Validate required columns exist
   2. Extract group name: Parse CN from "Entitlement Display Name" LDAP DN
-     Example: "CN=EADMIN_STD,OU=Groups,..." → "EADMIN_STD"
+  Example: "CN=EADMIN_STD,OU=Groups,..." → "EADMIN_STD"
   3. Extract user email from "Email" column
   4. Aggregate: group_name → list of user emails
-```
+```text
 
 ### 2. Build Group Objects
-```
+```text
 For each unique group_name:
   {
     "name": group_name,
@@ -95,27 +96,27 @@ For each unique group_name:
     "usernames": [email1, email2, ...],
     "namespace": "system"
   }
-```
+```text
 
 ### 3. Sync to F5 XC
-```
+```text
 1. GET existing groups from /api/web/custom/namespaces/system/user_groups
 2. Compare CSV groups vs XC groups:
-   - CREATE: Group in CSV, not in XC
-   - UPDATE: Group in CSV and XC, but usernames differ
-   - DELETE: Group in XC, not in CSV (only if --cleanup flag enabled)
-   - NO-OP: Group in CSV and XC with identical usernames
+  - CREATE: Group in CSV, not in XC
+  - UPDATE: Group in CSV and XC, but usernames differ
+  - DELETE: Group in XC, not in CSV (only if --cleanup flag enabled)
+  - NO-OP: Group in CSV and XC with identical usernames
 3. Execute operations (or log if --dry-run)
-```
+```text
 
 ## LDAP DN Parsing
 
 ### Pattern
-```
+```text
 Entitlement Display Name: "CN=EADMIN_STD,OU=Groups,DC=example,DC=com"
                               ^^^^^^^^^^
                               Extract this as group name
-```
+```text
 
 ### Edge Cases (Q6)
 - Multiple CN components: "CN=Users,CN=Admin,OU=..."
@@ -142,7 +143,7 @@ Entitlement Display Name: "CN=EADMIN_STD,OU=Groups,DC=example,DC=com"
 "USER001","...","Alice Anderson",...,"Active Directory","memberOf","CN=EADMIN_STD,OU=Groups,...","...","alice.anderson@example.com",...
 "USER002","...","Jane Doe",...,"Active Directory","memberOf","CN=EADMIN_STD,OU=Groups,...","...","jane.doe@example.com",...
 "USER003","...","Bob Smith",...,"Active Directory","memberOf","CN=DEV_TEAM,OU=Groups,...","...","bob.smith@example.com",...
-```
+```text
 
 ### Output: F5 XC API Calls
 
@@ -161,7 +162,7 @@ Authorization: APIToken <token>
     "jane.doe@example.com"
   ]
 }
-```
+```text
 
 **Create Group: DEV_TEAM**
 ```bash
@@ -177,7 +178,7 @@ Authorization: APIToken <token>
     "bob.smith@example.com"
   ]
 }
-```
+```text
 
 ## Validation Rules
 
