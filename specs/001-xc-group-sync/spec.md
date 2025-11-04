@@ -52,11 +52,50 @@ As an operator, I authenticate with an API token (or certificate) and the tool f
 
 ---
 
+**Clarification (2025-11-04):**
+The tool MUST support authentication to F5 Distributed Cloud XC API using either a p12 certificate/passphrase or a certificate/key pair. The user must manually generate a p12 API certificate in the F5 XC console, download it, and optionally convert it to a PEM cert/key pair.
+
+- Local `.env` variables:
+  - For p12: `VOLT_API_P12_FILE` (path to decoded p12), `VES_P12_PASSWORD` (passphrase)
+  - For cert/key: `VOLT_API_CERT_FILE` (path to decoded cert), `VOLT_API_CERT_KEY_FILE` (path to decoded key)
+- GitHub Actions secrets:
+  - For p12: `XC_P12` (base64 p12), `XC_P12_PASSWORD` or `VES_P12_PASSWORD`
+  - For cert/key: `XC_CERT` (base64 cert), `XC_CERT_KEY` (base64 key)
+
+The script MUST auto-detect which credential set is present and use it. If both are present, prefer p12. If neither is present, fail fast with a clear error. Secrets should be stored as base64, decoded to files at runtime, and environment variables must point to the resulting file paths.
+
+References:
+- https://community.f5.com/kb/technicalarticles/f5-hybrid-security-architectures-part-3-f5-xc-api-protection-and-nginx-ingress/310613
+- https://github.com/f5devcentral/f5-xc-terraform-examples
+
+---
+
 ### User Story 4 - Full membership synchronization (Priority: P1)
 
 As an operator, the tool reconciles group membership completely with the CSV as the source of truth, adding missing users and removing users not listed in the CSV for each group.
 
 **Why this priority**: Ensures complete parity between CSV and XC; prevents drift and maintains security posture by removing stale memberships.
+
+### User Story 5 - Setup and CI integration (Priority: P2)
+
+As an operator, I can run a setup script that discovers my F5 XC API certificate in Downloads, derives my tenant ID, splits the certificate into a passwordless cert/key, prepares a local `.env`, and configures GitHub secrets and a workflow so the sync can run automatically on pushes to `main` and via manual dispatch.
+
+**Why this priority**: Reduces onboarding friction and enforces consistent, secure secret handling across local and CI environments.
+
+**Independent Test**:
+- Place a single `.p12` in `~/Downloads` named `mytenant-api.p12`. Run the setup script and verify:
+  - `.env` exists with `TENANT_ID=mytenant` and correct variables for either p12 or cert/key.
+  - PEM `cert` and `key` files are created without passphrases.
+  - GitHub secrets `XC_P12`/`XC_P12_PASSWORD` and/or `XC_CERT`/`XC_CERT_KEY` are created.
+  - A workflow file exists that runs on push to `main` and via manual dispatch (`workflow_dispatch`) and decodes secrets to files before invoking the sync script.
+
+**Acceptance Scenarios**:
+1. Given exactly one `.p12` in Downloads named `acme-prod-api.p12`, When I run setup, Then `TENANT_ID` is set to `acme` and `.env` and secrets are created.
+2. Given multiple `.p12` files in Downloads, When I run setup, Then the script prompts me to select a file and enter `TENANT_ID` before proceeding.
+3. Given no `.p12` in Downloads, When I run setup, Then the script prompts me for the `.p12` path and passphrase.
+4. Given setup succeeded, When I push to `main`, Then the workflow runs and invokes the sync with decoded credentials.
+
+---
 
 **Independent Test**: For group A with members u1,u2 in XC; CSV lists only u1. Run sync and verify u2 is removed from group A. Then add u3 to CSV and verify u3 is added.
 
@@ -104,6 +143,13 @@ As an operator, the tool reconciles group membership completely with the CSV as 
 - **FR-019**: The tool MUST implement full membership synchronization: when updating groups, replace the entire `usernames` array with users from CSV. Users present in XC group but absent from CSV for that group MUST be removed (CSV is source of truth).
 - **FR-020**: The tool MUST parse CSV files conforming to RFC 4180 format only (comma delimiter, double-quote escaping, CRLF line endings). Non-standard CSV formats are not supported.
 - **FR-021**: The tool MUST use a proper LDAP DN parser library (e.g., `ldap3` for Python, `go-ldap` for Go) to extract CN from `Entitlement Display Name` LDAP DNs, and MUST validate extracted group names against F5 XC API naming constraints (length, allowed characters).
+- **FR-022**: Provide a setup script to bootstrap local and CI usage:
+  - Search `~/Downloads` for `.p12` files; if exactly one found, derive `TENANT_ID` from the filename prefix (before first `-` or `_`); otherwise prompt for file path and `TENANT_ID`.
+  - Prompt for p12 passphrase and split the `.p12` into passwordless PEM `cert` and `key` using `openssl`.
+  - Create `.env` with either p12 vars (`VOLT_API_P12_FILE`, `VES_P12_PASSWORD`) or cert/key vars (`VOLT_API_CERT_FILE`, `VOLT_API_CERT_KEY_FILE`) plus `TENANT_ID`.
+  - Create GitHub secrets (`XC_P12`, `XC_P12_PASSWORD` or `VES_P12_PASSWORD`, `XC_CERT`, `XC_CERT_KEY`) by base64-encoding the source files.
+    - Scaffold a GitHub Actions workflow to run the sync on push to `main` and via manual dispatch (`workflow_dispatch`), decoding secrets to files and exporting required env vars.
+  - Ensure no secret values are logged; mask sensitive output.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -155,6 +201,44 @@ Based on the provided `User-Database.csv`, the input file contains:
 - **User**: Identified by `email`; must exist in F5 XC tenant before group membership operations.
 - **Configuration**: Parameters controlling auth, target namespace(s), modes (dry-run, cleanup, membership), CSV parsing, and logging.
 - **Run Summary**: Counts of actions (created/updated/deleted/skipped/errors) and per-item outcomes for audit.
+
+#### Authentication Setup Entity
+
+- Local `.env` file variables:
+  - `VOLT_API_P12_FILE` (path to decoded p12)
+  - `VES_P12_PASSWORD` (passphrase)
+  - `VOLT_API_CERT_FILE` (path to decoded cert)
+  - `VOLT_API_CERT_KEY_FILE` (path to decoded key)
+
+- GitHub Actions secrets:
+  - `XC_P12` (base64 p12)
+  - `XC_P12_PASSWORD` or `VES_P12_PASSWORD`
+  - `XC_CERT` (base64 cert)
+  - `XC_CERT_KEY` (base64 key)
+
+- Setup behavior:
+  - Secrets are stored base64-encoded and decoded to files at runtime.
+  - Script auto-detects which credential set is present; if both present, prefer p12; if neither, fail fast.
+
+#### Setup Script Entity
+
+- Responsibilities:
+  - Search the user's `~/Downloads` directory for a single `.p12` file (the F5 XC API certificate export).
+  - If exactly one `.p12` is present, derive the tenant ID from the filename prefix (text before the first `-` or `_`) and use it as `TENANT_ID`.
+  - If zero or multiple `.p12` files are found, prompt the user to provide the correct `.p12` path and `TENANT_ID` explicitly.
+  - Prompt for the `.p12` passphrase and use `openssl` to split the `.p12` into a passwordless certificate and key (PEM):
+    - Extract cert: `openssl pkcs12 -in <p12> -clcerts -nokeys -out <cert.pem>`
+    - Extract key (no password): `openssl pkcs12 -in <p12> -nocerts -nodes -out <key.pem>` (and, if needed, `openssl rsa -in <key.pem> -out <key_nopass.pem>`)
+  - Generate a `.env` for local runs with variables:
+    - `VOLT_API_P12_FILE`, `VES_P12_PASSWORD` (if using p12)
+    - `VOLT_API_CERT_FILE`, `VOLT_API_CERT_KEY_FILE` (if using cert/key)
+    - `TENANT_ID` (derived from filename or prompt)
+  - Create GitHub repository secrets for CI/CD:
+    - p12 path: base64 of the `.p12` as `XC_P12` and `XC_P12_PASSWORD` (or `VES_P12_PASSWORD`)
+    - cert/key path: base64 of PEM files as `XC_CERT` and `XC_CERT_KEY`
+  - Scaffold a GitHub Actions workflow file to run the sync on commits to `main` and manual dispatch (`workflow_dispatch`):
+    - Decode secrets to files, export the corresponding environment variables, and invoke the sync script.
+  - Never print secrets or passphrases to stdout; mask logs appropriately.
 
 ## Success Criteria *(mandatory)*
 
@@ -288,3 +372,82 @@ This clarification session was initiated after examining the actual AD export CS
 - **Q4: CSV Format Validation** → RFC 4180 only (standard comma-delimited)
 - **Q5: Multi-Namespace Support** → Single "system" namespace (API constraint)
 - **Q6: LDAP DN Parsing** → Use proper LDAP parser library + validate against XC naming rules
+
+## Appendix: Minimal GitHub Actions Workflow
+
+This is a minimal example that runs the sync on push to `main` and via manual dispatch. It decodes either a P12 certificate or a cert/key pair from GitHub Secrets, sets the expected environment variables, and then invokes the sync script.
+
+```yaml
+name: XC Group Sync
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare credentials (p12 or cert/key)
+        env:
+          XC_P12: ${{ secrets.XC_P12 }}
+          XC_P12_PASSWORD: ${{ secrets.XC_P12_PASSWORD }}
+          VES_P12_PASSWORD: ${{ secrets.VES_P12_PASSWORD }}
+          XC_CERT: ${{ secrets.XC_CERT }}
+          XC_CERT_KEY: ${{ secrets.XC_CERT_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/xc"
+
+          # Prefer P12 if provided; fall back to cert/key
+          if [ -n "${XC_P12:-}" ]; then
+            echo "$XC_P12" | base64 -d > "$RUNNER_TEMP/xc/api.p12"
+            echo "VOLT_API_P12_FILE=$RUNNER_TEMP/xc/api.p12" >> "$GITHUB_ENV"
+            if [ -n "${XC_P12_PASSWORD:-}" ]; then
+              echo "VES_P12_PASSWORD=$XC_P12_PASSWORD" >> "$GITHUB_ENV"
+            elif [ -n "${VES_P12_PASSWORD:-}" ]; then
+              echo "VES_P12_PASSWORD=$VES_P12_PASSWORD" >> "$GITHUB_ENV"
+            fi
+          elif [ -n "${XC_CERT:-}" ] && [ -n "${XC_CERT_KEY:-}" ]; then
+            echo "$XC_CERT" | base64 -d > "$RUNNER_TEMP/xc/cert.pem"
+            echo "$XC_CERT_KEY" | base64 -d > "$RUNNER_TEMP/xc/key.pem"
+            echo "VOLT_API_CERT_FILE=$RUNNER_TEMP/xc/cert.pem" >> "$GITHUB_ENV"
+            echo "VOLT_API_CERT_KEY_FILE=$RUNNER_TEMP/xc/key.pem" >> "$GITHUB_ENV"
+          else
+            echo "No XC credentials provided via secrets (XC_P12 or XC_CERT/XC_CERT_KEY)" >&2
+            exit 1
+          fi
+
+      - name: Run sync (example)
+        run: |
+          # Replace with the actual entrypoint/flags of the sync tool
+          ./scripts/run-sync.sh --dry-run
+```
+
+Notes:
+- Secrets must be base64-encoded before storing in GitHub. The workflow decodes them into files and sets:
+  - `VOLT_API_P12_FILE` and `VES_P12_PASSWORD` for P12
+  - `VOLT_API_CERT_FILE` and `VOLT_API_CERT_KEY_FILE` for cert/key
+- The job prefers P12 if both modes are present, consistent with the spec.
+- Replace `./scripts/run-sync.sh --dry-run` with the actual command once the implementation exists.
+
+### Session 2025-11-04
+
+- Q: What are the recommended .env and GitHub secret names for authenticating to the F5 Distributed Cloud XC API using either a p12 certificate/passphrase or a certificate/key pair?
+  → A: Use the following conventions (per F5 docs/cloud best practices):
+  - For p12 certificate/passphrase:
+    - GitHub Secrets: `XC_P12` (base64 p12), `XC_P12_PASSWORD` or `VES_P12_PASSWORD` (passphrase)
+    - .env Variables: `VOLT_API_P12_FILE` (path to decoded p12), `VES_P12_PASSWORD` (passphrase)
+  - For cert/key pair:
+    - GitHub Secrets: `XC_CERT` (base64 PEM cert), `XC_CERT_KEY` (base64 PEM key)
+    - .env Variables: `VOLT_API_CERT_FILE` (path to decoded cert), `VOLT_API_CERT_KEY_FILE` (path to decoded key)
+  - Store secrets as base64 in GitHub, decode to files in workflow/setup, and set env vars to file paths. Script should auto-detect which credential set is present and use it. If both are present, prefer p12. If neither is present, fail fast with a clear error.
+
+- Q: How should the setup script discover the certificate and prepare local/CI configuration?
+  → A: The setup script should: (1) scan `~/Downloads` for a single `.p12` and derive `TENANT_ID` from the filename prefix; (2) prompt for passphrase; (3) use `openssl` to split into passwordless PEM cert/key; (4) create `.env` with either p12 or cert/key variables plus `TENANT_ID`; (5) create GitHub secrets (`XC_P12`, `XC_P12_PASSWORD` or `VES_P12_PASSWORD`, `XC_CERT`, `XC_CERT_KEY`); and (6) scaffold a workflow that runs on push to `main` and via manual dispatch (`workflow_dispatch`), decoding secrets to files and invoking the sync script.
