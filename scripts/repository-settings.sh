@@ -81,18 +81,151 @@ validate_config() {
     exit 1
   fi
 
-  # Check required fields
-  if ! jq -e '.branch' "${config_file}" >/dev/null 2>&1; then
-    error "Configuration file missing required field: 'branch'"
+  # Ensure at least one settings section exists
+  if ! jq -e '.protection or .repository' "${config_file}" >/dev/null 2>&1; then
+    error "Configuration file must contain at least one of: 'protection' or 'repository'"
     exit 1
   fi
 
-  if ! jq -e '.protection' "${config_file}" >/dev/null 2>&1; then
-    error "Configuration file missing required field: 'protection'"
-    exit 1
+  # If protection config is present, branch must be provided
+  if jq -e '.protection' "${config_file}" >/dev/null 2>&1; then
+    if ! jq -e '.branch and (.branch|type=="string")' "${config_file}" >/dev/null 2>&1; then
+      error "When 'protection' is specified, 'branch' must be a non-empty string"
+      exit 1
+    fi
   fi
 
   success "Configuration file validated: ${config_file}"
+}
+# Apply repository metadata (description, homepage, etc.)
+apply_repository_metadata() {
+  local config_file="$1"
+
+  # Build patch body from available fields
+  local patch
+  patch=$(jq -c 'if .repository then (.repository | {
+      description: (.description // empty),
+      homepage: (.homepage // empty)
+    } | with_entries(select(.value != null))) else {} end' "${config_file}")
+
+  if [ -z "${patch}" ] || [ "${patch}" = "{}" ]; then
+    info "No repository metadata to update"
+    return 0
+  fi
+
+  info "Updating repository metadata (description/homepage)"
+  echo "${patch}" | jq '.'
+
+  if echo "${patch}" | gh api -X PATCH -H "Accept: application/vnd.github+json" "repos/${REPO_FULL}" --input - >/dev/null 2>&1; then
+    success "Repository metadata updated"
+    return 0
+  else
+    warning "Failed to update repository metadata (continuing)"
+    return 0
+  fi
+}
+
+# Apply repository topics
+apply_repository_topics() {
+  local config_file="$1"
+  local topics_json
+
+  topics_json=$(jq -c 'if .repository and (.repository.topics != null) then {names: (.repository.topics // [])} else empty end' "${config_file}")
+
+  if [ -z "${topics_json}" ]; then
+    info "No repository topics to set"
+    return 0
+  fi
+
+  info "Setting repository topics"
+  echo "${topics_json}" | jq '.'
+
+  if echo "${topics_json}" | gh api -X PUT -H "Accept: application/vnd.github+json" "repos/${REPO_FULL}/topics" --input - >/dev/null 2>&1; then
+    success "Repository topics updated"
+    return 0
+  else
+    warning "Failed to update repository topics (continuing)"
+    return 0
+  fi
+}
+
+# Enable/disable vulnerability alerts
+apply_vulnerability_alerts() {
+  local config_file="$1"
+  local val
+  val=$(jq -r 'if .repository and (.repository.vulnerability_alerts != null) then .repository.vulnerability_alerts else empty end' "${config_file}")
+
+  if [ -z "${val}" ]; then
+    info "No vulnerability alerts setting provided"
+    return 0
+  fi
+
+  if [ "${val}" = "true" ]; then
+    info "Enabling vulnerability alerts"
+    if gh api -X PUT -H "Accept: application/vnd.github+json" "repos/${REPO_FULL}/vulnerability-alerts" >/dev/null 2>&1; then
+      success "Vulnerability alerts enabled"
+    else
+      warning "Failed to enable vulnerability alerts (may require org plan or permissions)"
+    fi
+  else
+    info "Disabling vulnerability alerts"
+    if gh api -X DELETE -H "Accept: application/vnd.github+json" "repos/${REPO_FULL}/vulnerability-alerts" >/dev/null 2>&1; then
+      success "Vulnerability alerts disabled"
+    else
+      warning "Failed to disable vulnerability alerts"
+    fi
+  fi
+}
+
+# Enable/disable automated security fixes
+apply_automated_security_fixes() {
+  local config_file="$1"
+  local val
+  val=$(jq -r 'if .repository and (.repository.automated_security_fixes != null) then .repository.automated_security_fixes else empty end' "${config_file}")
+
+  if [ -z "${val}" ]; then
+    info "No automated security fixes setting provided"
+    return 0
+  fi
+
+  if [ "${val}" = "true" ]; then
+    info "Enabling automated security fixes"
+    if gh api -X PUT -H "Accept: application/vnd.github+json" "repos/${REPO_FULL}/automated-security-fixes" >/dev/null 2>&1; then
+      success "Automated security fixes enabled"
+    else
+      warning "Failed to enable automated security fixes"
+    fi
+  else
+    info "Disabling automated security fixes"
+    if gh api -X DELETE -H "Accept: application/vnd.github+json" "repos/${REPO_FULL}/automated-security-fixes" >/dev/null 2>&1; then
+      success "Automated security fixes disabled"
+    else
+      warning "Failed to disable automated security fixes"
+    fi
+  fi
+}
+
+# Apply security and analysis settings (secret scanning, dependabot updates, etc.)
+apply_security_and_analysis() {
+  local config_file="$1"
+  local sa
+  sa=$(jq -c 'if .repository and (.repository.security_and_analysis != null) then {security_and_analysis: .repository.security_and_analysis} else empty end' "${config_file}")
+
+  if [ -z "${sa}" ]; then
+    info "No security_and_analysis settings provided"
+    return 0
+  fi
+
+  info "Applying security_and_analysis settings"
+  echo "${sa}" | jq '.'
+
+  if echo "${sa}" | gh api -X PATCH -H "Accept: application/vnd.github+json" "repos/${REPO_FULL}" --input - >/dev/null 2>&1; then
+    success "security_and_analysis settings applied"
+    return 0
+  else
+    warning "Failed to apply security_and_analysis (feature may require org plan or permissions)"
+    return 0
+  fi
 }
 
 # Get repository information
@@ -220,21 +353,40 @@ main() {
 
   # Show current protection (if any)
   local branch
-  branch=$(jq -r '.branch' "${CONFIG_FILE}")
-  echo ""
-  get_current_protection "${branch}" || true
-  echo ""
-
-  # Apply protection settings
-  if apply_protection "${CONFIG_FILE}"; then
-    show_summary "${CONFIG_FILE}"
+  branch=$(jq -r '.branch // empty' "${CONFIG_FILE}")
+  if [ -n "${branch}" ]; then
     echo ""
+    get_current_protection "${branch}" || true
+    echo ""
+  fi
+
+  local had_error=0
+
+  # Apply protection settings (optional)
+  if jq -e '.protection' "${CONFIG_FILE}" >/dev/null 2>&1; then
+    if apply_protection "${CONFIG_FILE}"; then
+      show_summary "${CONFIG_FILE}"
+    else
+      had_error=1
+    fi
+  else
+    info "No branch protection configuration provided; skipping"
+  fi
+
+  # Apply repository-level settings
+  apply_repository_metadata "${CONFIG_FILE}" || had_error=1
+  apply_repository_topics "${CONFIG_FILE}" || had_error=1
+  apply_vulnerability_alerts "${CONFIG_FILE}" || had_error=1
+  apply_automated_security_fixes "${CONFIG_FILE}" || had_error=1
+  apply_security_and_analysis "${CONFIG_FILE}" || had_error=1
+
+  echo ""
+  if [ ${had_error} -eq 0 ]; then
     success "Repository settings configuration complete!"
     echo ""
     exit 0
   else
-    echo ""
-    error "Failed to apply repository settings"
+    error "Some repository settings failed to apply"
     echo ""
     exit 1
   fi
