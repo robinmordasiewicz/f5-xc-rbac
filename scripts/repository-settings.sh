@@ -24,7 +24,26 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Default config file location
 DEFAULT_CONFIG="${SCRIPT_DIR}/repository-settings.json"
-CONFIG_FILE="${1:-${DEFAULT_CONFIG}}"
+
+# Flags and args
+EXPORT_LABELS=0
+CONFIG_FILE=""
+
+# Simple arg parsing: [--export-labels|-E] [config-file]
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --export-labels | -E)
+      EXPORT_LABELS=1
+      shift
+      ;;
+    *)
+      CONFIG_FILE="$1"
+      shift
+      ;;
+  esac
+done
+
+CONFIG_FILE="${CONFIG_FILE:-${DEFAULT_CONFIG}}"
 
 # Function to print colored messages
 info() {
@@ -82,8 +101,8 @@ validate_config() {
   fi
 
   # Ensure at least one settings section exists
-  if ! jq -e '.protection or .repository' "${config_file}" >/dev/null 2>&1; then
-    error "Configuration file must contain at least one of: 'protection' or 'repository'"
+  if ! jq -e '.protection or .repository or .labels' "${config_file}" >/dev/null 2>&1; then
+    error "Configuration file must contain at least one of: 'protection', 'repository', or 'labels'"
     exit 1
   fi
 
@@ -123,6 +142,109 @@ apply_repository_metadata() {
     warning "Failed to update repository metadata (continuing)"
     return 0
   fi
+}
+
+# URL-encode utility (for label names)
+url_encode() {
+  local raw="$1"
+  jq -rn --arg v "$raw" '$v|@uri'
+}
+
+# Normalize hex color (strip leading '#')
+normalize_color() {
+  local c="$1"
+  c="${c#\#}"
+  echo -n "$c"
+}
+
+# Export current labels into the config file under .labels
+export_labels_to_config() {
+  local config_file="$1"
+
+  info "Exporting current labels into configuration file"
+
+  # Fetch all labels (name, color, description)
+  local labels_json
+  labels_json=$(gh api --paginate -H "Accept: application/vnd.github+json" "repos/${REPO_FULL}/labels" -q '.[] | {name, color, description}' | jq -s 'map({name, color, description})')
+
+  if [ -z "${labels_json}" ] || [ "${labels_json}" = "null" ]; then
+    warning "No labels fetched; skipping export"
+    return 0
+  fi
+
+  # Write into .labels
+  tmp_file="${config_file}.tmp"
+  jq --argjson labels "${labels_json}" '.labels = $labels' "${config_file}" >"${tmp_file}" && mv "${tmp_file}" "${config_file}"
+  success "Exported $(echo "${labels_json}" | jq 'length') labels to ${config_file} (.labels)"
+}
+
+# Apply labels idempotently based on .labels array; optional purge via .labels_purge_unlisted (bool)
+apply_labels() {
+  local config_file="$1"
+
+  if ! jq -e '.labels' "${config_file}" >/dev/null 2>&1; then
+    info "No labels configuration provided; skipping"
+    return 0
+  fi
+
+  info "Applying labels (idempotent)"
+
+  # Build set of configured label names
+  local configured_names
+  configured_names=$(jq -r '.labels[]?.name' "${config_file}" | sort | uniq)
+
+  # Create or update each configured label
+  local count=0
+  jq -c '.labels[]' "${config_file}" | while read -r lbl; do
+    name=$(echo "$lbl" | jq -r '.name')
+    color=$(echo "$lbl" | jq -r '.color // ""')
+    desc=$(echo "$lbl" | jq -r '.description // ""')
+
+    color=$(normalize_color "$color")
+    enc_name=$(url_encode "$name")
+
+    # Try update (PATCH); if 404, then create (POST)
+    body=$(jq -cn --arg name "$name" --arg color "$color" --arg description "$desc" '{name: $name, color: ($color | select(. != "")), description: ($description | select(. != ""))} | with_entries(select(.value != null))')
+
+    if echo "$body" | gh api -X PATCH -H "Accept: application/vnd.github+json" "repos/${REPO_FULL}/labels/${enc_name}" --input - >/dev/null 2>&1; then
+      echo "updated: ${name}"
+    else
+      # Create
+      create_body=$(jq -cn --arg name "$name" --arg color "$color" --arg description "$desc" '{name: $name, color: ($color | select(. != "")), description: ($description | select(. != ""))} | with_entries(select(.value != null))')
+      if echo "$create_body" | gh api -X POST -H "Accept: application/vnd.github+json" "repos/${REPO_FULL}/labels" --input - >/dev/null 2>&1; then
+        echo "created: ${name}"
+      else
+        warning "Failed to create or update label: ${name}"
+      fi
+    fi
+    count=$((count + 1))
+  done
+
+  # Optionally purge labels not listed in config
+  local purge
+  purge=$(jq -r '.labels_purge_unlisted // false' "${config_file}")
+  if [ "${purge}" = "true" ]; then
+    info "Purging labels not listed in configuration"
+    # Get current label names
+    current_names=$(gh api --paginate -H "Accept: application/vnd.github+json" "repos/${REPO_FULL}/labels" -q '.[].name' | sort | uniq)
+    # Compute names to delete
+    to_delete=$(comm -23 <(echo "${current_names}") <(echo "${configured_names}"))
+    if [ -n "${to_delete}" ]; then
+      while IFS= read -r delname; do
+        [ -z "${delname}" ] && continue
+        enc_del=$(url_encode "${delname}")
+        if gh api -X DELETE -H "Accept: application/vnd.github+json" "repos/${REPO_FULL}/labels/${enc_del}" >/dev/null 2>&1; then
+          echo "deleted: ${delname}"
+        else
+          warning "Failed to delete label: ${delname}"
+        fi
+      done <<<"${to_delete}"
+    else
+      info "No extra labels to purge"
+    fi
+  fi
+
+  success "Labels applied"
 }
 
 # Apply repository topics
@@ -341,14 +463,22 @@ main() {
   success "All required tools found"
   echo ""
 
+  # Get repository information (needed for export and apply)
+  info "Getting repository information..."
+  get_repo_info
+  echo ""
+
+  # Export labels mode: skip validation and other apply steps
+  if [ ${EXPORT_LABELS} -eq 1 ]; then
+    export_labels_to_config "${CONFIG_FILE}"
+    echo ""
+    success "Export complete"
+    exit 0
+  fi
+
   # Validate configuration file
   info "Validating configuration..."
   validate_config "${CONFIG_FILE}"
-  echo ""
-
-  # Get repository information
-  info "Getting repository information..."
-  get_repo_info
   echo ""
 
   # Show current protection (if any)
@@ -379,6 +509,7 @@ main() {
   apply_vulnerability_alerts "${CONFIG_FILE}" || had_error=1
   apply_automated_security_fixes "${CONFIG_FILE}" || had_error=1
   apply_security_and_analysis "${CONFIG_FILE}" || had_error=1
+  apply_labels "${CONFIG_FILE}" || had_error=1
 
   echo ""
   if [ ${had_error} -eq 0 ]; then
