@@ -17,5 +17,27 @@
     "required_conversation_resolution": false,
     "lock_branch": false,
     "allow_fork_syncing": false
+  },
+  "repository": {
+    "description": "F5 Distributed Cloud Active Directory User Group Mapping",
+    "homepage": "TBD",
+    "topics": [
+      "xc",
+      "distributed-cloud",
+      "f5"
+    ],
+    "vulnerability_alerts": true,
+    "automated_security_fixes": true,
+    "security_and_analysis": {
+      "advanced_security": {
+        "status": "enabled"
+      },
+      "secret_scanning": {
+        "status": "enabled"
+      },
+      "secret_scanning_push_protection": {
+        "status": "enabled"
+      }
+    }
   }
 }
