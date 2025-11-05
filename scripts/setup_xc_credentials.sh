@@ -103,9 +103,19 @@ mkdir -p secrets
 CERT_PATH="secrets/cert.pem"
 KEY_PATH="secrets/key.pem"
 
-# Prompt for p12 password (won't echo)
-read -r -s -p "Enter p12 passphrase: " P12_PASS
-echo ""
+# Obtain p12 password
+if [[ -n "${VES_P12_PASSWORD:-}" ]]; then
+  P12_PASS="$VES_P12_PASSWORD"
+else
+  if [[ -t 0 ]]; then
+    # Interactive TTY: prompt silently
+    read -r -s -p "Enter p12 passphrase: " P12_PASS
+    echo ""
+  else
+    # Non-interactive: read first line from stdin
+    IFS= read -r P12_PASS || true
+  fi
+fi
 
 # Split p12 to PEM cert and key (no password on key)
 openssl pkcs12 -in "$P12" -clcerts -nokeys -out "$CERT_PATH" -passin pass:"$P12_PASS" 1>/dev/null
