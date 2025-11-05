@@ -32,6 +32,7 @@ repos:
       - id: check-vcs-permalinks
       - id: no-commit-to-branch
         args: ["--branch", "main"]
+        stages: [commit]
 
   - repo: https://github.com/jackdewinter/pymarkdown
     rev: 0b4ac197f67f6ed75e27a10fad70ddc8014cb2e2  # frozen: v0.9.33  # pragma: allowlist secret
@@ -95,8 +96,11 @@ repos:
       - id: bandit
         name: bandit (Python security SAST)
         args: ["-q", "-r", ".", "-ll"]
-        pass_filenames: false
-        exclude: '(^\\.git/|^\\.specify/|^secrets/)'
+    pass_filenames: false
+    # Exclude virtualenv and common vendored directories to avoid scanning
+    # third-party code in the workspace (noisy results). Focus Bandit on
+    # project sources in CI and local runs.
+    exclude: '(^\\.git/|^\\.specify/|^secrets/|^\\.venv/|^vendor/|^node_modules/)'
 
   # Security: Dependency vulnerability scan via pip-audit (strict)
   # Note: This audits the environment when no requirements are provided. For deterministic scans,
