@@ -4,7 +4,7 @@ This quickstart sets up local dev for a Python-based XC Group Sync tool and show
 
 ## Prerequisites
 
-- Python 3.11+
+- Python 3.12+
 - A `.p12` cert+password OR an API token
 - `.env` with either:
   - `VOLT_API_P12_FILE` and `VES_P12_PASSWORD` (preferred), or
