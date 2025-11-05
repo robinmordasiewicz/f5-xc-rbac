@@ -4,28 +4,30 @@ set -euo pipefail
 # Setup script for F5 XC credentials and CI secrets
 # - Derive TENANT_ID from a p12 filename or prompt
 # - Split p12 to PEM cert/key with openssl (no password)
-# - Create .env with appropriate variables
-# - Optionally set GitHub repo secrets via gh CLI
+# - Create .env with appropriate variables (now written under secrets/ by default)
+# - Create GitHub repo secrets via gh CLI by default (opt-out available)
 
 usage() {
   cat <<'USAGE'
-Usage: scripts/setup_xc_credentials.sh [--p12 <path>] [--tenant <id>] [--set-secrets]
+Usage: scripts/setup_xc_credentials.sh [--p12 <path>] [--tenant <id>] [--no-secrets] [--no-env]
 
 Options:
   --p12 <path>       Path to p12 file; if omitted, auto-detect in ~/Downloads when exactly one .p12 exists
   --tenant <id>      Tenant ID (prefix before '.' in https://<tenant>.console.ves.volterra.io)
-  --set-secrets      Use gh CLI to set secrets (XC_P12 / XC_P12_PASSWORD and/or XC_CERT / XC_CERT_KEY, TENANT_ID)
+  --no-secrets       Do NOT set GitHub repo secrets (default is to set them)
+  --no-env           Do NOT write a .env file (default writes secrets/.env)
 
 This script will:
   - Split p12 to PEM (cert.pem/key.pem) in ./secrets/ (created if missing)
-  - Write .env with TENANT_ID and either VOLT_API_P12_FILE/VES_P12_PASSWORD or VOLT_API_CERT_FILE/VOLT_API_CERT_KEY_FILE
-  - If --set-secrets, base64-encode files and set repo secrets via gh secret set (no secret values are printed)
+  - Write secrets/.env with TENANT_ID and either VOLT_API_P12_FILE/VES_P12_PASSWORD or VOLT_API_CERT_FILE/VOLT_API_CERT_KEY_FILE (unless --no-env)
+  - Base64-encode files and set repo secrets via gh secret set (TENANT_ID, XC_CERT, XC_CERT_KEY, XC_P12, XC_P12_PASSWORD) by default (unless --no-secrets)
 USAGE
 }
 
 P12=""
 TENANT=""
-SET_SECRETS="false"
+SET_SECRETS="true"
+WRITE_ENV="true"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -38,7 +40,16 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --set-secrets)
+      # Backward compatibility: previously opted in; now default is on
       SET_SECRETS="true"
+      shift
+      ;;
+    --no-secrets)
+      SET_SECRETS="false"
+      shift
+      ;;
+    --no-env)
+      WRITE_ENV="false"
       shift
       ;;
     -h | --help)
@@ -107,8 +118,11 @@ fi
 
 echo "Wrote $CERT_PATH and $KEY_PATH"
 
-# Write .env (prefers cert/key since requests can't use p12 directly)
-cat >.env <<ENV
+if [[ "$WRITE_ENV" == "true" ]]; then
+  # Write secrets/.env (prefers cert/key since requests can't use p12 directly)
+  ENV_DIR="secrets"
+  ENV_PATH="$ENV_DIR/.env"
+  cat >"$ENV_PATH" <<ENV
 TENANT_ID=$TENANT
 VOLT_API_CERT_FILE=$(pwd)/$CERT_PATH
 VOLT_API_CERT_KEY_FILE=$(pwd)/$KEY_PATH
@@ -116,12 +130,14 @@ VOLT_API_CERT_KEY_FILE=$(pwd)/$KEY_PATH
 VOLT_API_P12_FILE=$(realpath "$P12")
 VES_P12_PASSWORD=$P12_PASS
 ENV
-
-echo ".env written with TENANT_ID and cert/key paths"
+  echo "Wrote $ENV_PATH with TENANT_ID and cert/key paths"
+else
+  echo "Skipped writing .env (use --no-env to opt out; default writes secrets/.env)" >/dev/null
+fi
 
 if [[ "$SET_SECRETS" == "true" ]]; then
   if ! command -v gh >/dev/null 2>&1; then
-    echo "gh CLI not found; install GitHub CLI to set secrets or omit --set-secrets" >&2
+    echo "gh CLI not found; install GitHub CLI to set secrets or pass --no-secrets to skip" >&2
     exit 1
   fi
   # Base64 one-line
