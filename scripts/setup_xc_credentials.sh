@@ -87,9 +87,10 @@ fi
 # Derive tenant if not provided
 if [[ -z "$TENANT" ]]; then
   base=$(basename "$P12")
-  # Derive from prefix before first '-' or '_', e.g., acme-prod-api.p12 -> acme
-  TENANT=${base%%[-_]*}
-  TENANT=${TENANT%%.p12}
+  # Correct derivation: prefix before first '.' in <tenant>.console.ves.volterra.io...
+  # Example: f5-amer-ent.console.ves.volterra.io.api-creds.p12 -> f5-amer-ent
+  name_no_ext=${base%.p12}
+  TENANT=${name_no_ext%%.*}
   if [[ -z "$TENANT" ]]; then
     echo "Could not derive tenant; pass --tenant <id>" >&2
     exit 1
