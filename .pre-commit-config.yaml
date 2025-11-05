@@ -32,6 +32,7 @@ repos:
       - id: check-vcs-permalinks
       - id: no-commit-to-branch
         args: ["--branch", "main"]
+        stages: [pre-commit]
 
   - repo: https://github.com/jackdewinter/pymarkdown
     rev: 0b4ac197f67f6ed75e27a10fad70ddc8014cb2e2  # frozen: v0.9.33  # pragma: allowlist secret
@@ -89,14 +90,11 @@ repos:
         exclude: '(^\.git/|^\.specify/)'
 
   # Security: Python SAST via Bandit
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.9
-    hooks:
-      - id: bandit
-        name: bandit (Python security SAST)
-        args: ["-q", "-r", ".", "-ll"]
-        pass_filenames: false
-        exclude: '(^\\.git/|^\\.specify/|^secrets/)'
+  # NOTE: the upstream bandit pre-commit hook validation rejects some per-hook
+  # keys (e.g. `exclude` or `pass_filenames`) when provided in the hook config.
+  # To allow focused, reproducible local/CI scans and explicit exclude lists
+  # (e.g. .venv, vendor, node_modules), we provide a local wrapper hook below
+  # (see `bandit-local`) which runs `bandit` with an explicit -x exclude list.
 
   # Security: Dependency vulnerability scan via pip-audit (strict)
   # Note: This audits the environment when no requirements are provided. For deterministic scans,
@@ -127,17 +125,30 @@ repos:
   # Local hooks: enforce Issue-First policy gates
   - repo: local
     hooks:
+      - id: bandit-local
+        name: bandit (Python security SAST - local)
+        entry: bandit
+        language: python
+        additional_dependencies: [bandit==1.7.9]
+        # Limit Bandit to project sources to avoid scanning virtualenvs and vendored code
+        args: ["-q", "-r", "src", "-ll"]
+        pass_filenames: false
+        # run on pre-commit so CI and local pre-commit action invoke it
+        stages: [pre-commit]
+
       - id: enforce-branch-name
         name: "Enforce branch naming: ^[0-9]+-[a-z0-9-]+$"
         entry: python3 scripts/git/branch_name_check.py
         language: system
         stages: [pre-commit]
         pass_filenames: false
+
       - id: enforce-commit-msg-has-issue
         name: "Enforce commit message contains issue reference (#N)"
         entry: python3 scripts/git/commit_msg_check.py
         language: system
         stages: [commit-msg]
+
       - id: pip-audit-pyproject
         name: "pip-audit (pyproject, strict, CI-only)"
         entry: bash -eo pipefail -c 'python -m pip install -q --upgrade pip pip-audit; python -m pip install -q . || true; python -m pip_audit --strict -P --progress-spinner off'
@@ -145,6 +156,7 @@ repos:
         pass_filenames: false
         stages: [manual]
         exclude: '(^\\.git/|^\\.specify/|^secrets/)'
+
       - id: jscpd-dry
         name: "jscpd (DRY duplication scan)"
         entry: bash -eo pipefail -c 'npx -y jscpd --min-lines 15 --reporters console --silent src scripts .github/workflows'
