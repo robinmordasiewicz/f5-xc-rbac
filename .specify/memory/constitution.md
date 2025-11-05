@@ -1,9 +1,9 @@
 <!--
 Sync Impact Report
-Version change: 2.1.0 → 2.2.0
-Modified principles: Issue-First elevated to Policy with mandatory automation enforcement (pre-commit + CI + PR template)
-Added sections: Automation Enforcement (Issue-First), Commit Policy, PR Linking Requirements
-Removed sections: (none)
+Version change: 2.2.0 → 2.3.0
+Modified principles: Removed 'Review Required' principle; aligned Governance, PR checklist, Definition of Done.
+Added sections: (none)
+Removed sections: Review Required
 Templates requiring updates:
 - plan-template.md ✅ (no change required)
 - spec-template.md ✅ (no change required)
@@ -24,8 +24,6 @@ This is not advisory. It is a policy enforced by automation (see Automation Enfo
 ### Quality Gates
 Pre-commit hooks, linting, and tests are mandatory. All code must pass validation checks, and no bypasses are allowed. Code review is required before merge. No hardcoded secrets. Dependencies must be kept up to date.
 
-### Review Required
-All code MUST be reviewed and approved before merging. No direct commits to main. PRs must link to issues and pass all checks.
 
 ### Clean History
 Feature branches must be deleted after merge (local and remote).
@@ -127,15 +125,14 @@ Example commit subject lines:
 - [ ] All commits reference the issue (e.g., `Refs #N`); PR body includes `Closes #N`
 - [ ] Tests added and passing
 - [ ] Documentation updated
-- [ ] No linting errors
-- [ ] Code reviewed and approved
+ - [ ] No linting errors
 - [ ] All CI checks passing
 
 ## Definition of Done
 
 Work is complete when:
 1. Issue created first
-2. Code written and reviewed
+2. Code written
 3. All tests passing
 4. Documentation updated
 5. PR merged
@@ -148,9 +145,9 @@ Work is complete when:
 
 - This constitution supersedes all other practices.
 - Amendments require documentation, approval, and migration plan.
-- All PRs/reviews must verify compliance.
+- All PRs must verify compliance.
 - Versioning follows semantic rules: MAJOR for principle changes, MINOR for additions, PATCH for clarifications.
-- Compliance review is mandatory for every merge.
+- Compliance checks are mandatory for every merge.
 
 **Version**: 2.1.0 | **Ratified**: TODO(RATIFICATION_DATE): Original ratification date unknown | **Last Amended**: 2025-11-03
-**Version**: 2.2.0 | **Ratified**: TODO(RATIFICATION_DATE): Original ratification date unknown | **Last Amended**: 2025-11-05
+**Version**: 2.3.0 | **Ratified**: TODO(RATIFICATION_DATE): Original ratification date unknown | **Last Amended**: 2025-11-05
