@@ -3,8 +3,7 @@ from __future__ import annotations
 import csv
 import os
 from collections import defaultdict
-from pathlib import Path
-from typing import Dict, List, Set
+from typing import Dict, Set
 
 import click
 from dotenv import load_dotenv
@@ -28,14 +27,19 @@ def cli() -> None:
 
 
 @cli.command()
-@click.option("--csv", "csv_path", type=click.Path(exists=True, dir_okay=False), required=True, help="Path to CSV export")
+@click.option(
+    "--csv",
+    "csv_path",
+    type=click.Path(exists=True, dir_okay=False),
+    required=True,
+    help="Path to CSV export",
+)
 @click.option("--dry-run", is_flag=True, help="Log actions without calling the API")
 def sync(csv_path: str, dry_run: bool) -> None:
     load_dotenv()
     tenant_id = os.getenv("TENANT_ID")
     api_token = os.getenv("XC_API_TOKEN")
     p12_file = os.getenv("VOLT_API_P12_FILE")
-    p12_password = os.getenv("VES_P12_PASSWORD")
     cert_file = os.getenv("VOLT_API_CERT_FILE")
     key_file = os.getenv("VOLT_API_CERT_KEY_FILE")
 
@@ -45,21 +49,33 @@ def sync(csv_path: str, dry_run: bool) -> None:
     # Prefer P12 → cert/key → token
     client: XCClient
     if p12_file:
-        # requests can't use p12; user should split to PEM; fall back to token or cert/key
-        click.echo("P12 provided; split to PEM for requests or set XC_API_TOKEN / cert/key. Falling back.")
+        # requests can't use p12; split to PEM; fallback to token/cert-key
+        click.echo(
+            (
+                "P12 provided; split to PEM for requests "
+                "or set XC_API_TOKEN or cert/key. Falling back."
+            )
+        )
     if cert_file and key_file:
         client = XCClient(tenant_id=tenant_id, cert_file=cert_file, key_file=key_file)
     elif api_token:
         client = XCClient(tenant_id=tenant_id, api_token=api_token)
     else:
-        raise click.UsageError("Provide XC_API_TOKEN or VOLT_API_CERT_FILE/VOLT_API_CERT_KEY_FILE; p12 must be split")
+        raise click.UsageError(
+            (
+                "Provide XC_API_TOKEN or VOLT_API_CERT_FILE/"
+                "VOLT_API_CERT_KEY_FILE; p12 must be split"
+            )
+        )
 
     # Build groups from CSV
     members: Dict[str, Set[str]] = defaultdict(set)
     with open(csv_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            dn = row.get("Entitlement Display Name") or row.get("entitlement_display_name")
+            dn = row.get("Entitlement Display Name") or row.get(
+                "entitlement_display_name"
+            )
             email = row.get("Email") or row.get("email")
             if not dn or not email:
                 continue
@@ -83,7 +99,11 @@ def sync(csv_path: str, dry_run: bool) -> None:
         return
 
     # Example real flow (idempotent upsert): list, compare, create/update
-    existing = {g.get("name"): g for g in client.list_groups().get("items", []) if isinstance(g, dict)}
+    existing = {
+        g.get("name"): g
+        for g in client.list_groups().get("items", [])
+        if isinstance(g, dict)
+    }
     for grp in planned:
         body = {"name": grp.name, "users": grp.users}
         if grp.name in existing:

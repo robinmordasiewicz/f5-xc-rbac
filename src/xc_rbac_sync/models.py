@@ -4,7 +4,6 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field, constr
 
-
 GroupName = constr(regex=r"^[A-Za-z0-9_-]+$", min_length=1, max_length=128)
 
 
