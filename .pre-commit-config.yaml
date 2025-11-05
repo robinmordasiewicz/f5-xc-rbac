@@ -77,6 +77,17 @@ repos:
         types_or: [python]
         exclude: '(^\.git/|^\.specify/)'
 
+  # Testing: Run pytest with coverage
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: pytest
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
   # Secret scanning: detect-secrets with baseline to track/allow known benign matches
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0
