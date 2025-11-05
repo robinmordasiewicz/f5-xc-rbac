@@ -161,6 +161,8 @@ fi
 # Move into place with correct permissions
 install -m 600 "$TMP_CERT" "$CERT_PATH"
 install -m 600 "$TMP_KEY" "$KEY_PATH"
+# Remove temporary files now that installs succeeded
+rm -f "$TMP_CERT" "$TMP_KEY" || true
 # Clear temp file vars so trap won't remove the installed files
 TMP_CERT=""
 TMP_KEY=""
@@ -181,6 +183,7 @@ VOLT_API_P12_FILE=$(realpath "$P12")
 VES_P12_PASSWORD=$P12_PASS
 ENV
   install -m 600 "$TMP_ENV" "$ENV_PATH"
+  rm -f "$TMP_ENV" || true
   TMP_ENV=""
   echo "Wrote $ENV_PATH with TENANT_ID and cert/key paths"
 else
