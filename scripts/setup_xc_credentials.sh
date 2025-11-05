@@ -53,11 +53,14 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Detect p12 in ~/Downloads if not provided
+# Detect p12 in ~/Downloads if not provided (portable for macOS bash)
 if [[ -z "$P12" ]]; then
-  mapfile -t P12S < <(ls -1 ~/Downloads/*.p12 2>/dev/null || true)
-  if [[ ${#P12S[@]} -eq 1 ]]; then
-    P12="${P12S[0]}"
+  set +u
+  CANDIDATES=(~/Downloads/*.p12)
+  set -u
+  # If the glob didn't expand, the first element will still contain the pattern
+  if [[ ${#CANDIDATES[@]} -eq 1 && -f "${CANDIDATES[0]}" ]]; then
+    P12="${CANDIDATES[0]}"
     echo "Detected p12: $P12"
   else
     echo "No unique p12 found in ~/Downloads. Provide --p12 <path>." >&2
