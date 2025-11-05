@@ -103,6 +103,15 @@ mkdir -p secrets
 CERT_PATH="secrets/cert.pem"
 KEY_PATH="secrets/key.pem"
 
+# Helper: run openssl pkcs12, retrying with -legacy on failure (for OpenSSL 3)
+pkcs12_extract() {
+  # usage: pkcs12_extract <args...> (e.g., -in file -clcerts -nokeys -out out -passin pass:xxx)
+  if ! openssl pkcs12 "$@" 2>/dev/null; then
+    # Retry with -legacy when available
+    openssl pkcs12 -legacy "$@" 2>/dev/null
+  fi
+}
+
 # Obtain p12 password
 if [[ -n "${VES_P12_PASSWORD:-}" ]]; then
   P12_PASS="$VES_P12_PASSWORD"
@@ -117,9 +126,9 @@ else
   fi
 fi
 
-# Split p12 to PEM cert and key (no password on key)
-openssl pkcs12 -in "$P12" -clcerts -nokeys -out "$CERT_PATH" -passin pass:"$P12_PASS" 1>/dev/null
-openssl pkcs12 -in "$P12" -nocerts -nodes -out "$KEY_PATH" -passin pass:"$P12_PASS" 1>/dev/null
+# Split p12 to PEM cert and key (no password on key), with -legacy fallback
+pkcs12_extract -in "$P12" -clcerts -nokeys -out "$CERT_PATH" -passin pass:"$P12_PASS"
+pkcs12_extract -in "$P12" -nocerts -nodes -out "$KEY_PATH" -passin pass:"$P12_PASS"
 
 # Some keys may be encrypted; ensure passwordless key
 if grep -q "ENCRYPTED" "$KEY_PATH"; then
