@@ -87,3 +87,18 @@ repos:
           - --exclude-files
           - '(\\.venv/|^secrets/|^\.git/)'
         exclude: '(^\.git/|^\.specify/)'
+
+  # Local hooks: enforce Issue-First policy gates
+  - repo: local
+    hooks:
+      - id: enforce-branch-name
+        name: "Enforce branch naming: ^[0-9]+-[a-z0-9-]+$"
+        entry: python3 scripts/git/branch_name_check.py
+        language: system
+        stages: [commit]
+        pass_filenames: false
+      - id: enforce-commit-msg-has-issue
+        name: "Enforce commit message contains issue reference (#N)"
+        entry: python3 scripts/git/commit_msg_check.py
+        language: system
+        stages: [commit-msg]
