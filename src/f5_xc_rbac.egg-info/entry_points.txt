@@ -1,2 +1,0 @@
-[console_scripts]
-xc-group-sync = xc_rbac_sync.cli:cli
