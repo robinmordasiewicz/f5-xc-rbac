@@ -10,6 +10,7 @@
 ### Session 2025-11-05
 
 - Q: Should all pre-commit checks be mirrored and enforced in CI (PR-blocking) to guarantee parity and prevent bypass? → A: Enforce pre-commit checks in CI and block merges (Local + CI parity).
+- Q: Should we enforce a quantitative DRY threshold to block PRs on significant duplication? → A: Duplicate blocks ≥15 lines appearing in ≥2 locations must block PRs.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -113,6 +114,8 @@
 
 - **FR-016**: GitHub Actions workflows MUST be linted by actionlint via pre-commit and in CI; any violation blocks PRs.
 
+- **FR-017**: Code MUST follow DRY. Duplicate blocks of ≥15 lines occurring in ≥2 locations are violations. A duplication detector (e.g., jscpd or equivalent) MUST run in pre-commit and CI across relevant text/code types (Python, Shell, YAML, Markdown). Generated code, vendored dependencies, and explicitly documented exclusions MAY be ignored via configuration. Any violation MUST block PRs.
+
 ### Key Entities *(include if feature involves data)*
 
 - **[Entity 1]**: [What it represents, key attributes without implementation]
@@ -138,3 +141,5 @@
 - **SC-007**: Linting passes with 0 errors: Ruff (exit code 0), ShellCheck (exit code 0), PyMarkdown (exit code 0), YAML/JSON checks (exit code 0).
 - **SC-008**: Security passes: detect-secrets finds 0 new secrets (baseline clean), Bandit reports 0 MEDIUM/HIGH issues, and pip-audit reports 0 HIGH/CRITICAL vulnerabilities.
 - **SC-009**: Policy gates pass: no direct commits to main observed in history; branch names and commit messages conform to policy in all new commits.
+
+- **SC-010**: Duplication scan reports 0 violations at the DRY threshold (≥15 lines in ≥2 locations). Any needed exclusions are documented in the configuration and referenced in the PR description.

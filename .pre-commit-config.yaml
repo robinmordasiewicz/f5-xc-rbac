@@ -122,6 +122,8 @@ repos:
         args: ["-color"]
         files: '^\.github/workflows/.*\.ya?ml$'
 
+  # DRY enforcement: code duplication detector (jscpd via npx)
+
   # Local hooks: enforce Issue-First policy gates
   - repo: local
     hooks:
@@ -143,3 +145,9 @@ repos:
         pass_filenames: false
         stages: [manual]
         exclude: '(^\\.git/|^\\.specify/|^secrets/)'
+      - id: jscpd-dry
+        name: "jscpd (DRY duplication scan)"
+        entry: bash -eo pipefail -c 'npx -y jscpd --min-lines 15 --reporters console --silent src scripts .github/workflows'
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]

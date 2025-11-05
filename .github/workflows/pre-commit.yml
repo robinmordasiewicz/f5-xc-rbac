@@ -28,6 +28,11 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Set up Node.js (for jscpd via npx)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Run pre-commit (all files)
         uses: pre-commit/action@v3.0.1
         with:
