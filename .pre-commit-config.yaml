@@ -32,7 +32,8 @@ repos:
       - id: check-vcs-permalinks
       - id: no-commit-to-branch
         args: ["--branch", "main"]
-        stages: [pre-commit]
+        # Run only at actual commit time so global/all-files scans (CI) don't invoke it
+        stages: [commit]
 
   - repo: https://github.com/jackdewinter/pymarkdown
     rev: 0b4ac197f67f6ed75e27a10fad70ddc8014cb2e2  # frozen: v0.9.33  # pragma: allowlist secret
