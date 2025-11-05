@@ -77,6 +77,14 @@ def sync(csv_path: str, dry_run: bool, cleanup: bool, log_level: str) -> None:
             )
         )
 
+    # Preflight: fail fast on auth issues before doing any work
+    try:
+        # Create client first; will validate auth via a lightweight call below
+        pass
+    except Exception:
+        # placeholder: client not yet created
+        pass
+
     # Build groups from CSV
     members: Dict[str, Set[str]] = defaultdict(set)
     with open(csv_path, newline="", encoding="utf-8") as f:
@@ -110,24 +118,67 @@ def sync(csv_path: str, dry_run: bool, cleanup: bool, log_level: str) -> None:
     for grp in planned:
         click.echo(f" - {grp.name}: {len(grp.users)} users")
 
-    if dry_run:
-        click.echo("Dry-run: no API calls made.")
-        return
+    # List existing groups (auth preflight happens here)
+    try:
+        list_resp = client.list_groups()
+    except Exception as e:
+        raise click.ClickException(f"Authentication or API error listing groups: {e}")
 
-    # Example real flow (idempotent upsert): list, compare, create/update
     existing = {
-        g.get("name"): g
-        for g in client.list_groups().get("items", [])
-        if isinstance(g, dict)
+        g.get("name"): g for g in list_resp.get("items", []) if isinstance(g, dict)
     }
-    for grp in planned:
-        body = {"name": grp.name, "users": grp.users}
-        if grp.name in existing:
-            client.update_group(grp.name, body)
-        else:
-            client.create_group(body)
 
-    # Cleanup mode (planned for US2; wiring flag now, implement here if enabled)
+    created = 0
+    updated = 0
+    skipped = 0
+    deleted = 0
+    errors = 0
+
+    # Upsert logic with idempotency
+    for grp in planned:
+        desired_users = sorted(grp.users)
+        if grp.name in existing:
+            curr = existing[grp.name]
+            curr_users = sorted(curr.get("usernames") or curr.get("users") or [])
+            if curr_users == desired_users:
+                skipped += 1
+                logging.debug("No change for group %s", grp.name)
+                continue
+            payload = {
+                "name": grp.name,
+                "display_name": grp.name,
+                "usernames": desired_users,
+            }
+            if dry_run:
+                click.echo(
+                    f"Would update group {grp.name} ({len(desired_users)} users)"
+                )
+            else:
+                try:
+                    client.update_group(grp.name, payload)
+                    updated += 1
+                except Exception as e:
+                    errors += 1
+                    logging.error("Failed to update %s: %s", grp.name, e)
+        else:
+            payload = {
+                "name": grp.name,
+                "display_name": grp.name,
+                "usernames": desired_users,
+            }
+            if dry_run:
+                click.echo(
+                    f"Would create group {grp.name} ({len(desired_users)} users)"
+                )
+            else:
+                try:
+                    client.create_group(payload)
+                    created += 1
+                except Exception as e:
+                    errors += 1
+                    logging.error("Failed to create %s: %s", grp.name, e)
+
+    # Cleanup mode
     if cleanup:
         planned_names = {g.name for g in planned}
         extra = [name for name in existing.keys() if name not in planned_names]
@@ -137,8 +188,22 @@ def sync(csv_path: str, dry_run: bool, cleanup: bool, log_level: str) -> None:
                 click.echo(f" - {name}")
             if not dry_run:
                 for name in extra:
-                    client.delete_group(name)
+                    try:
+                        client.delete_group(name)
+                        deleted += 1
+                    except Exception as e:
+                        errors += 1
+                        logging.error("Failed to delete %s: %s", name, e)
 
+    # Summary
+    click.echo(
+        "Summary: created=%d, updated=%d, deleted=%d, skipped=%d, errors=%d"
+        % (created, updated, deleted, skipped, errors)
+    )
+    if errors:
+        raise click.ClickException(
+            "One or more operations failed; see logs for details"
+        )
     click.echo("Sync complete.")
 
 
