@@ -1,22 +1,67 @@
+"""Command-line interface for F5 XC group synchronization.
+
+This module provides the CLI commands for synchronizing user groups
+from CSV files to F5 Distributed Cloud (XC) using either API token
+or certificate-based authentication.
+"""
+
 from __future__ import annotations
 
-import csv
 import logging
 import os
-from collections import defaultdict
-from typing import Dict, Set
 
 import click
+import requests
 from dotenv import load_dotenv
 
 from .client import XCClient
-from .ldap_utils import LdapParseError, extract_cn
-from .models import Group
+from .sync_service import CSVParseError, GroupSyncService
 
-REQUIRED_COLUMNS = {
-    "Email",
-    "Entitlement Display Name",
-}
+
+def _create_client(
+    tenant_id: str,
+    api_token: str | None,
+    cert_file: str | None,
+    key_file: str | None,
+    timeout: int,
+    max_retries: int,
+) -> XCClient:
+    """Create authenticated XC client.
+
+    Args:
+        tenant_id: XC tenant identifier
+        api_token: Optional API token for authentication
+        cert_file: Optional certificate file path
+        key_file: Optional key file path
+        timeout: HTTP request timeout in seconds
+        max_retries: Maximum number of retries for failed requests
+
+    Returns:
+        Configured XCClient instance
+
+    Raises:
+        click.UsageError: If no valid authentication method provided
+
+    """
+    if cert_file and key_file:
+        return XCClient(
+            tenant_id=tenant_id,
+            cert_file=cert_file,
+            key_file=key_file,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
+    elif api_token:
+        return XCClient(
+            tenant_id=tenant_id,
+            api_token=api_token,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
+    else:
+        raise click.UsageError(
+            "Provide XC_API_TOKEN or VOLT_API_CERT_FILE/VOLT_API_CERT_KEY_FILE"
+        )
 
 
 @click.group()
@@ -50,208 +95,116 @@ def sync(
     max_retries: int,
     timeout: int,
 ) -> None:
+    """Synchronize XC groups from CSV file.
+
+    Reads a CSV file containing user-to-group mappings and synchronizes
+    those mappings to F5 XC. Supports creating, updating, and optionally
+    deleting groups to match the CSV.
+
+    Authentication can be provided via environment variables:
+    - TENANT_ID (required): Your XC tenant ID
+    - XC_API_TOKEN: API token for authentication
+    - VOLT_API_CERT_FILE + VOLT_API_CERT_KEY_FILE: Certificate-based auth
+
+    Args:
+        csv_path: Path to CSV file with Email and Entitlement Display Name columns
+        dry_run: If True, log actions without making API changes
+        cleanup: If True, delete groups that exist in XC but not in CSV
+        log_level: Logging verbosity level
+        max_retries: Maximum retries for failed API requests
+        timeout: HTTP timeout in seconds
+
+    """
+    # Configure logging
     logging.basicConfig(
         level=getattr(logging, log_level.upper(), logging.INFO),
         format="%(levelname)s %(message)s",
     )
+
+    # Load environment variables
     load_dotenv()
     tenant_id = os.getenv("TENANT_ID")
+    if not tenant_id:
+        raise click.UsageError("TENANT_ID must be set in env or .env")
+
     api_token = os.getenv("XC_API_TOKEN")
     p12_file = os.getenv("VOLT_API_P12_FILE")
     cert_file = os.getenv("VOLT_API_CERT_FILE")
     key_file = os.getenv("VOLT_API_CERT_KEY_FILE")
 
-    if not tenant_id:
-        raise click.UsageError("TENANT_ID must be set in env or .env")
-
-    # Prefer P12 → cert/key → token
-    client: XCClient
+    # P12 files are not supported by requests library
     if p12_file:
-        # requests can't use p12; split to PEM; fallback to token/cert-key
         logging.info(
-            (
-                "P12 provided; split to PEM for requests "
-                "or set XC_API_TOKEN or cert/key. Falling back."
-            )
-        )
-    if cert_file and key_file:
-        client = XCClient(
-            tenant_id=tenant_id,
-            cert_file=cert_file,
-            key_file=key_file,
-            timeout=timeout,
-            max_retries=max_retries,
-        )
-    elif api_token:
-        client = XCClient(
-            tenant_id=tenant_id,
-            api_token=api_token,
-            timeout=timeout,
-            max_retries=max_retries,
-        )
-    else:
-        raise click.UsageError(
-            (
-                "Provide XC_API_TOKEN or VOLT_API_CERT_FILE/"
-                "VOLT_API_CERT_KEY_FILE; p12 must be split"
-            )
+            "P12 provided but not supported; use XC_API_TOKEN or cert/key instead"
         )
 
-    # Preflight: fail fast on auth issues before doing any work
+    # Create authenticated client
     try:
-        # Create client first; will validate auth via a lightweight call below
-        pass
-    except Exception:
-        # placeholder: client not yet created
-        pass
+        client = _create_client(
+            tenant_id, api_token, cert_file, key_file, timeout, max_retries
+        )
+    except click.UsageError:
+        raise
+    except Exception as e:
+        raise click.ClickException(f"Failed to create client: {e}")
 
-    # Build groups from CSV
-    members: Dict[str, Set[str]] = defaultdict(set)
-    with open(csv_path, newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        header = set(reader.fieldnames or [])
-        missing = [c for c in REQUIRED_COLUMNS if c not in header]
-        if missing:
-            raise click.UsageError(
-                f"CSV missing required columns: {', '.join(sorted(missing))}"
-            )
-        for row in reader:
-            dn = row.get("Entitlement Display Name") or row.get(
-                "entitlement_display_name"
-            )
-            email = row.get("Email") or row.get("email")
-            if not dn or not email:
-                continue
-            try:
-                cn = extract_cn(dn)
-            except LdapParseError as e:
-                logging.warning("Skipping row due to DN parse error: %s", e)
-                continue
-            members[cn].add(email)
+    # Create sync service
+    service = GroupSyncService(client)
 
-    planned = []
-    for name, users in sorted(members.items()):
-        grp = Group(name=name, users=sorted(users))
-        planned.append(grp)
+    # Parse CSV file
+    try:
+        planned_groups = service.parse_csv_to_groups(csv_path)
+    except CSVParseError as e:
+        raise click.UsageError(str(e))
+    except Exception as e:
+        raise click.ClickException(f"Failed to parse CSV: {e}")
 
-    click.echo(f"Groups planned from CSV: {len(planned)}")
-    for grp in planned:
+    # Display planned groups
+    click.echo(f"Groups planned from CSV: {len(planned_groups)}")
+    for grp in planned_groups:
         click.echo(f" - {grp.name}: {len(grp.users)} users")
 
-    # List existing groups (auth preflight happens here)
+    # Fetch existing groups (validates authentication)
     try:
-        list_resp = client.list_groups()
+        existing_groups = service.fetch_existing_groups()
+    except requests.RequestException as e:
+        raise click.ClickException(f"API error listing groups: {e}")
     except Exception as e:
-        raise click.ClickException(f"Authentication or API error listing groups: {e}")
+        raise click.ClickException(f"Unexpected error listing groups: {e}")
 
-    existing = {
-        g.get("name"): g for g in list_resp.get("items", []) if isinstance(g, dict)
-    }
-
-    created = 0
-    updated = 0
-    skipped = 0
-    deleted = 0
-    errors = 0
-    skipped_due_to_unknown = 0
-
-    # FR-010: Pre-validate user existence in XC
-    # Build set of all unique emails from planned groups
-    # Note: can be used for reporting; current flow only needs membership map per group
+    # Pre-validate user existence
     try:
-        roles = client.list_user_roles()
-        existing_users = {
-            u.get("username") or u.get("email")
-            for u in roles.get("items", [])
-            if isinstance(u, dict)
-        }
+        existing_users = service.fetch_existing_users()
     except Exception as e:
-        logging.warning("Could not pre-validate users (user_roles): %s", e)
+        logging.warning("User pre-validation failed: %s", e)
         existing_users = None
 
-    # Upsert logic with idempotency
-    for grp in planned:
-        desired_users = sorted(grp.users)
-        # Skip groups with unknown users if pre-validation found gaps
-        if existing_users is not None:
-            unknown = [u for u in desired_users if u not in existing_users]
-            if unknown:
-                skipped_due_to_unknown += 1
-                errors += 1  # count as error per spec's pre-validation requirement
-                logging.error(
-                    "Skipping group %s due to unknown users: %s",
-                    grp.name,
-                    ", ".join(unknown),
-                )
-                continue
+    # Synchronize groups
+    try:
+        stats = service.sync_groups(
+            planned_groups, existing_groups, existing_users, dry_run
+        )
+    except Exception as e:
+        raise click.ClickException(f"Sync failed: {e}")
 
-        if grp.name in existing:
-            curr = existing[grp.name]
-            curr_users = sorted(curr.get("usernames") or curr.get("users") or [])
-            if curr_users == desired_users:
-                skipped += 1
-                logging.debug("No change for group %s", grp.name)
-                continue
-            payload = {
-                "name": grp.name,
-                "display_name": grp.name,
-                "usernames": desired_users,
-            }
-            if dry_run:
-                click.echo(
-                    f"Would update group {grp.name} ({len(desired_users)} users)"
-                )
-            else:
-                try:
-                    client.update_group(grp.name, payload)
-                    updated += 1
-                except Exception as e:
-                    errors += 1
-                    logging.error("Failed to update %s: %s", grp.name, e)
-        else:
-            payload = {
-                "name": grp.name,
-                "display_name": grp.name,
-                "usernames": desired_users,
-            }
-            if dry_run:
-                click.echo(
-                    f"Would create group {grp.name} ({len(desired_users)} users)"
-                )
-            else:
-                try:
-                    client.create_group(payload)
-                    created += 1
-                except Exception as e:
-                    errors += 1
-                    logging.error("Failed to create %s: %s", grp.name, e)
-
-    # Cleanup mode
+    # Cleanup orphaned groups if requested
     if cleanup:
-        planned_names = {g.name for g in planned}
-        extra = [name for name in existing.keys() if name not in planned_names]
-        if extra:
-            click.echo(f"Extra groups in XC not in CSV: {len(extra)}")
-            for name in extra:
-                click.echo(f" - {name}")
-            if not dry_run:
-                for name in extra:
-                    try:
-                        client.delete_group(name)
-                        deleted += 1
-                    except Exception as e:
-                        errors += 1
-                        logging.error("Failed to delete %s: %s", name, e)
+        try:
+            deleted = service.cleanup_orphaned_groups(
+                planned_groups, existing_groups, dry_run
+            )
+            stats.deleted = deleted
+        except Exception as e:
+            raise click.ClickException(f"Cleanup failed: {e}")
 
-    # Summary
-    click.echo(
-        "Summary: created=%d, updated=%d, deleted=%d, skipped=%d, errors=%d"
-        % (created, updated, deleted, skipped, errors)
-    )
-    if errors:
+    # Display summary
+    click.echo(stats.summary())
+
+    if stats.has_errors():
         raise click.ClickException(
             "One or more operations failed; see logs for details"
         )
+
     click.echo("Sync complete.")
 
 
