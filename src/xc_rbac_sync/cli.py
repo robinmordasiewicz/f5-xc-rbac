@@ -40,7 +40,16 @@ def cli() -> None:
     default="info",
     help="Logging level",
 )
-def sync(csv_path: str, dry_run: bool, cleanup: bool, log_level: str) -> None:
+@click.option("--max-retries", type=int, default=3, help="Max retries for API calls")
+@click.option("--timeout", type=int, default=30, help="HTTP timeout (seconds)")
+def sync(
+    csv_path: str,
+    dry_run: bool,
+    cleanup: bool,
+    log_level: str,
+    max_retries: int,
+    timeout: int,
+) -> None:
     logging.basicConfig(
         level=getattr(logging, log_level.upper(), logging.INFO),
         format="%(levelname)s %(message)s",
@@ -66,9 +75,20 @@ def sync(csv_path: str, dry_run: bool, cleanup: bool, log_level: str) -> None:
             )
         )
     if cert_file and key_file:
-        client = XCClient(tenant_id=tenant_id, cert_file=cert_file, key_file=key_file)
+        client = XCClient(
+            tenant_id=tenant_id,
+            cert_file=cert_file,
+            key_file=key_file,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
     elif api_token:
-        client = XCClient(tenant_id=tenant_id, api_token=api_token)
+        client = XCClient(
+            tenant_id=tenant_id,
+            api_token=api_token,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
     else:
         raise click.UsageError(
             (
@@ -133,10 +153,38 @@ def sync(csv_path: str, dry_run: bool, cleanup: bool, log_level: str) -> None:
     skipped = 0
     deleted = 0
     errors = 0
+    skipped_due_to_unknown = 0
+
+    # FR-010: Pre-validate user existence in XC
+    # Build set of all unique emails from planned groups
+    # Note: can be used for reporting; current flow only needs membership map per group
+    try:
+        roles = client.list_user_roles()
+        existing_users = {
+            u.get("username") or u.get("email")
+            for u in roles.get("items", [])
+            if isinstance(u, dict)
+        }
+    except Exception as e:
+        logging.warning("Could not pre-validate users (user_roles): %s", e)
+        existing_users = None
 
     # Upsert logic with idempotency
     for grp in planned:
         desired_users = sorted(grp.users)
+        # Skip groups with unknown users if pre-validation found gaps
+        if existing_users is not None:
+            unknown = [u for u in desired_users if u not in existing_users]
+            if unknown:
+                skipped_due_to_unknown += 1
+                errors += 1  # count as error per spec's pre-validation requirement
+                logging.error(
+                    "Skipping group %s due to unknown users: %s",
+                    grp.name,
+                    ", ".join(unknown),
+                )
+                continue
+
         if grp.name in existing:
             curr = existing[grp.name]
             curr_users = sorted(curr.get("usernames") or curr.get("users") or [])

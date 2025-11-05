@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional
 import requests
 from requests import Response
 from tenacity import (
-    retry,
+    Retrying,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
@@ -22,11 +22,19 @@ class XCClient:
         cert_file: Optional[str] = None,
         key_file: Optional[str] = None,
         timeout: int = 30,
+        max_retries: int = 3,
+        backoff_multiplier: float = 1.0,
+        backoff_min: float = 1.0,
+        backoff_max: float = 8.0,
     ) -> None:
         self.tenant_id = tenant_id
         self.base_url = f"https://{tenant_id}.console.ves.volterra.io"
         self.session = requests.Session()
         self.timeout = timeout
+        self.max_retries = max_retries
+        self.backoff_multiplier = backoff_multiplier
+        self.backoff_min = backoff_min
+        self.backoff_max = backoff_max
 
         if api_token:
             self.session.headers.update({"Authorization": f"APIToken {api_token}"})
@@ -41,22 +49,28 @@ class XCClient:
         else:
             raise ValueError("No authentication provided (token or cert/key)")
 
-    @retry(
-        reraise=True,
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=1, max=8),
-        retry=retry_if_exception_type((requests.RequestException,)),
-    )
     def _request(self, method: str, path: str, **kwargs: Any) -> Response:
         url = f"{self.base_url}{path}"
-        resp = self.session.request(method, url, timeout=self.timeout, **kwargs)
-        if resp.status_code in (429, 500, 502, 503, 504):
-            # Let tenacity retry
-            raise requests.RequestException(
-                f"Transient error: {resp.status_code}: {resp.text}"
-            )
-        resp.raise_for_status()
-        return resp
+        # Use per-instance retry configuration
+        for attempt in Retrying(
+            stop=stop_after_attempt(self.max_retries),
+            wait=wait_exponential(
+                multiplier=self.backoff_multiplier,
+                min=self.backoff_min,
+                max=self.backoff_max,
+            ),
+            retry=retry_if_exception_type((requests.RequestException,)),
+            reraise=True,
+        ):
+            with attempt:
+                resp = self.session.request(method, url, timeout=self.timeout, **kwargs)
+                if resp.status_code in (429, 500, 502, 503, 504):
+                    # Trigger retry by raising a retriable exception
+                    raise requests.RequestException(
+                        f"Transient error: {resp.status_code}: {resp.text}"
+                    )
+                resp.raise_for_status()
+                return resp
 
     # User Groups (custom API)
     def list_groups(self, namespace: str = "system") -> Dict[str, Any]:

@@ -109,9 +109,9 @@ Independent Test: Single `.p12` in `~/Downloads` named `mytenant-api.p12` → `.
 
 ### Implementation for User Story 5
 
-- [ ] T021 [US5] Implement setup script `scripts/setup_xc_credentials.sh` (derive TENANT_ID, split p12 to PEM, write `.env`)
-- [ ] T022 [P] [US5] Create workflow `.github/workflows/xc-group-sync.yml` to decode secrets and run sync
-- [ ] T023 [US5] Document CI secrets and setup steps in `specs/001-xc-group-sync/quickstart.md`
+- [X] T021 [US5] Implement setup script `scripts/setup_xc_credentials.sh` (derive TENANT_ID, split p12 to PEM, write `.env`)
+- [X] T022 [P] [US5] Create workflow `.github/workflows/xc-group-sync.yml` to decode secrets and run sync
+- [X] T023 [US5] Document CI secrets and setup steps in `specs/001-xc-group-sync/quickstart.md`
 
 Checkpoint: One-command setup and CI pipeline are in place
 
@@ -119,9 +119,9 @@ Checkpoint: One-command setup and CI pipeline are in place
 
 ## Phase N: Polish & Cross-Cutting
 
-- [ ] T024 [P] Update README.md with usage and dry-run examples in `README.md`
-- [ ] T025 Add performance knobs (max retries, backoff) and document in `specs/001-xc-group-sync/quickstart.md`
-- [ ] T026 Security review: verify no secrets are logged and HTTPS validation is enforced across `src/xc_rbac_sync/*`
+- [X] T024 [P] Update README.md with usage and dry-run examples in `README.md`
+- [X] T025 Add performance knobs (max retries, backoff) and document in `specs/001-xc-group-sync/quickstart.md`
+- [X] T026 Security review: verify no secrets are logged and HTTPS validation is enforced across `src/xc_rbac_sync/*`
 
 ---
 
