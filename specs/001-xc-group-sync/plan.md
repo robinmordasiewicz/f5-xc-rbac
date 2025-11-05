@@ -17,7 +17,7 @@ Automate synchronization of Active Directory groups to F5 Distributed Cloud (XC)
   the iteration process.
 -->
 
-**Language/Version**: Python 3.11
+**Language/Version**: Python 3.12
 **Primary Dependencies**: requests, click, pydantic, python-dotenv, tenacity
 **Storage**: N/A (reads CSV files)
 **Testing**: pytest
