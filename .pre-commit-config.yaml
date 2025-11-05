@@ -59,3 +59,19 @@ repos:
     hooks:
       - id: editorconfig-checker
         exclude: '(^\.git/|^\.specify/|^\.github/prompts/|\.csv$)'
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.0
+    hooks:
+      - id: ruff
+        args: ["--no-fix"]
+        types_or: [python]
+        exclude: '(^\.git/|^\.specify/)'
+
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+        args: ["--check", "--diff"]
+        types_or: [python]
+        exclude: '(^\.git/|^\.specify/)'
