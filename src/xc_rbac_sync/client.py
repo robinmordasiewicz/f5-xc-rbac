@@ -1,3 +1,10 @@
+"""F5 XC API client with automatic retry logic.
+
+Provides a REST API client for F5 Distributed Cloud with built-in
+retry logic for transient errors, support for multiple authentication
+methods, and exponential backoff.
+"""
+
 from __future__ import annotations
 
 from typing import Any, Dict, Optional
@@ -13,12 +20,17 @@ from tenacity import (
 
 
 class XCClient:
+    """F5 Distributed Cloud API client with automatic retry logic.
+
+    Provides REST API interface for F5 XC with built-in retry logic
+    for transient errors, exponential backoff, and support for both
+    token-based and certificate-based authentication.
+    """
+
     def __init__(
         self,
         tenant_id: str,
         api_token: Optional[str] = None,
-        p12_file: Optional[str] = None,
-        p12_password: Optional[str] = None,
         cert_file: Optional[str] = None,
         key_file: Optional[str] = None,
         timeout: int = 30,
@@ -27,6 +39,23 @@ class XCClient:
         backoff_min: float = 1.0,
         backoff_max: float = 8.0,
     ) -> None:
+        """Initialize the F5 XC API client.
+
+        Args:
+            tenant_id: F5 XC tenant identifier
+            api_token: API token for authentication (mutually exclusive with cert/key)
+            cert_file: Path to API certificate file (requires key_file)
+            key_file: Path to API key file (requires cert_file)
+            timeout: HTTP request timeout in seconds
+            max_retries: Maximum number of retry attempts for failed requests
+            backoff_multiplier: Exponential backoff multiplier
+            backoff_min: Minimum backoff time in seconds
+            backoff_max: Maximum backoff time in seconds
+
+        Raises:
+            ValueError: If no authentication method provided or invalid combination
+
+        """
         self.tenant_id = tenant_id
         self.base_url = f"https://{tenant_id}.console.ves.volterra.io"
         self.session = requests.Session()
@@ -38,12 +67,6 @@ class XCClient:
 
         if api_token:
             self.session.headers.update({"Authorization": f"APIToken {api_token}"})
-        elif p12_file:
-            # requests doesn't support .p12 directly; assume caller split to PEM before
-            # Keeping branch for completeness if adapter is added later
-            raise ValueError(
-                "requests does not support .p12; provide cert/key or split the p12"
-            )
         elif cert_file and key_file:
             self.session.cert = (cert_file, key_file)
         else:
@@ -74,12 +97,31 @@ class XCClient:
 
     # User Groups (custom API)
     def list_groups(self, namespace: str = "system") -> Dict[str, Any]:
+        """List all user groups in the specified namespace.
+
+        Args:
+            namespace: XC namespace (default: "system")
+
+        Returns:
+            Dictionary containing list of groups with their metadata
+
+        """
         r = self._request("GET", f"/api/web/custom/namespaces/{namespace}/user_groups")
         return r.json()
 
     def create_group(
         self, group: Dict[str, Any], namespace: str = "system"
     ) -> Dict[str, Any]:
+        """Create a new user group.
+
+        Args:
+            group: Group specification with name, display_name, and usernames
+            namespace: XC namespace (default: "system")
+
+        Returns:
+            Dictionary containing created group metadata
+
+        """
         r = self._request(
             "POST",
             f"/api/web/custom/namespaces/{namespace}/user_groups",
@@ -90,6 +132,17 @@ class XCClient:
     def update_group(
         self, name: str, group: Dict[str, Any], namespace: str = "system"
     ) -> Dict[str, Any]:
+        """Update an existing user group.
+
+        Args:
+            name: Name of the group to update
+            group: Updated group specification
+            namespace: XC namespace (default: "system")
+
+        Returns:
+            Dictionary containing updated group metadata
+
+        """
         r = self._request(
             "PUT",
             f"/api/web/custom/namespaces/{namespace}/user_groups/{name}",
@@ -98,11 +151,27 @@ class XCClient:
         return r.json()
 
     def delete_group(self, name: str, namespace: str = "system") -> None:
+        """Delete a user group.
+
+        Args:
+            name: Name of the group to delete
+            namespace: XC namespace (default: "system")
+
+        """
         self._request(
             "DELETE", f"/api/web/custom/namespaces/{namespace}/user_groups/{name}"
         )
 
     # Users / Roles (for pre-validation)
     def list_user_roles(self, namespace: str = "system") -> Dict[str, Any]:
+        """List all user roles for validation purposes.
+
+        Args:
+            namespace: XC namespace (default: "system")
+
+        Returns:
+            Dictionary containing list of users with their roles
+
+        """
         r = self._request("GET", f"/api/web/custom/namespaces/{namespace}/user_roles")
         return r.json()

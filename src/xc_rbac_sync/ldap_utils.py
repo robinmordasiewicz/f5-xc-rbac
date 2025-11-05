@@ -1,3 +1,9 @@
+"""LDAP distinguished name (DN) parsing utilities.
+
+Provides functions for extracting and validating Common Name (CN)
+components from LDAP DNs with F5 XC group name constraints.
+"""
+
 from __future__ import annotations
 
 import re
@@ -12,6 +18,8 @@ GROUP_NAME_RE = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
 
 
 class LdapParseError(ValueError):
+    """Exception raised when LDAP DN parsing fails or validation errors occur."""
+
     pass
 
 
@@ -21,18 +29,15 @@ def extract_cn(dn: str) -> str:
     Raises LdapParseError if CN missing or invalid.
     """
     try:
-        rdn_seq = parse_dn(dn, case_sensitive=False)
+        rdn_seq = parse_dn(dn)
     except Exception as exc:  # ldap3 throws on malformed DN
         raise LdapParseError(f"Malformed DN: {dn}") from exc
 
-    # rdn_seq is a list of RDNs; each RDN is list of (attr, value, flags)
+    # rdn_seq is a list of (attr, value, separator) tuples
     cn: Optional[str] = None
-    for rdn in rdn_seq:
-        for attr, value, _flags in rdn:
-            if attr.upper() == "CN":
-                cn = value
-                break
-        if cn:
+    for attr, value, _ in rdn_seq:
+        if attr.upper() == "CN":
+            cn = value
             break
 
     if not cn:
