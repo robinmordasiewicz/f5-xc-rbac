@@ -88,6 +88,42 @@ repos:
           - '(\\.venv/|^secrets/|^\.git/)'
         exclude: '(^\.git/|^\.specify/)'
 
+  # Security: Python SAST via Bandit
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.9
+    hooks:
+      - id: bandit
+        name: bandit (Python security SAST)
+        args: ["-q", "-r", ".", "-ll"]
+        pass_filenames: false
+        exclude: '(^\\.git/|^\\.specify/|^secrets/)'
+
+  # Security: Dependency vulnerability scan via pip-audit (strict)
+  # Note: This audits the environment when no requirements are provided. For deterministic scans,
+  # prefer adding a requirements.txt and piping it via CI (follow-up allowed).
+  - repo: https://github.com/pypa/pip-audit
+    rev: v2.7.3
+    hooks:
+      - id: pip-audit
+        name: pip-audit (dependency scan)
+        args: ["--strict", "--progress-spinner", "off", "-r"]
+        # Only run when a requirements manifest exists/is modified; avoids auditing the tool env
+        files: '(^requirements\.txt$|^requirements\..*\.txt$)'
+        additional_dependencies: []
+        exclude: '(^\\.git/|^\\.specify/|^secrets/)'
+
+  # GitHub Actions workflow linter
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.4
+    hooks:
+      - id: actionlint
+        name: actionlint (GitHub Actions linter)
+        # Avoid double shellcheck/py checks inside actionlint; we run ShellCheck separately
+        args: ["-color"]
+        files: '^\.github/workflows/.*\.ya?ml$'
+
+  # DRY enforcement: code duplication detector (jscpd via npx)
+
   # Local hooks: enforce Issue-First policy gates
   - repo: local
     hooks:
@@ -95,10 +131,23 @@ repos:
         name: "Enforce branch naming: ^[0-9]+-[a-z0-9-]+$"
         entry: python3 scripts/git/branch_name_check.py
         language: system
-        stages: [commit]
+        stages: [pre-commit]
         pass_filenames: false
       - id: enforce-commit-msg-has-issue
         name: "Enforce commit message contains issue reference (#N)"
         entry: python3 scripts/git/commit_msg_check.py
         language: system
         stages: [commit-msg]
+      - id: pip-audit-pyproject
+        name: "pip-audit (pyproject, strict, CI-only)"
+        entry: bash -eo pipefail -c 'python -m pip install -q --upgrade pip pip-audit; python -m pip install -q . || true; python -m pip_audit --strict -P --progress-spinner off'
+        language: system
+        pass_filenames: false
+        stages: [manual]
+        exclude: '(^\\.git/|^\\.specify/|^secrets/)'
+      - id: jscpd-dry
+        name: "jscpd (DRY duplication scan)"
+        entry: bash -eo pipefail -c 'npx -y jscpd --min-lines 15 --reporters console --silent src scripts .github/workflows'
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]

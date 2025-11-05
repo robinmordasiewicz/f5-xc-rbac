@@ -1,0 +1,50 @@
+name: pre-commit
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: pre-commit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Node.js (for jscpd via npx)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run pre-commit (all files)
+        uses: pre-commit/action@v3.0.1
+        with:
+          extra_args: --all-files --show-diff-on-failure
+
+      - name: pip-audit (pyproject, strict)
+        run: pre-commit run pip-audit-pyproject --hook-stage manual
+
+      # Optional: surface hook versions and cache summary for debugging
+      - name: Show pre-commit versions
+        if: always()
+        run: |
+          python -V
+          pre-commit --version || true
+          git --no-pager log -1 --pretty=oneline || true

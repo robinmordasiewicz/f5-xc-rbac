@@ -39,8 +39,8 @@ jobs:
             echo "$XC_CERT" | base64 -d > secrets/cert.pem
             echo "$XC_CERT_KEY" | base64 -d > secrets/key.pem
             echo "Using cert/key auth"
-            echo "VOLT_API_CERT_FILE=$GITHUB_WORKSPACE/secrets/cert.pem" >> $GITHUB_ENV
-            echo "VOLT_API_CERT_KEY_FILE=$GITHUB_WORKSPACE/secrets/key.pem" >> $GITHUB_ENV
+            echo "VOLT_API_CERT_FILE=${GITHUB_WORKSPACE}/secrets/cert.pem" >> "$GITHUB_ENV"
+            echo "VOLT_API_CERT_KEY_FILE=${GITHUB_WORKSPACE}/secrets/key.pem" >> "$GITHUB_ENV"
           elif [[ -n "${XC_P12:-}" && -n "${XC_P12_PASSWORD:-}" ]]; then
             echo "$XC_P12" | base64 -d > secrets/xc.p12
             # Split p12 to PEM for requests
@@ -52,8 +52,8 @@ jobs:
               mv secrets/key_nopass.pem secrets/key.pem
             fi
             echo "Using p12 (converted to PEM) auth"
-            echo "VOLT_API_CERT_FILE=$GITHUB_WORKSPACE/secrets/cert.pem" >> $GITHUB_ENV
-            echo "VOLT_API_CERT_KEY_FILE=$GITHUB_WORKSPACE/secrets/key.pem" >> $GITHUB_ENV
+            echo "VOLT_API_CERT_FILE=${GITHUB_WORKSPACE}/secrets/cert.pem" >> "$GITHUB_ENV"
+            echo "VOLT_API_CERT_KEY_FILE=${GITHUB_WORKSPACE}/secrets/key.pem" >> "$GITHUB_ENV"
           else
             echo "No XC credentials found in secrets (XC_CERT/XC_CERT_KEY or XC_P12/XC_P12_PASSWORD)." >&2
             exit 1
@@ -62,7 +62,7 @@ jobs:
             echo "TENANT_ID secret is required" >&2
             exit 1
           fi
-          echo "TENANT_ID=$TENANT_ID" >> $GITHUB_ENV
+          echo "TENANT_ID=${TENANT_ID}" >> "$GITHUB_ENV"
 
       - name: Dry-run sync
         run: |
