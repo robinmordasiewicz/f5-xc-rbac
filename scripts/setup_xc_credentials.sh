@@ -125,11 +125,11 @@ if [[ "$SET_SECRETS" == "true" ]]; then
   b64() { base64 | tr -d '\n'; }
 
   echo "Setting GitHub repo secrets (TENANT_ID, XC_CERT, XC_CERT_KEY, XC_P12, XC_P12_PASSWORD)..."
-  printf "%s" "$TENANT" | gh secret set TENANT_ID --repos :owner/:repo --body - 1>/dev/null || true
-  b64 <"$CERT_PATH" | gh secret set XC_CERT --repos :owner/:repo --body - 1>/dev/null || true
-  b64 <"$KEY_PATH" | gh secret set XC_CERT_KEY --repos :owner/:repo --body - 1>/dev/null || true
-  b64 <"$P12" | gh secret set XC_P12 --repos :owner/:repo --body - 1>/dev/null || true
-  printf "%s" "$P12_PASS" | gh secret set XC_P12_PASSWORD --repos :owner/:repo --body - 1>/dev/null || true
+  printf "%s" "$TENANT" | gh secret set TENANT_ID --body - 1>/dev/null || true
+  b64 <"$CERT_PATH" | gh secret set XC_CERT --body - 1>/dev/null || true
+  b64 <"$KEY_PATH" | gh secret set XC_CERT_KEY --body - 1>/dev/null || true
+  b64 <"$P12" | gh secret set XC_P12 --body - 1>/dev/null || true
+  printf "%s" "$P12_PASS" | gh secret set XC_P12_PASSWORD --body - 1>/dev/null || true
   echo "Secrets set."
 fi
 
