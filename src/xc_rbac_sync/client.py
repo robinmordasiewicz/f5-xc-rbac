@@ -1,11 +1,15 @@
 from __future__ import annotations
 
-import os
 from typing import Any, Dict, Optional
 
 import requests
 from requests import Response
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 
 class XCClient:
@@ -29,7 +33,9 @@ class XCClient:
         elif p12_file:
             # requests doesn't support .p12 directly; assume caller split to PEM before
             # Keeping branch for completeness if adapter is added later
-            raise ValueError("requests does not support .p12; provide cert/key or split the p12")
+            raise ValueError(
+                "requests does not support .p12; provide cert/key or split the p12"
+            )
         elif cert_file and key_file:
             self.session.cert = (cert_file, key_file)
         else:
@@ -46,7 +52,9 @@ class XCClient:
         resp = self.session.request(method, url, timeout=self.timeout, **kwargs)
         if resp.status_code in (429, 500, 502, 503, 504):
             # Let tenacity retry
-            raise requests.RequestException(f"Transient error: {resp.status_code}: {resp.text}")
+            raise requests.RequestException(
+                f"Transient error: {resp.status_code}: {resp.text}"
+            )
         resp.raise_for_status()
         return resp
 
@@ -55,7 +63,9 @@ class XCClient:
         r = self._request("GET", f"/api/web/namespaces/{namespace}/usergroups")
         return r.json()
 
-    def create_group(self, group: Dict[str, Any], namespace: str = "system") -> Dict[str, Any]:
+    def create_group(
+        self, group: Dict[str, Any], namespace: str = "system"
+    ) -> Dict[str, Any]:
         r = self._request(
             "POST",
             f"/api/web/namespaces/{namespace}/usergroups",
@@ -63,7 +73,9 @@ class XCClient:
         )
         return r.json()
 
-    def update_group(self, name: str, group: Dict[str, Any], namespace: str = "system") -> Dict[str, Any]:
+    def update_group(
+        self, name: str, group: Dict[str, Any], namespace: str = "system"
+    ) -> Dict[str, Any]:
         r = self._request(
             "PUT",
             f"/api/web/namespaces/{namespace}/usergroups/{name}",
