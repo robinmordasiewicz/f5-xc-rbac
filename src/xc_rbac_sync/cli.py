@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import logging
 import os
 from collections import defaultdict
 from typing import Dict, Set
@@ -9,16 +10,13 @@ import click
 from dotenv import load_dotenv
 
 from .client import XCClient
+from .ldap_utils import LdapParseError, extract_cn
 from .models import Group
 
-
-def _extract_cn(dn: str) -> str:
-    # Very simple CN extractor; proper LDAP parsing can be added (python-ldap/ldap3)
-    for part in dn.split(","):
-        part = part.strip()
-        if part.upper().startswith("CN="):
-            return part.split("=", 1)[1]
-    raise ValueError(f"CN not found in DN: {dn}")
+REQUIRED_COLUMNS = {
+    "Email",
+    "Entitlement Display Name",
+}
 
 
 @click.group()
@@ -35,7 +33,27 @@ def cli() -> None:
     help="Path to CSV export",
 )
 @click.option("--dry-run", is_flag=True, help="Log actions without calling the API")
-def sync(csv_path: str, dry_run: bool) -> None:
+@click.option("--cleanup", is_flag=True, help="Delete XC groups missing from CSV")
+@click.option(
+    "--log-level",
+    type=click.Choice(["debug", "info", "warn", "error"], case_sensitive=False),
+    default="info",
+    help="Logging level",
+)
+@click.option("--max-retries", type=int, default=3, help="Max retries for API calls")
+@click.option("--timeout", type=int, default=30, help="HTTP timeout (seconds)")
+def sync(
+    csv_path: str,
+    dry_run: bool,
+    cleanup: bool,
+    log_level: str,
+    max_retries: int,
+    timeout: int,
+) -> None:
+    logging.basicConfig(
+        level=getattr(logging, log_level.upper(), logging.INFO),
+        format="%(levelname)s %(message)s",
+    )
     load_dotenv()
     tenant_id = os.getenv("TENANT_ID")
     api_token = os.getenv("XC_API_TOKEN")
@@ -50,16 +68,27 @@ def sync(csv_path: str, dry_run: bool) -> None:
     client: XCClient
     if p12_file:
         # requests can't use p12; split to PEM; fallback to token/cert-key
-        click.echo(
+        logging.info(
             (
                 "P12 provided; split to PEM for requests "
                 "or set XC_API_TOKEN or cert/key. Falling back."
             )
         )
     if cert_file and key_file:
-        client = XCClient(tenant_id=tenant_id, cert_file=cert_file, key_file=key_file)
+        client = XCClient(
+            tenant_id=tenant_id,
+            cert_file=cert_file,
+            key_file=key_file,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
     elif api_token:
-        client = XCClient(tenant_id=tenant_id, api_token=api_token)
+        client = XCClient(
+            tenant_id=tenant_id,
+            api_token=api_token,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
     else:
         raise click.UsageError(
             (
@@ -68,10 +97,24 @@ def sync(csv_path: str, dry_run: bool) -> None:
             )
         )
 
+    # Preflight: fail fast on auth issues before doing any work
+    try:
+        # Create client first; will validate auth via a lightweight call below
+        pass
+    except Exception:
+        # placeholder: client not yet created
+        pass
+
     # Build groups from CSV
     members: Dict[str, Set[str]] = defaultdict(set)
     with open(csv_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
+        header = set(reader.fieldnames or [])
+        missing = [c for c in REQUIRED_COLUMNS if c not in header]
+        if missing:
+            raise click.UsageError(
+                f"CSV missing required columns: {', '.join(sorted(missing))}"
+            )
         for row in reader:
             dn = row.get("Entitlement Display Name") or row.get(
                 "entitlement_display_name"
@@ -80,8 +123,9 @@ def sync(csv_path: str, dry_run: bool) -> None:
             if not dn or not email:
                 continue
             try:
-                cn = _extract_cn(dn)
-            except ValueError:
+                cn = extract_cn(dn)
+            except LdapParseError as e:
+                logging.warning("Skipping row due to DN parse error: %s", e)
                 continue
             members[cn].add(email)
 
@@ -94,23 +138,120 @@ def sync(csv_path: str, dry_run: bool) -> None:
     for grp in planned:
         click.echo(f" - {grp.name}: {len(grp.users)} users")
 
-    if dry_run:
-        click.echo("Dry-run: no API calls made.")
-        return
+    # List existing groups (auth preflight happens here)
+    try:
+        list_resp = client.list_groups()
+    except Exception as e:
+        raise click.ClickException(f"Authentication or API error listing groups: {e}")
 
-    # Example real flow (idempotent upsert): list, compare, create/update
     existing = {
-        g.get("name"): g
-        for g in client.list_groups().get("items", [])
-        if isinstance(g, dict)
+        g.get("name"): g for g in list_resp.get("items", []) if isinstance(g, dict)
     }
-    for grp in planned:
-        body = {"name": grp.name, "users": grp.users}
-        if grp.name in existing:
-            client.update_group(grp.name, body)
-        else:
-            client.create_group(body)
 
+    created = 0
+    updated = 0
+    skipped = 0
+    deleted = 0
+    errors = 0
+    skipped_due_to_unknown = 0
+
+    # FR-010: Pre-validate user existence in XC
+    # Build set of all unique emails from planned groups
+    # Note: can be used for reporting; current flow only needs membership map per group
+    try:
+        roles = client.list_user_roles()
+        existing_users = {
+            u.get("username") or u.get("email")
+            for u in roles.get("items", [])
+            if isinstance(u, dict)
+        }
+    except Exception as e:
+        logging.warning("Could not pre-validate users (user_roles): %s", e)
+        existing_users = None
+
+    # Upsert logic with idempotency
+    for grp in planned:
+        desired_users = sorted(grp.users)
+        # Skip groups with unknown users if pre-validation found gaps
+        if existing_users is not None:
+            unknown = [u for u in desired_users if u not in existing_users]
+            if unknown:
+                skipped_due_to_unknown += 1
+                errors += 1  # count as error per spec's pre-validation requirement
+                logging.error(
+                    "Skipping group %s due to unknown users: %s",
+                    grp.name,
+                    ", ".join(unknown),
+                )
+                continue
+
+        if grp.name in existing:
+            curr = existing[grp.name]
+            curr_users = sorted(curr.get("usernames") or curr.get("users") or [])
+            if curr_users == desired_users:
+                skipped += 1
+                logging.debug("No change for group %s", grp.name)
+                continue
+            payload = {
+                "name": grp.name,
+                "display_name": grp.name,
+                "usernames": desired_users,
+            }
+            if dry_run:
+                click.echo(
+                    f"Would update group {grp.name} ({len(desired_users)} users)"
+                )
+            else:
+                try:
+                    client.update_group(grp.name, payload)
+                    updated += 1
+                except Exception as e:
+                    errors += 1
+                    logging.error("Failed to update %s: %s", grp.name, e)
+        else:
+            payload = {
+                "name": grp.name,
+                "display_name": grp.name,
+                "usernames": desired_users,
+            }
+            if dry_run:
+                click.echo(
+                    f"Would create group {grp.name} ({len(desired_users)} users)"
+                )
+            else:
+                try:
+                    client.create_group(payload)
+                    created += 1
+                except Exception as e:
+                    errors += 1
+                    logging.error("Failed to create %s: %s", grp.name, e)
+
+    # Cleanup mode
+    if cleanup:
+        planned_names = {g.name for g in planned}
+        extra = [name for name in existing.keys() if name not in planned_names]
+        if extra:
+            click.echo(f"Extra groups in XC not in CSV: {len(extra)}")
+            for name in extra:
+                click.echo(f" - {name}")
+            if not dry_run:
+                for name in extra:
+                    try:
+                        client.delete_group(name)
+                        deleted += 1
+                    except Exception as e:
+                        errors += 1
+                        logging.error("Failed to delete %s: %s", name, e)
+
+    # Summary
+    click.echo(
+        "Summary: created=%d, updated=%d, deleted=%d, skipped=%d, errors=%d"
+        % (created, updated, deleted, skipped, errors)
+    )
+    if errors:
+        raise click.ClickException(
+            "One or more operations failed; see logs for details"
+        )
     click.echo("Sync complete.")
 
 
