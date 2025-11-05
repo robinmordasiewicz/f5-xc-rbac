@@ -36,3 +36,12 @@ __pycache__/
 
 # Python packaging artifacts
 *.egg-info/
+
+# Build artifacts
+/build/
+/dist/
+*.whl
+*.tar.gz
+
+# Wheel / binary build dirs
+bdist.*
