@@ -166,7 +166,10 @@ repos:
         entry: bash -eo pipefail -c 'python -m pip install -q --upgrade pip pip-audit; python -m pip install -q . || true; python -m pip_audit --strict -P --progress-spinner off'
         language: system
         pass_filenames: false
-        stages: [manual]
+        # Run pip-audit against the project when pyproject.toml exists.
+        # Note: this may be slower for local commits; keep it if you want local pyproject auditing.
+        stages: [pre-commit]
+        files: '^pyproject\.toml$'
         exclude: '(^\\.git/|^\\.specify/|^secrets/)'
 
       - id: jscpd-dry
