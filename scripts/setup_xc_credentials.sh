@@ -215,4 +215,21 @@ if [[ "$TIDY_LEGACY_ENV" == "true" && -f .env ]]; then
   fi
 fi
 
+# Always clean up any historical temp-suffix files left by prior runs
+# Only remove files matching: secrets/{.env,cert.pem,key.pem}.XXXXXX (6 alphanumeric)
+(
+  shopt -s nullglob
+  for base in .env cert.pem key.pem; do
+    for tmp in "secrets/$base".*; do
+      name=${tmp##*/}
+      suffix=${name##*.}
+      stem=${name%.*}
+      if [[ "$stem" == "$base" && "$suffix" =~ ^[[:alnum:]]{6}$ ]]; then
+        rm -f "$tmp" || true
+      fi
+    done
+  done
+  shopt -u nullglob
+)
+
 echo "Setup complete."
