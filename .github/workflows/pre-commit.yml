@@ -33,6 +33,9 @@ jobs:
         with:
           extra_args: --all-files --show-diff-on-failure
 
+      - name: pip-audit (pyproject, strict)
+        run: pre-commit run pip-audit-pyproject --hook-stage manual
+
       # Optional: surface hook versions and cache summary for debugging
       - name: Show pre-commit versions
         if: always()
