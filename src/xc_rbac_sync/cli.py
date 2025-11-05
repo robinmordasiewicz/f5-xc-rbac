@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import logging
 import os
 from collections import defaultdict
 from typing import Dict, Set
@@ -9,16 +10,13 @@ import click
 from dotenv import load_dotenv
 
 from .client import XCClient
+from .ldap_utils import LdapParseError, extract_cn
 from .models import Group
 
-
-def _extract_cn(dn: str) -> str:
-    # Very simple CN extractor; proper LDAP parsing can be added (python-ldap/ldap3)
-    for part in dn.split(","):
-        part = part.strip()
-        if part.upper().startswith("CN="):
-            return part.split("=", 1)[1]
-    raise ValueError(f"CN not found in DN: {dn}")
+REQUIRED_COLUMNS = {
+    "Email",
+    "Entitlement Display Name",
+}
 
 
 @click.group()
@@ -35,7 +33,18 @@ def cli() -> None:
     help="Path to CSV export",
 )
 @click.option("--dry-run", is_flag=True, help="Log actions without calling the API")
-def sync(csv_path: str, dry_run: bool) -> None:
+@click.option("--cleanup", is_flag=True, help="Delete XC groups missing from CSV")
+@click.option(
+    "--log-level",
+    type=click.Choice(["debug", "info", "warn", "error"], case_sensitive=False),
+    default="info",
+    help="Logging level",
+)
+def sync(csv_path: str, dry_run: bool, cleanup: bool, log_level: str) -> None:
+    logging.basicConfig(
+        level=getattr(logging, log_level.upper(), logging.INFO),
+        format="%(levelname)s %(message)s",
+    )
     load_dotenv()
     tenant_id = os.getenv("TENANT_ID")
     api_token = os.getenv("XC_API_TOKEN")
@@ -50,7 +59,7 @@ def sync(csv_path: str, dry_run: bool) -> None:
     client: XCClient
     if p12_file:
         # requests can't use p12; split to PEM; fallback to token/cert-key
-        click.echo(
+        logging.info(
             (
                 "P12 provided; split to PEM for requests "
                 "or set XC_API_TOKEN or cert/key. Falling back."
@@ -72,6 +81,12 @@ def sync(csv_path: str, dry_run: bool) -> None:
     members: Dict[str, Set[str]] = defaultdict(set)
     with open(csv_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
+        header = set(reader.fieldnames or [])
+        missing = [c for c in REQUIRED_COLUMNS if c not in header]
+        if missing:
+            raise click.UsageError(
+                f"CSV missing required columns: {', '.join(sorted(missing))}"
+            )
         for row in reader:
             dn = row.get("Entitlement Display Name") or row.get(
                 "entitlement_display_name"
@@ -80,8 +95,9 @@ def sync(csv_path: str, dry_run: bool) -> None:
             if not dn or not email:
                 continue
             try:
-                cn = _extract_cn(dn)
-            except ValueError:
+                cn = extract_cn(dn)
+            except LdapParseError as e:
+                logging.warning("Skipping row due to DN parse error: %s", e)
                 continue
             members[cn].add(email)
 
@@ -110,6 +126,18 @@ def sync(csv_path: str, dry_run: bool) -> None:
             client.update_group(grp.name, body)
         else:
             client.create_group(body)
+
+    # Cleanup mode (planned for US2; wiring flag now, implement here if enabled)
+    if cleanup:
+        planned_names = {g.name for g in planned}
+        extra = [name for name in existing.keys() if name not in planned_names]
+        if extra:
+            click.echo(f"Extra groups in XC not in CSV: {len(extra)}")
+            for name in extra:
+                click.echo(f" - {name}")
+            if not dry_run:
+                for name in extra:
+                    client.delete_group(name)
 
     click.echo("Sync complete.")
 

@@ -17,9 +17,9 @@ Format: `[ID] [P?] [Story] Description`
 
 Purpose: Project initialization and basic structure
 
-- [ ] T001 Ensure Python packaging baseline is Python 3.12 in `pyproject.toml`
-- [ ] T002 [P] Add LDAP DN parsing dependency `ldap3` to `[project.dependencies]` in `pyproject.toml`
-- [ ] T003 [P] Confirm pre-commit hooks (Ruff/Black/Markdown/Shell) are installed and configured in `.pre-commit-config.yaml`
+- [X] T001 Ensure Python packaging baseline is Python 3.12 in `pyproject.toml`
+- [X] T002 [P] Add LDAP DN parsing dependency `ldap3` to `[project.dependencies]` in `pyproject.toml`
+- [X] T003 [P] Confirm pre-commit hooks (Ruff/Black/Markdown/Shell) are installed and configured in `.pre-commit-config.yaml`
 
 ---
 
@@ -27,11 +27,11 @@ Purpose: Project initialization and basic structure
 
 Purpose: Core infrastructure that MUST be complete before ANY user story can be implemented.
 
-- [ ] T004 Create LDAP DN parsing utility `src/xc_rbac_sync/ldap_utils.py` using `ldap3.utils.dn.parse_dn` and validate CN against naming rules
-- [ ] T005 [P] Implement XC API client with retries in `src/xc_rbac_sync/client.py` for endpoints from `specs/001-xc-group-sync/contracts/xc-iam.yaml`
-- [ ] T006 [P] Add CLI options and environment loading for auth, tenant, dry-run, cleanup in `src/xc_rbac_sync/cli.py`
-- [ ] T007 Implement CSV schema validation for required columns in `src/xc_rbac_sync/cli.py`
-- [ ] T008 Configure logging levels and ensure secrets are never logged in `src/xc_rbac_sync/cli.py`
+- [X] T004 Create LDAP DN parsing utility `src/xc_rbac_sync/ldap_utils.py` using `ldap3.utils.dn.parse_dn` and validate CN against naming rules
+- [X] T005 [P] Implement XC API client with retries in `src/xc_rbac_sync/client.py` for endpoints from `specs/001-xc-group-sync/contracts/xc-iam.yaml`
+- [X] T006 [P] Add CLI options and environment loading for auth, tenant, dry-run, cleanup in `src/xc_rbac_sync/cli.py`
+- [X] T007 Implement CSV schema validation for required columns in `src/xc_rbac_sync/cli.py`
+- [X] T008 Configure logging levels and ensure secrets are never logged in `src/xc_rbac_sync/cli.py`
 
 Checkpoint: Foundation ready — user story implementation can now begin in parallel
 

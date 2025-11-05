@@ -58,9 +58,9 @@ class XCClient:
         resp.raise_for_status()
         return resp
 
-    # User Groups
+    # User Groups (custom API)
     def list_groups(self, namespace: str = "system") -> Dict[str, Any]:
-        r = self._request("GET", f"/api/web/namespaces/{namespace}/usergroups")
+        r = self._request("GET", f"/api/web/custom/namespaces/{namespace}/user_groups")
         return r.json()
 
     def create_group(
@@ -68,7 +68,7 @@ class XCClient:
     ) -> Dict[str, Any]:
         r = self._request(
             "POST",
-            f"/api/web/namespaces/{namespace}/usergroups",
+            f"/api/web/custom/namespaces/{namespace}/user_groups",
             json=group,
         )
         return r.json()
@@ -78,10 +78,17 @@ class XCClient:
     ) -> Dict[str, Any]:
         r = self._request(
             "PUT",
-            f"/api/web/namespaces/{namespace}/usergroups/{name}",
+            f"/api/web/custom/namespaces/{namespace}/user_groups/{name}",
             json=group,
         )
         return r.json()
 
     def delete_group(self, name: str, namespace: str = "system") -> None:
-        self._request("DELETE", f"/api/web/namespaces/{namespace}/usergroups/{name}")
+        self._request(
+            "DELETE", f"/api/web/custom/namespaces/{namespace}/user_groups/{name}"
+        )
+
+    # Users / Roles (for pre-validation)
+    def list_user_roles(self, namespace: str = "system") -> Dict[str, Any]:
+        r = self._request("GET", f"/api/web/custom/namespaces/{namespace}/user_roles")
+        return r.json()
