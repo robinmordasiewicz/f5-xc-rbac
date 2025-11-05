@@ -168,7 +168,7 @@ repos:
         pass_filenames: false
         # Run pip-audit against the project when pyproject.toml exists.
         # Note: this may be slower for local commits; keep it if you want local pyproject auditing.
-        stages: [pre-commit]
+        stages: [manual, pre-commit]
         files: '^pyproject\.toml$'
         exclude: '(^\\.git/|^\\.specify/|^secrets/)'
 
