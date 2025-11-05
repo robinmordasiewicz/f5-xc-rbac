@@ -1,9 +1,9 @@
 <!--
 Sync Impact Report
-Version change: 2.2.0 → 2.3.0
-Modified principles: Removed 'Review Required' principle; aligned Governance, PR checklist, Definition of Done.
-Added sections: (none)
-Removed sections: Review Required
+Version change: 2.3.0 → 2.4.0
+Modified sections: Quality Gates, Automation Enforcement (Issue-First), Bot/Agent Behavior, Pull Request Checklist, Governance
+Added sections: Pre-edit Guard (Bot/Agent hard gate)
+Removed sections: (none)
 Templates requiring updates:
 - plan-template.md ✅ (no change required)
 - spec-template.md ✅ (no change required)
@@ -22,7 +22,8 @@ Every piece of work MUST start with a GitHub issue. No coding, branches, or fixe
 This is not advisory. It is a policy enforced by automation (see Automation Enforcement).
 
 ### Quality Gates
-Pre-commit hooks, linting, and tests are mandatory. All code must pass validation checks, and no bypasses are allowed. Code review is required before merge. No hardcoded secrets. Dependencies must be kept up to date.
+Pre-commit hooks, linting, and tests are mandatory. All code must pass validation checks, and no bypasses are allowed. No hardcoded secrets. Dependencies must be kept up to date.
+
 
 
 ### Clean History
@@ -59,6 +60,14 @@ If at any point an issue is not present, work MUST stop and an issue MUST be cre
 
 To guarantee Issue-First behavior, the following gates are MANDATORY:
 
+0) Pre-edit Guard (Bot/Agent hard gate)
+- Before ANY file modification or stateful tool call (e.g., apply_patch, create_file, edit_notebook_file), the agent MUST:
+	- Verify an open Issue exists and capture its number N;
+	- Verify the current branch is named `N-<description>`; if not, create/switch to it;
+	- Post the Issue URL in the same assistant message BEFORE performing edits;
+	- Include `Refs #N` in the tool "explanation" field for every editing action.
+- If the agent lacks permission to create an issue/branch, it MUST halt and request user guidance.
+
 1) Pre-commit (commit-msg stage)
 - A commit message gate rejects commits without an issue reference (`#N`) in the subject or body.
 - Example requirement: subject must start with `[N]` or contain `Refs #N`/`Closes #N`.
@@ -81,7 +90,7 @@ To guarantee Issue-First behavior, the following gates are MANDATORY:
 - Before any file modification, the agent MUST:
 	- Search for a related open issue; if none exists, create one with the problem statement and acceptance criteria.
 	- Create/switch to a branch named with the issue number.
-	- Include the issue reference in all commits and PR description.
+	- Include the issue link in the conversation BEFORE edits, and include the issue reference in all commits, PR descriptions, and edit-tool explanations.
 	- Halt and request user guidance only if lacking permissions to create issues/branches.
 
 Non-compliance with any gate MUST block the change until resolved.
@@ -123,6 +132,7 @@ Example commit subject lines:
 - [ ] Issue created FIRST before work began
 - [ ] Branch name matches `^[0-9]+-[a-z0-9-]+$` and encodes the issue number
 - [ ] All commits reference the issue (e.g., `Refs #N`); PR body includes `Closes #N`
+- [ ] Agent posted the Issue link in the conversation before any edits (automation evidence)
 - [ ] Tests added and passing
 - [ ] Documentation updated
  - [ ] No linting errors
@@ -151,3 +161,4 @@ Work is complete when:
 
 **Version**: 2.1.0 | **Ratified**: TODO(RATIFICATION_DATE): Original ratification date unknown | **Last Amended**: 2025-11-03
 **Version**: 2.3.0 | **Ratified**: TODO(RATIFICATION_DATE): Original ratification date unknown | **Last Amended**: 2025-11-05
+**Version**: 2.4.0 | **Ratified**: TODO(RATIFICATION_DATE): Original ratification date unknown | **Last Amended**: 2025-11-05
