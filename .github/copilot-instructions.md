@@ -15,7 +15,11 @@ tests/
 
 ## Commands
 
-cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] pytest [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] ruff check .
+```bash
+cd src
+pytest
+ruff check .
+```
 
 ## Code Style
 
@@ -23,6 +27,7 @@ Python 3.12: Follow standard conventions
 
 ## Recent Changes
 
+- 001-precommit-requirements: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
 - 001-xc-group-sync-plan: Added Python 3.12 + requests, click, pydantic, python-dotenv, tenacity
 
 <!-- MANUAL ADDITIONS START -->
