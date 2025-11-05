@@ -111,6 +111,8 @@
 - **FR-014**: Secrets and sensitive material MUST NOT be committed. The repository MUST .gitignore secrets/ and similar paths; detect-secrets baseline MUST be updated when intentional test fixtures create deterministic matches.
 - **FR-015**: Lint/format/security checks MUST be runnable locally via pre-commit and reproducible in CI (e.g., "pre-commit run --all-files" in CI).
 
+- **FR-016**: GitHub Actions workflows MUST be linted by actionlint via pre-commit and in CI; any violation blocks PRs.
+
 ### Key Entities *(include if feature involves data)*
 
 - **[Entity 1]**: [What it represents, key attributes without implementation]

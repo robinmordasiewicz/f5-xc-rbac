@@ -88,6 +88,40 @@ repos:
           - '(\\.venv/|^secrets/|^\.git/)'
         exclude: '(^\.git/|^\.specify/)'
 
+  # Security: Python SAST via Bandit
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.9
+    hooks:
+      - id: bandit
+        name: bandit (Python security SAST)
+        args: ["-q", "-r", ".", "-ll"]
+        pass_filenames: false
+        exclude: '(^\\.git/|^\\.specify/|^secrets/)'
+
+  # Security: Dependency vulnerability scan via pip-audit (strict)
+  # Note: This audits the environment when no requirements are provided. For deterministic scans,
+  # prefer adding a requirements.txt and piping it via CI (follow-up allowed).
+  - repo: https://github.com/pypa/pip-audit
+    rev: v2.7.3
+    hooks:
+      - id: pip-audit
+        name: pip-audit (dependency scan)
+        args: ["--strict", "--progress-spinner", "off", "-r"]
+        # Only run when a requirements manifest exists/is modified; avoids auditing the tool env
+        files: '(^requirements\.txt$|^requirements\..*\.txt$)'
+        additional_dependencies: []
+        exclude: '(^\\.git/|^\\.specify/|^secrets/)'
+
+  # GitHub Actions workflow linter
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.4
+    hooks:
+      - id: actionlint
+        name: actionlint (GitHub Actions linter)
+        # Avoid double shellcheck/py checks inside actionlint; we run ShellCheck separately
+        args: ["-color"]
+        files: '^\.github/workflows/.*\.ya?ml$'
+
   # Local hooks: enforce Issue-First policy gates
   - repo: local
     hooks:

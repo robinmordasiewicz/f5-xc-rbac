@@ -12,7 +12,7 @@ Implement comprehensive, enforceable pre-commit requirements (formatting, lintin
 ## Technical Context
 
 **Language/Version**: Python 3.12
-**Primary Dependencies**: pre-commit; Black 24.10.0; Ruff v0.6.0; ShellCheck v0.11.0; shfmt v3.12.0-2; PyMarkdown v0.9.33; editorconfig-checker 3.4.1; detect-secrets v1.5.0; Bandit (to add); pip-audit (to add)
+**Primary Dependencies**: pre-commit; Black 24.10.0; Ruff v0.6.0; ShellCheck v0.11.0; shfmt v3.12.0-2; PyMarkdown v0.9.33; editorconfig-checker 3.4.1; detect-secrets v1.5.0; Bandit 1.7.9; pip-audit v2.7.3; actionlint v1.7.4
 **Storage**: N/A
 **Testing**: pytest
 **Target Platform**: GitHub Actions (CI), macOS/Linux dev machines
