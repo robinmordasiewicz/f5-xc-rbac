@@ -12,6 +12,10 @@
 - Q: Should all pre-commit checks be mirrored and enforced in CI (PR-blocking) to guarantee parity and prevent bypass? → A: Enforce pre-commit checks in CI and block merges (Local + CI parity).
 - Q: Should we enforce a quantitative DRY threshold to block PRs on significant duplication? → A: Duplicate blocks ≥15 lines appearing in ≥2 locations must block PRs.
 
+### Session 2025-11-06
+
+- Q: CSV-driven sync behavior: should the CSV be authoritative for group existence and membership, including creating groups, creating users when missing, and adding users to groups when absent? → A: Yes. The CSV MUST be used to ensure groups exist (create if missing), create users when they do not exist, and add users to the groups defined in the CSV when they are not already members.
+
 ## User Scenarios & Testing *(mandatory)*
 
 <!--
@@ -82,6 +86,10 @@
 - What happens when [boundary condition]?
 - How does system handle [error scenario]?
 
+- If a CSV references a user that cannot be created automatically (missing required attributes or external identity provider rejection), the system MUST log the failure and continue processing other rows; the row should be reported in an errors summary and optionally written to a failure report for manual remediation.
+- When group creation fails due to name validation or collision, the system MUST skip that group, record the failure, and continue processing other groups; collisions with existing system-managed groups must be treated as errors and surfaced for human review.
+- Membership operations MUST be resilient to transient API failures (retries with backoff in accordance with repository backoff policy) and avoid partial-commit states: where practical, group creation and membership assignments for a single CSV row should be retried; permanent failures should be recorded and summarized.
+
 ## Requirements *(mandatory)*
 
 <!--
@@ -114,12 +122,22 @@
 
 - **FR-016**: GitHub Actions workflows MUST be linted by actionlint via pre-commit and in CI; any violation blocks PRs.
 
+- **FR-018**: CSV-driven synchronization MUST ensure group existence: when the CSV references a group name that does not exist in the target system, the system MUST create the group prior to assigning users.
+- **FR-019**: CSV-driven synchronization MUST ensure user existence: when the CSV references a user (email/username) that does not exist in the target system, the system MUST create the user (with necessary minimal attributes drawn from the CSV or configured defaults) before attempting to add them to groups.
+- **FR-020**: CSV-driven synchronization MUST ensure membership: for each group/user mapping in the CSV, if the user is not already a member of the specified group, the system MUST add the user to the group. These operations MUST be idempotent (re-running the same CSV must not produce duplicate memberships) and must respect dry-run mode.
+
 - **FR-017**: Code MUST follow DRY. Duplicate blocks of ≥15 lines occurring in ≥2 locations are violations. A duplication detector (e.g., jscpd or equivalent) MUST run in pre-commit and CI across relevant text/code types (Python, Shell, YAML, Markdown). Generated code, vendored dependencies, and explicitly documented exclusions MAY be ignored via configuration. Any violation MUST block PRs.
 
 ### Key Entities *(include if feature involves data)*
 
 - **[Entity 1]**: [What it represents, key attributes without implementation]
 - **[Entity 2]**: [What it represents, relationships to other entities]
+
+### CSV Sync Entities
+
+- **User**: identified by email or username. Key attributes: email, username (optional alias), display_name (optional), created_at. Uniqueness: email is canonical unique identifier.
+- **Group**: identified by name (CN derived from DN). Key attributes: name, display_name, member list. Relationship: many-to-many (users ↔ groups).
+- **Membership**: association between User and Group. Operations: create, delete, query. Idempotent semantics required.
 
 ## Success Criteria *(mandatory)*
 

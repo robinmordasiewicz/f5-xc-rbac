@@ -175,3 +175,23 @@ class XCClient:
         """
         r = self._request("GET", f"/api/web/custom/namespaces/{namespace}/user_roles")
         return r.json()
+
+    def create_user(
+        self, user: Dict[str, Any], namespace: str = "system"
+    ) -> Dict[str, Any]:
+        """Create a new user/role entry for validation or provisioning.
+
+        Args:
+            user: User data dictionary (e.g., email, username, display_name)
+            namespace: XC namespace (default: "system")
+
+        Returns:
+            Dictionary containing created user metadata
+
+        """
+        r = self._request(
+            "POST",
+            f"/api/web/custom/namespaces/{namespace}/user_roles",
+            json=user,
+        )
+        return r.json()

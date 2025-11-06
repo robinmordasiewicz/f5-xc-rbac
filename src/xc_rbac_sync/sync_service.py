@@ -3,6 +3,21 @@
 Provides the core business logic for synchronizing user groups from CSV
 files to F5 XC, including CSV parsing, group CRUD operations, user validation,
 and orphaned group cleanup.
+
+Create_user contract and payload:
+- The service will call `repository.create_user(user_dict)` when it needs to
+    provision a missing user. The `user_dict` SHOULD contain at minimum:
+        - `email` (string) — canonical identifier used by the CSV and XC.
+    Optional fields that may be provided when available:
+        - `username` (string)
+        - `display_name` (string)
+    Concrete repository implementations MUST accept this shape or raise an
+    exception. The operation is retried on transient errors.
+
+Retry configuration:
+- `GroupSyncService` accepts retry/backoff parameters to control how many
+    attempts are made when creating users and the exponential backoff window.
+    These default to conservative values but can be tuned per-instance.
 """
 
 from __future__ import annotations
@@ -12,6 +27,12 @@ import logging
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import ClassVar, Dict, List, Set
+
+from tenacity import (
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from .ldap_utils import LdapParseError, extract_cn
 from .models import Group
@@ -52,7 +73,15 @@ class GroupSyncService:
 
     REQUIRED_COLUMNS: ClassVar[set[str]] = {"Email", "Entitlement Display Name"}
 
-    def __init__(self, repository: GroupRepository):
+    def __init__(
+        self,
+        repository: GroupRepository,
+        *,
+        retry_attempts: int = 3,
+        backoff_multiplier: float = 1.0,
+        backoff_min: float = 1.0,
+        backoff_max: float = 4.0,
+    ):
         """Initialize service with a group repository.
 
         Args:
@@ -60,6 +89,11 @@ class GroupSyncService:
 
         """
         self.repository = repository
+        # Retry/backoff tuning for user creation retries
+        self.retry_attempts = int(retry_attempts)
+        self.backoff_multiplier = float(backoff_multiplier)
+        self.backoff_min = float(backoff_min)
+        self.backoff_max = float(backoff_max)
 
     def parse_csv_to_groups(self, csv_path: str) -> List[Group]:
         """Parse CSV file into Group objects.
@@ -170,20 +204,59 @@ class GroupSyncService:
         """
         stats = SyncStats()
 
+        # If caller didn't provide existing_users for pre-validation, fetch
+        # current users so we can create missing users as needed.
+        if existing_users is None:
+            try:
+                roles = self.repository.list_user_roles()
+                current_users = {
+                    u.get("username") or u.get("email")
+                    for u in roles.get("items", [])
+                    if isinstance(u, dict)
+                }
+            except Exception as e:
+                logging.warning("Could not fetch existing users: %s", e)
+                current_users = set()
+        else:
+            current_users = set(existing_users)
+
         for grp in planned_groups:
             desired_users = sorted(grp.users)
 
-            # Skip groups with unknown users if pre-validation found gaps
-            if existing_users is not None:
-                unknown = [u for u in desired_users if u not in existing_users]
+            # Ensure users exist when pre-validation was not provided.
+            unknown = [u for u in desired_users if u not in current_users]
+            if unknown:
+                for u in unknown:
+                    if dry_run:
+                        logging.info("Would create user %s", u)
+                    else:
+                        try:
+                            # Attempt to create a minimal user record with retries for
+                            # transient failures. The repository interface may implement
+                            # create_user(email) or create_user(dict). We pass a dict.
+                            self._create_user_with_retry({"email": u})
+                            logging.info("Created user %s", u)
+                            current_users.add(u)
+                        except Exception as e:
+                            # If user creation fails after retries, record an error.
+                            # Skip this group because the user could not be provisioned.
+                            stats.errors += 1
+                            logging.error(
+                                "Failed to create user %s after retries: %s",
+                                u,
+                                e,
+                            )
+                # Recompute unknown after attempted creations
+                unknown = [u for u in desired_users if u not in current_users]
                 if unknown:
                     stats.skipped_due_to_unknown += 1
-                    stats.errors += 1
                     logging.error(
-                        "Skipping group %s due to unknown users: %s",
+                        "Skipping group %s due to unknown users "
+                        "after create attempts: %s",
                         grp.name,
                         ", ".join(unknown),
                     )
+                    stats.errors += 1
                     continue
 
             if grp.name in existing_groups:
@@ -286,6 +359,27 @@ class GroupSyncService:
                 logging.error("Failed to create %s: %s", group.name, e)
 
         return stats
+
+    def _create_user_with_retry(self, user: Dict[str, str]) -> Dict:
+        """Create a user via repository with retries for transient failures.
+
+        Uses tenacity.Retrying with the instance's retry/backoff configuration.
+        Raises after retries are exhausted.
+        """
+        from tenacity import Retrying
+
+        for attempt in Retrying(
+            stop=stop_after_attempt(self.retry_attempts),
+            wait=wait_exponential(
+                multiplier=self.backoff_multiplier,
+                min=self.backoff_min,
+                max=self.backoff_max,
+            ),
+            retry=retry_if_exception_type(Exception),
+            reraise=True,
+        ):
+            with attempt:
+                return self.repository.create_user(user)
 
     def cleanup_orphaned_groups(
         self,
