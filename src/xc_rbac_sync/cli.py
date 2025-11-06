@@ -122,7 +122,15 @@ def sync(
     )
 
     # Load environment variables
-    load_dotenv()
+    # Check for secrets/.env first (GitHub Actions), then fallback to default .env
+    dotenv_path = os.getenv("DOTENV_PATH")
+    if dotenv_path and os.path.exists(dotenv_path):
+        load_dotenv(dotenv_path)
+    elif os.path.exists("secrets/.env"):
+        load_dotenv("secrets/.env")
+    else:
+        load_dotenv()
+
     tenant_id = os.getenv("TENANT_ID")
     if not tenant_id:
         raise click.UsageError("TENANT_ID must be set in env or .env")
