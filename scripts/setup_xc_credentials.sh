@@ -22,7 +22,7 @@ Options:
 This script will:
   - Split p12 to PEM (cert.pem/key.pem) in ./secrets/ (created if missing)
   - Write secrets/.env with TENANT_ID and either VOLT_API_P12_FILE/VES_P12_PASSWORD or VOLT_API_CERT_FILE/VOLT_API_CERT_KEY_FILE (unless --no-env)
-  - Set repo variable (TENANT_ID) and secrets (XC_CERT, XC_CERT_KEY, XC_P12, XC_P12_PASSWORD) via gh CLI by default (unless --no-secrets)
+  - Set repo secrets (TENANT_ID, XC_CERT, XC_CERT_KEY, XC_P12, XC_P12_PASSWORD) via gh CLI by default (unless --no-secrets)
   - Avoid leftover temporary files; optionally tidy a legacy root .env when --tidy-legacy-env is provided
 USAGE
 }
@@ -197,16 +197,16 @@ if [[ "$SET_SECRETS" == "true" ]]; then
   fi
   # Store PEM files directly (no base64 encoding needed)
   # GitHub Actions can handle multi-line secrets natively
-  echo "Setting GitHub repo variable (TENANT_ID) and secrets (XC_CERT, XC_CERT_KEY, XC_P12, XC_P12_PASSWORD)..."
-  # TENANT_ID is not sensitive (visible in cert, URLs) so use repository variable not secret
-  printf "%s" "$TENANT" | gh variable set TENANT_ID --body - 1>/dev/null || true
+  echo "Setting GitHub repo secrets (TENANT_ID, XC_CERT, XC_CERT_KEY, XC_P12, XC_P12_PASSWORD)..."
+  # TENANT_ID is customer information and should be kept as a secret for privacy
+  printf "%s" "$TENANT" | gh secret set TENANT_ID --body - 1>/dev/null || true
   cat "$CERT_PATH" | gh secret set XC_CERT --body - 1>/dev/null || true
   cat "$KEY_PATH" | gh secret set XC_CERT_KEY --body - 1>/dev/null || true
   # P12 must be base64 (binary file), but use -w 0 for single line
   base64 -w 0 <"$P12" 2>/dev/null | gh secret set XC_P12 --body - 1>/dev/null ||
     base64 <"$P12" | tr -d '\n' | gh secret set XC_P12 --body - 1>/dev/null || true
   printf "%s" "$P12_PASS" | gh secret set XC_P12_PASSWORD --body - 1>/dev/null || true
-  echo "Variable and secrets set."
+  echo "Secrets set."
 fi
 
 # Optionally remove a legacy root .env if it points to secrets/ paths
