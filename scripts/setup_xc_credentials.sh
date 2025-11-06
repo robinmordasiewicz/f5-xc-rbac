@@ -199,8 +199,8 @@ if [[ "$SET_SECRETS" == "true" ]]; then
   # GitHub Actions can handle multi-line secrets natively
   echo "Setting GitHub repo secrets (TENANT_ID, XC_CERT, XC_CERT_KEY, XC_P12, XC_P12_PASSWORD)..."
   printf "%s" "$TENANT" | gh secret set TENANT_ID --body - 1>/dev/null || true
-  gh secret set XC_CERT --body-file "$CERT_PATH" 1>/dev/null || true
-  gh secret set XC_CERT_KEY --body-file "$KEY_PATH" 1>/dev/null || true
+  cat "$CERT_PATH" | gh secret set XC_CERT --body - 1>/dev/null || true
+  cat "$KEY_PATH" | gh secret set XC_CERT_KEY --body - 1>/dev/null || true
   # P12 must be base64 (binary file), but use -w 0 for single line
   base64 -w 0 <"$P12" 2>/dev/null | gh secret set XC_P12 --body - 1>/dev/null ||
     base64 <"$P12" | tr -d '\n' | gh secret set XC_P12 --body - 1>/dev/null || true
