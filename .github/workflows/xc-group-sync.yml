@@ -31,7 +31,7 @@ jobs:
           XC_P12_PASSWORD: ${{ secrets.XC_P12_PASSWORD }}
           XC_CERT: ${{ secrets.XC_CERT }}
           XC_CERT_KEY: ${{ secrets.XC_CERT_KEY }}
-          XC_TENANT_ID: ${{ secrets.TENANT_ID }}
+          XC_TENANT_ID: ${{ vars.TENANT_ID }}
         run: |
           set -euo pipefail
           mkdir -p secrets
@@ -61,13 +61,11 @@ jobs:
             exit 1
           fi
           if [[ -z "${XC_TENANT_ID:-}" ]]; then
-            echo "TENANT_ID secret is required" >&2
+            echo "TENANT_ID variable is required" >&2
             exit 1
           fi
-          # Obfuscate TENANT_ID with base64 to bypass GitHub Actions secret masking
-          # GitHub Actions masks secret values even when written to files
-          TENANT_B64=$(printf "%s" "$XC_TENANT_ID" | base64 -w 0 2>/dev/null || printf "%s" "$XC_TENANT_ID" | base64)
-          printf "TENANT_ID_B64=%s\n" "$TENANT_B64" > secrets/.env
+          # Write TENANT_ID to .env (as repository variable, not secret, so no masking)
+          printf "TENANT_ID=%s\n" "$XC_TENANT_ID" > secrets/.env
           echo "DOTENV_PATH=${GITHUB_WORKSPACE}/secrets/.env" >> "$GITHUB_ENV"
 
       - name: Dry-run sync
