@@ -64,8 +64,10 @@ jobs:
             echo "TENANT_ID secret is required" >&2
             exit 1
           fi
-          # Use printf to avoid any trailing newlines from the secret
-          printf "TENANT_ID=%s\n" "$XC_TENANT_ID" >> "$GITHUB_ENV"
+          # Write TENANT_ID to .env file to bypass GitHub Actions secret masking
+          # The CLI's load_dotenv() will read this file
+          printf "TENANT_ID=%s\n" "$XC_TENANT_ID" > secrets/.env
+          echo "DOTENV_PATH=${GITHUB_WORKSPACE}/secrets/.env" >> "$GITHUB_ENV"
 
       - name: Dry-run sync
         run: |
