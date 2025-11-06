@@ -163,12 +163,13 @@ repos:
 
       - id: pip-audit-pyproject
         name: "pip-audit (pyproject, strict, CI-only)"
-        entry: bash -eo pipefail -c 'python -m pip install -q --upgrade pip pip-audit; python -m pip install -q . || true; python -m pip_audit --strict --progress-spinner off'
+        entry: bash -eo pipefail -c 'python -m pip install -q --upgrade pip pip-audit; python -m pip install -q . || true; python -m pip_audit --strict --progress-spinner off --timeout 30'
         language: system
         pass_filenames: false
         # Run pip-audit against the project when pyproject.toml exists.
         # Note: this may be slower for local commits; keep it if you want local pyproject auditing.
-        stages: [pre-commit]
+        # Only runs in manual stage (invoked explicitly by CI workflow)
+        stages: [manual]
         files: '^pyproject\.toml$'
         exclude: '(^\\.git/|^\\.specify/|^secrets/)'
 
