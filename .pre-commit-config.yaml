@@ -163,7 +163,7 @@ repos:
 
       - id: pip-audit-pyproject
         name: "pip-audit (pyproject, strict, CI-only)"
-        entry: bash -eo pipefail -c 'python -m pip install -q --upgrade pip pip-audit; python -m pip install -q . || true; python -m pip_audit --strict --progress-spinner off --timeout 30'
+        entry: bash -eo pipefail -c 'python -m pip install -q --upgrade pip pip-audit; python -m pip install -q . || true; pip-audit --strict --progress-spinner off --timeout 30'
         language: system
         pass_filenames: false
         # Run pip-audit against the project when pyproject.toml exists.

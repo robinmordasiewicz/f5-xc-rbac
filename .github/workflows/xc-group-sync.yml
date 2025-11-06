@@ -36,13 +36,13 @@ jobs:
           set -euo pipefail
           mkdir -p secrets
           if [[ -n "${XC_CERT:-}" && -n "${XC_CERT_KEY:-}" ]]; then
-            echo "$XC_CERT" | tr -d '\n\r' | base64 -d > secrets/cert.pem
-            echo "$XC_CERT_KEY" | tr -d '\n\r' | base64 -d > secrets/key.pem
+            echo "$XC_CERT" | tr -d '[:space:]' | base64 -d > secrets/cert.pem
+            echo "$XC_CERT_KEY" | tr -d '[:space:]' | base64 -d > secrets/key.pem
             echo "Using cert/key auth"
             echo "VOLT_API_CERT_FILE=${GITHUB_WORKSPACE}/secrets/cert.pem" >> "$GITHUB_ENV"
             echo "VOLT_API_CERT_KEY_FILE=${GITHUB_WORKSPACE}/secrets/key.pem" >> "$GITHUB_ENV"
           elif [[ -n "${XC_P12:-}" && -n "${XC_P12_PASSWORD:-}" ]]; then
-            echo "$XC_P12" | base64 -d > secrets/xc.p12
+            echo "$XC_P12" | tr -d '[:space:]' | base64 -d > secrets/xc.p12
             # Split p12 to PEM for requests
             openssl pkcs12 -in secrets/xc.p12 -clcerts -nokeys -out secrets/cert.pem -passin env:XC_P12_PASSWORD
             openssl pkcs12 -in secrets/xc.p12 -nocerts -nodes -out secrets/key.pem -passin env:XC_P12_PASSWORD
