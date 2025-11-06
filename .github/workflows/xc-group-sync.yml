@@ -31,7 +31,7 @@ jobs:
           XC_P12_PASSWORD: ${{ secrets.XC_P12_PASSWORD }}
           XC_CERT: ${{ secrets.XC_CERT }}
           XC_CERT_KEY: ${{ secrets.XC_CERT_KEY }}
-          TENANT_ID: ${{ secrets.TENANT_ID }}
+          XC_TENANT_ID: ${{ secrets.TENANT_ID }}
         run: |
           set -euo pipefail
           mkdir -p secrets
@@ -60,11 +60,12 @@ jobs:
             echo "No XC credentials found in secrets (XC_CERT/XC_CERT_KEY or XC_P12/XC_P12_PASSWORD)." >&2
             exit 1
           fi
-          if [[ -z "${TENANT_ID:-}" ]]; then
+          if [[ -z "${XC_TENANT_ID:-}" ]]; then
             echo "TENANT_ID secret is required" >&2
             exit 1
           fi
-          echo "TENANT_ID=${TENANT_ID}" >> "$GITHUB_ENV"
+          # Use printf to avoid any trailing newlines from the secret
+          printf "TENANT_ID=%s\n" "$XC_TENANT_ID" >> "$GITHUB_ENV"
 
       - name: Dry-run sync
         run: |
