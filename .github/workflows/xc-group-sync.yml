@@ -31,7 +31,7 @@ jobs:
           XC_P12_PASSWORD: ${{ secrets.XC_P12_PASSWORD }}
           XC_CERT: ${{ secrets.XC_CERT }}
           XC_CERT_KEY: ${{ secrets.XC_CERT_KEY }}
-          XC_TENANT_ID: ${{ vars.TENANT_ID }}
+          XC_TENANT_ID: ${{ secrets.TENANT_ID }}
         run: |
           set -euo pipefail
           mkdir -p secrets
@@ -61,10 +61,10 @@ jobs:
             exit 1
           fi
           if [[ -z "${XC_TENANT_ID:-}" ]]; then
-            echo "TENANT_ID variable is required" >&2
+            echo "TENANT_ID secret is required" >&2
             exit 1
           fi
-          # Write TENANT_ID to .env (as repository variable, not secret, so no masking)
+          # Write TENANT_ID to .env (will be masked in logs for customer privacy)
           printf "TENANT_ID=%s\n" "$XC_TENANT_ID" > secrets/.env
           echo "DOTENV_PATH=${GITHUB_WORKSPACE}/secrets/.env" >> "$GITHUB_ENV"
 
