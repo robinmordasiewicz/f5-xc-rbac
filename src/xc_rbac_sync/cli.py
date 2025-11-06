@@ -7,6 +7,7 @@ or certificate-based authentication.
 
 from __future__ import annotations
 
+import base64
 import logging
 import os
 
@@ -133,7 +134,12 @@ def sync(
 
     tenant_id = os.getenv("TENANT_ID")
     if not tenant_id:
-        raise click.UsageError("TENANT_ID must be set in env or .env")
+        # Try base64 encoded version (GitHub Actions workaround for secret masking)
+        tenant_id_b64 = os.getenv("TENANT_ID_B64")
+        if tenant_id_b64:
+            tenant_id = base64.b64decode(tenant_id_b64).decode("utf-8")
+        else:
+            raise click.UsageError("TENANT_ID must be set in env or .env")
 
     api_token = os.getenv("XC_API_TOKEN")
     p12_file = os.getenv("VOLT_API_P12_FILE")
