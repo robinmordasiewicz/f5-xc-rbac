@@ -36,8 +36,8 @@ jobs:
           set -euo pipefail
           mkdir -p secrets
           if [[ -n "${XC_CERT:-}" && -n "${XC_CERT_KEY:-}" ]]; then
-            echo "$XC_CERT" | base64 -d > secrets/cert.pem
-            echo "$XC_CERT_KEY" | base64 -d > secrets/key.pem
+            echo "$XC_CERT" | tr -d '\n\r' | base64 -d > secrets/cert.pem
+            echo "$XC_CERT_KEY" | tr -d '\n\r' | base64 -d > secrets/key.pem
             echo "Using cert/key auth"
             echo "VOLT_API_CERT_FILE=${GITHUB_WORKSPACE}/secrets/cert.pem" >> "$GITHUB_ENV"
             echo "VOLT_API_CERT_KEY_FILE=${GITHUB_WORKSPACE}/secrets/key.pem" >> "$GITHUB_ENV"
