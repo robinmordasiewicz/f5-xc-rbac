@@ -91,3 +91,21 @@ class GroupRepository(Protocol):
 
         """
         ...
+
+    def create_user(
+        self, user: Dict[str, Any], namespace: str = "system"
+    ) -> Dict[str, Any]:
+        """Create a user/role entry.
+
+        Args:
+            user: User data dictionary (e.g., email, username, display_name)
+            namespace: The namespace to create the user in (default: "system")
+
+        Returns:
+            Created user data dictionary
+
+        Raises:
+            Exception: If the operation fails
+
+        """
+        ...
