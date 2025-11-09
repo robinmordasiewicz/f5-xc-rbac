@@ -223,9 +223,30 @@ class GroupSyncService:
         for grp in planned_groups:
             desired_users = sorted(grp.users)
 
-            # Ensure users exist when pre-validation was not provided.
+            # Identify users that are not present in the repository snapshot.
             unknown = [u for u in desired_users if u not in current_users]
+
+            # If the caller provided an `existing_users` set we **must not** attempt
+            # to provision missing users on their behalf; instead treat this as a
+            # validation failure and skip the group. When the service fetched the
+            # users itself (existing_users was None on entry) it is permitted to
+            # attempt to create missing users.
             if unknown:
+                if existing_users is not None:
+                    # Caller asked for strict validation; skip the group and record
+                    # the occurrence as an error so callers can be alerted.
+                    stats.skipped_due_to_unknown += 1
+                    stats.errors += 1
+                    logging.error(
+                        "Skipping group %s due to unknown users (validation only): %s",
+                        grp.name,
+                        ", ".join(unknown),
+                    )
+                    continue
+
+                # At this point we are allowed to attempt provisioning missing users
+                # (we previously fetched the current users ourselves). Try to create
+                # each missing user unless running a dry-run.
                 for u in unknown:
                     if dry_run:
                         logging.info("Would create user %s", u)
@@ -238,21 +259,22 @@ class GroupSyncService:
                             logging.info("Created user %s", u)
                             current_users.add(u)
                         except Exception as e:
-                            # If user creation fails after retries, record an error.
-                            # Skip this group because the user could not be provisioned.
+                            # If user creation fails after retries, record an error and
+                            # we'll decide below whether to skip the group.
                             stats.errors += 1
                             logging.error(
                                 "Failed to create user %s after retries: %s",
                                 u,
                                 e,
                             )
-                # Recompute unknown after attempted creations
+
+                # Recompute unknown after attempted creations and skip if still missing
                 unknown = [u for u in desired_users if u not in current_users]
                 if unknown:
                     stats.skipped_due_to_unknown += 1
                     logging.error(
-                        "Skipping group %s due to unknown users "
-                        "after create attempts: %s",
+                        "Skipping group %s due to unknown users after create "
+                        "attempts: %s",
                         grp.name,
                         ", ".join(unknown),
                     )
