@@ -394,3 +394,162 @@ class TestUserDeletion:
         assert len(stats.error_details) == 1
         assert stats.error_details[0]["email"] == "orphan@example.com"
         assert stats.error_details[0]["operation"] == "delete"
+
+
+class TestDryRunMode:
+    """Test dry-run mode functionality (Phase 5 - US5)."""
+
+    def test_dry_run_logs_creates_without_executing(self):
+        """Test dry_run logs creates without executing (T059)."""
+        mock_repo = Mock()
+        service = UserSyncService(mock_repo)
+
+        planned = [
+            User(
+                email="new@example.com",
+                display_name="New User",
+                first_name="New",
+                last_name="User",
+            )
+        ]
+        existing = {}
+
+        stats = service.sync_users(planned, existing, dry_run=True, delete_users=False)
+        assert stats.created == 1
+        assert stats.errors == 0
+        # Verify no actual API calls made
+        mock_repo.create_user.assert_not_called()
+
+    def test_dry_run_logs_updates_without_executing(self):
+        """Test dry_run logs updates without executing (T060)."""
+        mock_repo = Mock()
+        service = UserSyncService(mock_repo)
+
+        planned = [
+            User(
+                email="existing@example.com",
+                display_name="Updated Name",
+                first_name="Updated",
+                last_name="Name",
+            )
+        ]
+        existing = {
+            "existing@example.com": {
+                "email": "existing@example.com",
+                "username": "existing@example.com",
+                "display_name": "Old Name",
+                "first_name": "Old",
+                "last_name": "Name",
+                "active": True,
+                "groups": [],
+            }
+        }
+
+        stats = service.sync_users(planned, existing, dry_run=True, delete_users=False)
+        assert stats.updated == 1
+        assert stats.errors == 0
+        # Verify no actual API calls made
+        mock_repo.update_user.assert_not_called()
+
+    def test_dry_run_logs_deletes_without_executing(self):
+        """Test dry_run logs deletes without executing (T061)."""
+        mock_repo = Mock()
+        service = UserSyncService(mock_repo)
+
+        planned = []
+        existing = {
+            "orphan@example.com": {
+                "email": "orphan@example.com",
+                "username": "orphan@example.com",
+                "display_name": "Orphan User",
+                "first_name": "Orphan",
+                "last_name": "User",
+                "active": True,
+                "groups": [],
+            }
+        }
+
+        stats = service.sync_users(planned, existing, dry_run=True, delete_users=True)
+        assert stats.deleted == 1
+        assert stats.errors == 0
+        # Verify no actual API calls made
+        mock_repo.delete_user.assert_not_called()
+
+    def test_dry_run_shows_correct_summary_counts(self):
+        """Test dry_run shows correct summary counts (T062)."""
+        mock_repo = Mock()
+        service = UserSyncService(mock_repo)
+
+        # Mix of operations: 1 create, 1 update, 1 unchanged, 1 delete
+        planned = [
+            User(
+                email="new@example.com",
+                display_name="New User",
+                first_name="New",
+                last_name="User",
+            ),
+            User(
+                email="update@example.com",
+                display_name="Updated Name",
+                first_name="Updated",
+                last_name="Name",
+            ),
+            User(
+                email="unchanged@example.com",
+                display_name="Same Name",
+                first_name="Same",
+                last_name="Name",
+                active=True,
+                groups=["GROUP1"],
+            ),
+        ]
+
+        existing = {
+            "update@example.com": {
+                "email": "update@example.com",
+                "username": "update@example.com",
+                "display_name": "Old Name",
+                "first_name": "Old",
+                "last_name": "Name",
+                "active": True,
+                "groups": [],
+            },
+            "unchanged@example.com": {
+                "email": "unchanged@example.com",
+                "username": "unchanged@example.com",
+                "display_name": "Same Name",
+                "first_name": "Same",
+                "last_name": "Name",
+                "active": True,
+                "groups": ["GROUP1"],
+            },
+            "orphan@example.com": {
+                "email": "orphan@example.com",
+                "username": "orphan@example.com",
+                "display_name": "Orphan User",
+                "first_name": "Orphan",
+                "last_name": "User",
+                "active": True,
+                "groups": [],
+            },
+        }
+
+        stats = service.sync_users(planned, existing, dry_run=True, delete_users=True)
+        assert stats.created == 1
+        assert stats.updated == 1
+        assert stats.unchanged == 1
+        assert stats.deleted == 1
+        assert stats.errors == 0
+
+        # Verify summary string format
+        summary = stats.summary()
+        assert "created=1" in summary
+        assert "updated=1" in summary
+        assert "unchanged=1" in summary
+        assert "deleted=1" in summary
+        assert "errors=0" in summary
+
+        # Verify no actual API calls made
+        mock_repo.create_user.assert_not_called()
+        mock_repo.update_user.assert_not_called()
+        mock_repo.delete_user.assert_not_called()
