@@ -109,3 +109,92 @@ class GroupRepository(Protocol):
 
         """
         ...
+
+
+class UserRepository(Protocol):
+    """Protocol for user management operations.
+
+    This protocol defines the interface for user CRUD operations,
+    enabling dependency injection and testability.
+    """
+
+    def list_users(self, namespace: str = "system") -> Dict[str, Any]:
+        """List all users with roles from F5 XC.
+
+        Args:
+            namespace: F5 XC namespace (default: "system")
+
+        Returns:
+            Dictionary mapping email addresses to user data
+
+        Raises:
+            Exception: On API communication failure
+
+        """
+        ...
+
+    def create_user(
+        self, user: Dict[str, Any], namespace: str = "system"
+    ) -> Dict[str, Any]:
+        """Create new user in F5 XC.
+
+        Args:
+            user: User data dictionary with email, username, display_name, etc.
+            namespace: F5 XC namespace (default: "system")
+
+        Returns:
+            Created user data as returned by F5 XC API
+
+        Raises:
+            Exception: On API failures
+
+        """
+        ...
+
+    def update_user(
+        self, email: str, user: Dict[str, Any], namespace: str = "system"
+    ) -> Dict[str, Any]:
+        """Update existing user in F5 XC.
+
+        Args:
+            email: User email address (primary identifier)
+            user: Updated user data
+            namespace: F5 XC namespace (default: "system")
+
+        Returns:
+            Updated user data as returned by F5 XC API
+
+        Raises:
+            Exception: On API failures
+
+        """
+        ...
+
+    def delete_user(self, email: str, namespace: str = "system") -> None:
+        """Delete user from F5 XC.
+
+        Args:
+            email: User email address (primary identifier)
+            namespace: F5 XC namespace (default: "system")
+
+        Raises:
+            Exception: On API failures
+
+        """
+        ...
+
+    def get_user(self, email: str, namespace: str = "system") -> Dict[str, Any]:
+        """Get single user by email from F5 XC.
+
+        Args:
+            email: User email address (primary identifier)
+            namespace: F5 XC namespace (default: "system")
+
+        Returns:
+            User data dictionary
+
+        Raises:
+            Exception: On API failures
+
+        """
+        ...

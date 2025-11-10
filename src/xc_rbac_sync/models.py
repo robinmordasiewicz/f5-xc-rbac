@@ -8,12 +8,40 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import BaseModel, EmailStr, Field, StringConstraints
 from typing_extensions import Annotated
 
 GroupName = Annotated[
     str, StringConstraints(pattern=r"^[A-Za-z0-9_-]+$", min_length=1, max_length=128)
 ]
+
+
+class User(BaseModel):
+    """User data model for F5 XC synchronization.
+
+    Attributes:
+        email: User's email address (unique identifier, primary key)
+        username: Username for F5 XC (typically same as email)
+        display_name: Full name as shown in UI (from CSV "User Display Name")
+        first_name: Given name (parsed from display_name)
+        last_name: Family name (parsed from display_name)
+        active: Whether user can access system (from CSV "Employee Status")
+        groups: List of group names user belongs to (for coordination with group sync)
+
+    """
+
+    email: EmailStr
+    username: str = Field(default="")
+    display_name: str
+    first_name: str
+    last_name: str
+    active: bool = True
+    groups: List[str] = Field(default_factory=list)
+
+    def model_post_init(self, __context) -> None:
+        """Set username to email if not provided."""
+        if not self.username:
+            self.username = str(self.email)
 
 
 class Group(BaseModel):

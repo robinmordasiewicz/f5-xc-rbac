@@ -75,3 +75,40 @@ def temp_csv_file(tmp_path, sample_csv_content):
     csv_file = tmp_path / "test.csv"
     csv_file.write_text(sample_csv_content)
     return str(csv_file)
+
+
+@pytest.fixture
+def sample_user_csv_content():
+    """Sample user CSV content for testing."""
+    return """Email,User Display Name,Employee Status,Entitlement Display Name
+alice@example.com,Alice Anderson,A,"CN=ADMINS,OU=Groups,DC=example,DC=com"
+bob@example.com,Bob Builder,A,"CN=DEVELOPERS,OU=Groups,DC=example,DC=com"
+charlie@example.com,Charlie Chen,I,"CN=VIEWERS,OU=Groups,DC=example,DC=com"
+"""
+
+
+@pytest.fixture
+def sample_users_response():
+    """Sample API response for list_users."""
+    return {
+        "items": [
+            {
+                "email": "alice@example.com",
+                "username": "alice@example.com",
+                "display_name": "Alice Anderson",
+                "first_name": "Alice",
+                "last_name": "Anderson",
+                "active": True,
+                "groups": ["ADMINS"],
+            },
+            {
+                "email": "bob@example.com",
+                "username": "bob@example.com",
+                "display_name": "Bob Builder",
+                "first_name": "Bob",
+                "last_name": "Builder",
+                "active": True,
+                "groups": ["DEVELOPERS"],
+            },
+        ]
+    }

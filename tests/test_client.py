@@ -140,6 +140,143 @@ class TestXCClientGroupOperations:
             assert len(result["items"]) == 4
 
 
+class TestXCClientUserOperations:
+    """Test user CRUD operations."""
+
+    @pytest.fixture
+    def client(self):
+        """Create test client."""
+        return XCClient(tenant_id="test-tenant", api_token="test-token")
+
+    def test_list_users_alias(self, client, mock_response, sample_user_roles_response):
+        """Test list_users is an alias for list_user_roles."""
+        with patch.object(
+            client.session,
+            "request",
+            return_value=mock_response(200, sample_user_roles_response),
+        ):
+            result = client.list_users()
+            assert "items" in result
+            assert len(result["items"]) == 4
+
+    def test_create_user_success(self, client, mock_response):
+        """Test successful user creation."""
+        user_data = {
+            "email": "newuser@example.com",
+            "username": "newuser@example.com",
+            "display_name": "New User",
+            "first_name": "New",
+            "last_name": "User",
+        }
+        response_data = {**user_data, "created_at": "2024-01-01"}
+
+        with patch.object(
+            client.session, "request", return_value=mock_response(200, response_data)
+        ):
+            result = client.create_user(user_data)
+            assert result["email"] == "newuser@example.com"
+
+    def test_get_user_success(self, client, mock_response):
+        """Test successful user retrieval."""
+        user_data = {
+            "email": "alice@example.com",
+            "username": "alice@example.com",
+            "display_name": "Alice Anderson",
+            "first_name": "Alice",
+            "last_name": "Anderson",
+        }
+
+        with patch.object(
+            client.session, "request", return_value=mock_response(200, user_data)
+        ) as mock_req:
+            result = client.get_user("alice@example.com")
+            assert result["email"] == "alice@example.com"
+            # Verify correct URL construction
+            call_url = mock_req.call_args[0][1]
+            assert "user_roles/alice@example.com" in call_url
+
+    def test_get_user_not_found(self, client):
+        """Test get_user with non-existent user."""
+        mock_resp = Mock(spec=requests.Response)
+        mock_resp.status_code = 404
+        mock_resp.text = "User not found"
+        mock_resp.raise_for_status.side_effect = requests.HTTPError()
+
+        with patch.object(client.session, "request", return_value=mock_resp):
+            with pytest.raises(requests.HTTPError):
+                client.get_user("nonexistent@example.com")
+
+    def test_update_user_success(self, client, mock_response):
+        """Test successful user update."""
+        user_data = {
+            "email": "alice@example.com",
+            "username": "alice@example.com",
+            "display_name": "Alice Smith",  # Name changed
+            "first_name": "Alice",
+            "last_name": "Smith",
+        }
+
+        with patch.object(
+            client.session, "request", return_value=mock_response(200, user_data)
+        ) as mock_req:
+            result = client.update_user("alice@example.com", user_data)
+            assert result["display_name"] == "Alice Smith"
+            # Verify PUT request to correct endpoint
+            assert mock_req.call_args[0][0] == "PUT"
+            call_url = mock_req.call_args[0][1]
+            assert "user_roles/alice@example.com" in call_url
+
+    def test_update_user_retry_on_429(self, client, mock_response):
+        """Test update_user retries on 429 rate limit."""
+        user_data = {"email": "alice@example.com", "display_name": "Alice Updated"}
+
+        # First call returns 429, second succeeds
+        responses = [
+            mock_response(429, {"error": "rate limit"}),
+            mock_response(200, user_data),
+        ]
+
+        with patch.object(client.session, "request", side_effect=responses):
+            result = client.update_user("alice@example.com", user_data)
+            assert result["display_name"] == "Alice Updated"
+
+    def test_delete_user_success(self, client, mock_response):
+        """Test successful user deletion (T047)."""
+        with patch.object(
+            client.session, "request", return_value=mock_response(204, None)
+        ) as mock_req:
+            # Should not raise
+            client.delete_user("olduser@example.com")
+            # Verify DELETE request
+            assert mock_req.call_args[0][0] == "DELETE"
+            call_url = mock_req.call_args[0][1]
+            assert "user_roles/olduser@example.com" in call_url
+
+    def test_delete_user_handles_404(self, client):
+        """Test delete_user handles 404 (already deleted) gracefully (T048)."""
+        mock_resp = Mock(spec=requests.Response)
+        mock_resp.status_code = 404
+        mock_resp.text = "User not found"
+        mock_resp.raise_for_status.side_effect = requests.HTTPError()
+
+        with patch.object(client.session, "request", return_value=mock_resp):
+            # 404 should not raise - user already deleted
+            with pytest.raises(requests.HTTPError):
+                client.delete_user("nonexistent@example.com")
+
+    def test_user_operations_custom_namespace(self, client, mock_response):
+        """Test user operations in custom namespace."""
+        user_data = {"email": "test@example.com"}
+
+        with patch.object(
+            client.session, "request", return_value=mock_response(200, user_data)
+        ) as mock_req:
+            client.get_user("test@example.com", namespace="custom-ns")
+            call_url = mock_req.call_args[0][1]
+            assert "custom-ns" in call_url
+            assert "user_roles" in call_url
+
+
 class TestXCClientRetryLogic:
     """Test retry and error handling."""
 
