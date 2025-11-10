@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 
 from .client import XCClient
 from .sync_service import CSVParseError, GroupSyncService
+from .user_sync_service import UserSyncService
 
 
 def _create_client(
@@ -214,6 +215,146 @@ def sync(
         )
 
     click.echo("Sync complete.")
+
+
+@cli.command()
+@click.option(
+    "--csv",
+    "csv_path",
+    type=click.Path(exists=True, dir_okay=False),
+    required=True,
+    help="Path to user CSV export",
+)
+@click.option("--dry-run", is_flag=True, help="Log actions without calling the API")
+@click.option("--delete-users", is_flag=True, help="Delete XC users missing from CSV")
+@click.option(
+    "--log-level",
+    type=click.Choice(["debug", "info", "warn", "error"], case_sensitive=False),
+    default="info",
+    help="Logging level",
+)
+@click.option("--max-retries", type=int, default=3, help="Max retries for API calls")
+@click.option("--timeout", type=int, default=30, help="HTTP timeout (seconds)")
+def sync_users(
+    csv_path: str,
+    dry_run: bool,
+    delete_users: bool,
+    log_level: str,
+    max_retries: int,
+    timeout: int,
+) -> None:
+    """Synchronize XC users from CSV file.
+
+    Reads a CSV file containing user data and synchronizes those users
+    to F5 XC. Supports creating, updating, and optionally deleting users
+    to match the CSV.
+
+    Authentication can be provided via environment variables:
+    - TENANT_ID (required): Your XC tenant ID
+    - XC_API_TOKEN: API token for authentication
+    - VOLT_API_CERT_FILE + VOLT_API_CERT_KEY_FILE: Certificate-based auth
+
+    Required CSV columns:
+    - Email: User email address (unique identifier)
+    - User Display Name: Full name (parsed to first/last)
+    - Employee Status: A (active), I/T (inactive)
+    - Entitlement Display Name: Pipe-separated LDAP DNs for group membership
+
+    Args:
+        csv_path: Path to CSV file with user data
+        dry_run: If True, log actions without making API changes
+        delete_users: If True, delete users that exist in XC but not in CSV
+        log_level: Logging verbosity level
+        max_retries: Maximum retries for failed API requests
+        timeout: HTTP timeout in seconds
+
+    """
+    # Configure logging
+    logging.basicConfig(
+        level=getattr(logging, log_level.upper(), logging.INFO),
+        format="%(levelname)s %(message)s",
+    )
+
+    # Load environment variables
+    dotenv_path = os.getenv("DOTENV_PATH")
+    if dotenv_path and os.path.exists(dotenv_path):
+        load_dotenv(dotenv_path)
+    elif os.path.exists("secrets/.env"):
+        load_dotenv("secrets/.env")
+    else:
+        load_dotenv()
+
+    tenant_id = os.getenv("TENANT_ID")
+    if not tenant_id:
+        raise click.UsageError("TENANT_ID must be set in env or .env")
+
+    api_token = os.getenv("XC_API_TOKEN")
+    p12_file = os.getenv("VOLT_API_P12_FILE")
+    cert_file = os.getenv("VOLT_API_CERT_FILE")
+    key_file = os.getenv("VOLT_API_CERT_KEY_FILE")
+
+    # P12 files are not supported by requests library
+    if p12_file:
+        logging.info(
+            "P12 provided but not supported; use XC_API_TOKEN or cert/key instead"
+        )
+
+    # Create authenticated client
+    try:
+        client = _create_client(
+            tenant_id, api_token, cert_file, key_file, timeout, max_retries
+        )
+    except click.UsageError:
+        raise
+    except Exception as e:
+        raise click.ClickException(f"Failed to create client: {e}")
+
+    # Create user sync service
+    service = UserSyncService(client)
+
+    # Parse CSV file
+    try:
+        planned_users = service.parse_csv_to_users(csv_path)
+    except FileNotFoundError as e:
+        raise click.UsageError(str(e))
+    except ValueError as e:
+        raise click.UsageError(f"CSV validation error: {e}")
+    except Exception as e:
+        raise click.ClickException(f"Failed to parse CSV: {e}")
+
+    # Display planned users
+    click.echo(f"Users planned from CSV: {len(planned_users)}")
+    active_count = sum(1 for u in planned_users if u.active)
+    inactive_count = len(planned_users) - active_count
+    click.echo(f" - Active: {active_count}, Inactive: {inactive_count}")
+
+    # Fetch existing users (validates authentication)
+    try:
+        existing_users = service.fetch_existing_users()
+    except requests.RequestException as e:
+        raise click.ClickException(f"API error listing users: {e}")
+    except Exception as e:
+        raise click.ClickException(f"Unexpected error listing users: {e}")
+
+    click.echo(f"Existing users in F5 XC: {len(existing_users)}")
+
+    # Synchronize users
+    try:
+        stats = service.sync_users(planned_users, existing_users, dry_run, delete_users)
+    except Exception as e:
+        raise click.ClickException(f"Sync failed: {e}")
+
+    # Display summary
+    click.echo("\n" + stats.summary())
+
+    # Show error details if any
+    if stats.has_errors():
+        click.echo("\nErrors encountered:")
+        for err in stats.error_details:
+            click.echo(f" - {err['email']}: {err['operation']} failed - {err['error']}")
+        raise click.ClickException("One or more operations failed; see details above")
+
+    click.echo("\nUser sync complete.")
 
 
 if __name__ == "__main__":
