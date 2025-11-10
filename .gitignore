@@ -45,3 +45,4 @@ __pycache__/
 
 # Wheel / binary build dirs
 bdist.*
+.coverage
