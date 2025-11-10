@@ -578,42 +578,74 @@ charlie@example.com,Charlie Jones,T,
 
 ```bash
 # Dry-run to see what would happen (no changes made)
-xc-group-sync sync --csv users.csv --dry-run
+xc-group-sync sync-users --csv users.csv --dry-run
 
 # Output:
-# Would create user: alice@example.com
-# Would update user: bob@example.com (name changed)
+# Users planned from CSV: 1067
+#  - Active: 1066, Inactive: 1
+# Existing users in F5 XC: 1066
+#
+# [DRY-RUN] Would create user: alice@example.com
+# [DRY-RUN] Would update user: bob@example.com
+#
 # Users: created=1, updated=1, deleted=0, unchanged=1065, errors=0
+# Execution time: 2.34 seconds
+#
+# User sync complete.
 ```
 
 #### 2. Sync Users (Create and Update Only)
 
 ```bash
 # Sync users without deletions (safe default)
-xc-group-sync sync --csv users.csv
+xc-group-sync sync-users --csv users.csv
 
 # Output:
+# Users planned from CSV: 1067
+#  - Active: 1066, Inactive: 1
+# Existing users in F5 XC: 1066
+#
 # Created user: alice@example.com
 # Updated user: bob@example.com
+#
 # Users: created=1, updated=1, deleted=0, unchanged=1065, errors=0
+# Execution time: 4.56 seconds
+#
+# User sync complete.
 ```
 
 #### 3. Sync Users with Deletions (Use with Caution)
 
 ```bash
 # Preview deletions first (ALWAYS recommended)
-xc-group-sync sync --csv users.csv --delete-users --dry-run
+xc-group-sync sync-users --csv users.csv --delete-users --dry-run
 
 # Output:
-# Would delete user: charlie@example.com (not in CSV)
-# Users: created=0, updated=0, deleted=1, unchanged=1065, errors=0
+# Users planned from CSV: 1066
+#  - Active: 1066, Inactive: 0
+# Existing users in F5 XC: 1067
+#
+# [DRY-RUN] Would delete user: charlie@example.com
+#
+# Users: created=0, updated=0, deleted=1, unchanged=1066, errors=0
+# Execution time: 2.12 seconds
+#
+# User sync complete.
 
 # Execute deletions (only if dry-run output is correct)
-xc-group-sync sync --csv users.csv --delete-users
+xc-group-sync sync-users --csv users.csv --delete-users
 
 # Output:
+# Users planned from CSV: 1066
+#  - Active: 1066, Inactive: 0
+# Existing users in F5 XC: 1067
+#
 # Deleted user: charlie@example.com
-# Users: created=0, updated=0, deleted=1, unchanged=1065, errors=0
+#
+# Users: created=0, updated=0, deleted=1, unchanged=1066, errors=0
+# Execution time: 3.78 seconds
+#
+# User sync complete.
 ```
 
 ### Common Workflows
@@ -623,10 +655,10 @@ xc-group-sync sync --csv users.csv --delete-users
 ```bash
 # 1. Export users from Active Directory to CSV
 # 2. Preview import
-xc-group-sync sync --csv initial_users.csv --dry-run
+xc-group-sync sync-users --csv initial_users.csv --dry-run
 
 # 3. Execute import
-xc-group-sync sync --csv initial_users.csv
+xc-group-sync sync-users --csv initial_users.csv
 
 # Expected: All users created, no errors
 ```
@@ -636,10 +668,10 @@ xc-group-sync sync --csv initial_users.csv
 ```bash
 # 1. Export updated CSV from Active Directory
 # 2. Preview changes
-xc-group-sync sync --csv daily_sync.csv --dry-run
+xc-group-sync sync-users --csv daily_sync.csv --dry-run
 
 # 3. Execute sync (create/update only, no deletions)
-xc-group-sync sync --csv daily_sync.csv
+xc-group-sync sync-users --csv daily_sync.csv
 
 # Expected: New users created, changed users updated, no deletions
 ```
@@ -649,11 +681,11 @@ xc-group-sync sync --csv daily_sync.csv
 ```bash
 # 1. Export current active users from Active Directory
 # 2. Preview deletions (CRITICAL: verify output carefully)
-xc-group-sync sync --csv active_users.csv --delete-users --dry-run
+xc-group-sync sync-users --csv active_users.csv --delete-users --dry-run
 
 # 3. Review dry-run output: ensure only terminated users are listed for deletion
 # 4. Execute cleanup (only if dry-run is correct)
-xc-group-sync sync --csv active_users.csv --delete-users
+xc-group-sync sync-users --csv active_users.csv --delete-users
 
 # Expected: Terminated users deleted, active users unchanged
 ```
