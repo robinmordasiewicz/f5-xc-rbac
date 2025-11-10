@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 
 import click
 import requests
@@ -188,7 +189,8 @@ def sync(
         logging.warning("User pre-validation failed: %s", e)
         existing_users = None
 
-    # Synchronize groups
+    # Synchronize groups with execution time tracking
+    start_time = time.time()
     try:
         stats = service.sync_groups(
             planned_groups, existing_groups, existing_users, dry_run
@@ -205,9 +207,11 @@ def sync(
             stats.deleted = deleted
         except Exception as e:
             raise click.ClickException(f"Cleanup failed: {e}")
+    execution_time = time.time() - start_time
 
-    # Display summary
+    # Display summary with execution time
     click.echo(stats.summary())
+    click.echo(f"Execution time: {execution_time:.2f} seconds")
 
     if stats.has_errors():
         raise click.ClickException(
@@ -338,14 +342,17 @@ def sync_users(
 
     click.echo(f"Existing users in F5 XC: {len(existing_users)}")
 
-    # Synchronize users
+    # Synchronize users with execution time tracking (T077)
+    start_time = time.time()
     try:
         stats = service.sync_users(planned_users, existing_users, dry_run, delete_users)
     except Exception as e:
         raise click.ClickException(f"Sync failed: {e}")
+    execution_time = time.time() - start_time
 
-    # Display summary
+    # Display summary with execution time (T079)
     click.echo("\n" + stats.summary())
+    click.echo(f"Execution time: {execution_time:.2f} seconds")
 
     # Show error details if any
     if stats.has_errors():
