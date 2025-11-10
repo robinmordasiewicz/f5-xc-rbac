@@ -79,10 +79,24 @@ if [[ -z "$P12" ]]; then
   set -u
   # If the glob didn't expand, the first element will still contain the pattern
   if [[ ${#CANDIDATES[@]} -eq 1 && -f "${CANDIDATES[0]}" ]]; then
+    # Single p12 file found - use it automatically
     P12="${CANDIDATES[0]}"
     echo "Detected p12: $P12"
+  elif [[ ${#CANDIDATES[@]} -gt 1 ]]; then
+    # Multiple p12 files found - present interactive selection
+    echo "Multiple p12 files found in ~/Downloads:"
+    PS3="Select p12 file (enter number): "
+    select P12 in "${CANDIDATES[@]}"; do
+      if [[ -n "$P12" ]]; then
+        echo "Selected: $P12"
+        break
+      else
+        echo "Invalid selection. Please try again." >&2
+      fi
+    done
   else
-    echo "No unique p12 found in ~/Downloads. Provide --p12 <path>." >&2
+    # No p12 files found
+    echo "No p12 files found in ~/Downloads. Provide --p12 <path>." >&2
     exit 1
   fi
 fi

@@ -147,10 +147,12 @@ def sync(
     cert_file = os.getenv("VOLT_API_CERT_FILE")
     key_file = os.getenv("VOLT_API_CERT_KEY_FILE")
 
-    # P12 files are not supported by requests library
-    if p12_file:
-        logging.info(
-            "P12 provided but not supported; use XC_API_TOKEN or cert/key instead"
+    # P12 not supported by requests - warn only if no cert/key available
+    if p12_file and not (cert_file and key_file):
+        logging.warning(
+            "P12 file provided but Python requests library cannot use it "
+            "directly. Please run setup_xc_credentials.sh to extract "
+            "cert/key files."
         )
 
     # Create authenticated client
@@ -303,10 +305,12 @@ def sync_users(
     cert_file = os.getenv("VOLT_API_CERT_FILE")
     key_file = os.getenv("VOLT_API_CERT_KEY_FILE")
 
-    # P12 files are not supported by requests library
-    if p12_file:
-        logging.info(
-            "P12 provided but not supported; use XC_API_TOKEN or cert/key instead"
+    # P12 not supported by requests - warn only if no cert/key available
+    if p12_file and not (cert_file and key_file):
+        logging.warning(
+            "P12 file provided but Python requests library cannot use it "
+            "directly. Please run setup_xc_credentials.sh to extract "
+            "cert/key files."
         )
 
     # Create authenticated client
