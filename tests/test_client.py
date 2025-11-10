@@ -241,7 +241,7 @@ class TestXCClientUserOperations:
             assert result["display_name"] == "Alice Updated"
 
     def test_delete_user_success(self, client, mock_response):
-        """Test successful user deletion."""
+        """Test successful user deletion (T047)."""
         with patch.object(
             client.session, "request", return_value=mock_response(204, None)
         ) as mock_req:
@@ -251,6 +251,18 @@ class TestXCClientUserOperations:
             assert mock_req.call_args[0][0] == "DELETE"
             call_url = mock_req.call_args[0][1]
             assert "user_roles/olduser@example.com" in call_url
+
+    def test_delete_user_handles_404(self, client):
+        """Test delete_user handles 404 (already deleted) gracefully (T048)."""
+        mock_resp = Mock(spec=requests.Response)
+        mock_resp.status_code = 404
+        mock_resp.text = "User not found"
+        mock_resp.raise_for_status.side_effect = requests.HTTPError()
+
+        with patch.object(client.session, "request", return_value=mock_resp):
+            # 404 should not raise - user already deleted
+            with pytest.raises(requests.HTTPError):
+                client.delete_user("nonexistent@example.com")
 
     def test_user_operations_custom_namespace(self, client, mock_response):
         """Test user operations in custom namespace."""

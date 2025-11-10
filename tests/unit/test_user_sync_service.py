@@ -318,3 +318,79 @@ class TestIntegration:
         assert stats2.unchanged == 1
         assert stats2.created == 0
         assert stats2.updated == 0
+
+
+class TestUserDeletion:
+    """Test user deletion functionality (Phase 4 - US3)."""
+
+    def test_sync_deletes_user_when_delete_users_true(self):
+        """Test sync_users deletes user when delete_users=True (T045)."""
+        mock_repo = Mock()
+        mock_repo.delete_user.return_value = None
+
+        service = UserSyncService(mock_repo)
+
+        # CSV has no users, but F5 XC has one user
+        planned = []
+        existing = {
+            "orphan@example.com": {
+                "email": "orphan@example.com",
+                "username": "orphan@example.com",
+                "display_name": "Orphan User",
+                "first_name": "Orphan",
+                "last_name": "User",
+                "active": True,
+                "groups": [],
+            }
+        }
+
+        stats = service.sync_users(planned, existing, dry_run=False, delete_users=True)
+        assert stats.deleted == 1
+        assert stats.created == 0
+        assert stats.updated == 0
+        assert stats.unchanged == 0
+        mock_repo.delete_user.assert_called_once_with("orphan@example.com")
+
+    def test_sync_preserves_user_when_delete_users_false(self):
+        """Test sync_users preserves user when delete_users=False (T046)."""
+        mock_repo = Mock()
+
+        service = UserSyncService(mock_repo)
+
+        # CSV has no users, but F5 XC has one user
+        planned = []
+        existing = {
+            "orphan@example.com": {
+                "email": "orphan@example.com",
+                "username": "orphan@example.com",
+                "display_name": "Orphan User",
+                "first_name": "Orphan",
+                "last_name": "User",
+                "active": True,
+                "groups": [],
+            }
+        }
+
+        stats = service.sync_users(planned, existing, dry_run=False, delete_users=False)
+        assert stats.deleted == 0
+        assert stats.created == 0
+        assert stats.updated == 0
+        assert stats.unchanged == 0
+        mock_repo.delete_user.assert_not_called()
+
+    def test_delete_user_error_handling(self):
+        """Test delete_user handles errors gracefully (T045)."""
+        mock_repo = Mock()
+        mock_repo.delete_user.side_effect = Exception("API Error")
+
+        service = UserSyncService(mock_repo)
+
+        planned = []
+        existing = {"orphan@example.com": {"email": "orphan@example.com"}}
+
+        stats = service.sync_users(planned, existing, dry_run=False, delete_users=True)
+        assert stats.errors == 1
+        assert stats.deleted == 0
+        assert len(stats.error_details) == 1
+        assert stats.error_details[0]["email"] == "orphan@example.com"
+        assert stats.error_details[0]["operation"] == "delete"

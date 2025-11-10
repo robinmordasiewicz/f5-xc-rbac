@@ -333,3 +333,45 @@ def test_cli_sync_users_shows_error_details(monkeypatch, tmp_path):
     assert "Errors encountered:" in result.output
     assert "alice@example.com" in result.output
     assert "create failed" in result.output
+
+
+def test_cli_sync_users_delete_flag(monkeypatch, tmp_path):
+    """Test sync-users with --delete-users flag (T049)."""
+    csv_file = tmp_path / "users.csv"
+    csv_file.write_text(
+        "Email,User Display Name,Employee Status,Entitlement Display Name\n"
+        "alice@example.com,Alice Anderson,A,\n"
+    )
+
+    class UserRepo:
+        def list_users(self, namespace: str = "system"):
+            # Return existing user not in CSV
+            return {
+                "items": [
+                    {"email": "orphan@example.com", "username": "orphan@example.com"}
+                ]
+            }
+
+        def create_user(self, user_data: dict, namespace: str = "system"):
+            return {"email": user_data["email"]}
+
+        def delete_user(self, email: str, namespace: str = "system"):
+            return None
+
+    monkeypatch.setenv("TENANT_ID", "tenant")
+    monkeypatch.setenv("DOTENV_PATH", "/dev/null")
+    mock_repo = UserRepo()
+    monkeypatch.setattr(cli, "_create_client", lambda *args, **kwargs: mock_repo)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cli.cli,
+        ["sync-users", "--csv", str(csv_file), "--delete-users"],
+        catch_exceptions=False,
+    )
+    assert result.exit_code == 0
+    assert "Users planned from CSV: 1" in result.output
+    assert "Existing users in F5 XC: 1" in result.output
+    # Should have created alice and deleted orphan
+    assert "created=1" in result.output
+    assert "deleted=1" in result.output
