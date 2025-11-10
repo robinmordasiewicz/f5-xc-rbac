@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from xc_rbac_sync.models import Config, Group
+from xc_rbac_sync.models import Config, Group, User
 
 
 class TestGroup:
@@ -239,3 +239,130 @@ class TestConfig:
         assert config.volt_api_cert_file is None
         assert config.volt_api_cert_key_file is None
         assert config.xc_api_token is None
+
+
+class TestUser:
+    """Test User model validation."""
+
+    def test_valid_user_minimal(self):
+        """Test creating user with minimal valid data."""
+        user = User(
+            email="alice@example.com",
+            display_name="Alice Anderson",
+            first_name="Alice",
+            last_name="Anderson",
+        )
+        assert user.email == "alice@example.com"
+        assert user.username == "alice@example.com"  # Defaults to email
+        assert user.display_name == "Alice Anderson"
+        assert user.first_name == "Alice"
+        assert user.last_name == "Anderson"
+        assert user.active is True  # Default
+        assert user.groups == []  # Default
+
+    def test_valid_user_full(self):
+        """Test creating user with all fields."""
+        user = User(
+            email="bob@example.com",
+            username="bob@example.com",
+            display_name="Bob Smith",
+            first_name="Bob",
+            last_name="Smith",
+            active=False,
+            groups=["EADMIN_STD", "DEVELOPERS"],
+        )
+        assert user.email == "bob@example.com"
+        assert user.username == "bob@example.com"
+        assert user.display_name == "Bob Smith"
+        assert user.first_name == "Bob"
+        assert user.last_name == "Smith"
+        assert user.active is False
+        assert user.groups == ["EADMIN_STD", "DEVELOPERS"]
+
+    def test_user_email_validation_valid(self):
+        """Test EmailStr validation accepts valid email."""
+        user = User(
+            email="test@example.com",
+            display_name="Test User",
+            first_name="Test",
+            last_name="User",
+        )
+        assert user.email == "test@example.com"
+
+    def test_user_email_validation_invalid(self):
+        """Test EmailStr validation rejects invalid email."""
+        with pytest.raises(ValidationError) as exc_info:
+            User(
+                email="invalid-email",
+                display_name="Test User",
+                first_name="Test",
+                last_name="User",
+            )
+        errors = exc_info.value.errors()
+        assert any(error["loc"] == ("email",) for error in errors)
+
+    def test_user_username_defaults_to_email(self):
+        """Test username defaults to email if not provided."""
+        user = User(
+            email="charlie@example.com",
+            display_name="Charlie Jones",
+            first_name="Charlie",
+            last_name="Jones",
+        )
+        assert user.username == "charlie@example.com"
+
+    def test_user_username_explicit(self):
+        """Test username can be set explicitly."""
+        user = User(
+            email="dave@example.com",
+            username="custom_username",
+            display_name="Dave Wilson",
+            first_name="Dave",
+            last_name="Wilson",
+        )
+        assert user.username == "custom_username"
+
+    def test_user_active_default_true(self):
+        """Test active defaults to True."""
+        user = User(
+            email="eve@example.com",
+            display_name="Eve Adams",
+            first_name="Eve",
+            last_name="Adams",
+        )
+        assert user.active is True
+
+    def test_user_groups_default_empty(self):
+        """Test groups defaults to empty list."""
+        user = User(
+            email="frank@example.com",
+            display_name="Frank Brown",
+            first_name="Frank",
+            last_name="Brown",
+        )
+        assert user.groups == []
+
+    def test_user_single_name(self):
+        """Test user with single name (empty last_name)."""
+        user = User(
+            email="madonna@example.com",
+            display_name="Madonna",
+            first_name="Madonna",
+            last_name="",
+        )
+        assert user.first_name == "Madonna"
+        assert user.last_name == ""
+
+    def test_user_multiple_groups(self):
+        """Test user with multiple groups."""
+        user = User(
+            email="grace@example.com",
+            display_name="Grace Lee",
+            first_name="Grace",
+            last_name="Lee",
+            groups=["GROUP1", "GROUP2", "GROUP3"],
+        )
+        assert len(user.groups) == 3
+        assert "GROUP1" in user.groups
+        assert "GROUP2" in user.groups
+        assert "GROUP3" in user.groups

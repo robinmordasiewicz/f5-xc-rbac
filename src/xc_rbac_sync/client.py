@@ -195,3 +195,75 @@ class XCClient:
             json=user,
         )
         return r.json()
+
+    def list_users(self, namespace: str = "system") -> Dict[str, Any]:
+        """Alias for list_user_roles for consistency with protocol.
+
+        Args:
+            namespace: XC namespace (default: "system")
+
+        Returns:
+            Dictionary containing list of users with their roles
+
+        """
+        return self.list_user_roles(namespace)
+
+    def get_user(self, email: str, namespace: str = "system") -> Dict[str, Any]:
+        """Get a single user by email from F5 XC.
+
+        Args:
+            email: User email address (primary identifier)
+            namespace: XC namespace (default: "system")
+
+        Returns:
+            Dictionary containing user data
+
+        Raises:
+            requests.HTTPError: On API failures (including 404 if not found)
+
+        """
+        r = self._request(
+            "GET",
+            f"/api/web/custom/namespaces/{namespace}/user_roles/{email}",
+        )
+        return r.json()
+
+    def update_user(
+        self, email: str, user: Dict[str, Any], namespace: str = "system"
+    ) -> Dict[str, Any]:
+        """Update an existing user in F5 XC.
+
+        Args:
+            email: User email address (primary identifier)
+            user: Updated user data dictionary
+            namespace: XC namespace (default: "system")
+
+        Returns:
+            Dictionary containing updated user metadata
+
+        Raises:
+            requests.HTTPError: On API failures
+
+        """
+        r = self._request(
+            "PUT",
+            f"/api/web/custom/namespaces/{namespace}/user_roles/{email}",
+            json=user,
+        )
+        return r.json()
+
+    def delete_user(self, email: str, namespace: str = "system") -> None:
+        """Delete a user from F5 XC.
+
+        Args:
+            email: User email address (primary identifier)
+            namespace: XC namespace (default: "system")
+
+        Raises:
+            requests.HTTPError: On API failures
+
+        """
+        self._request(
+            "DELETE",
+            f"/api/web/custom/namespaces/{namespace}/user_roles/{email}",
+        )
