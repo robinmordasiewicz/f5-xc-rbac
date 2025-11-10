@@ -79,10 +79,24 @@ if [[ -z "$P12" ]]; then
   set -u
   # If the glob didn't expand, the first element will still contain the pattern
   if [[ ${#CANDIDATES[@]} -eq 1 && -f "${CANDIDATES[0]}" ]]; then
+    # Single p12 file found - use it automatically
     P12="${CANDIDATES[0]}"
     echo "Detected p12: $P12"
+  elif [[ ${#CANDIDATES[@]} -gt 1 ]]; then
+    # Multiple p12 files found - present interactive selection
+    echo "Multiple p12 files found in ~/Downloads:"
+    PS3="Select p12 file (enter number): "
+    select P12 in "${CANDIDATES[@]}"; do
+      if [[ -n "$P12" ]]; then
+        echo "Selected: $P12"
+        break
+      else
+        echo "Invalid selection. Please try again." >&2
+      fi
+    done
   else
-    echo "No unique p12 found in ~/Downloads. Provide --p12 <path>." >&2
+    # No p12 files found
+    echo "No p12 files found in ~/Downloads. Provide --p12 <path>." >&2
     exit 1
   fi
 fi
@@ -92,20 +106,45 @@ if [[ ! -f "$P12" ]]; then
   exit 1
 fi
 
-# Derive tenant if not provided
+# Derive tenant and API URL if not provided
 if [[ -z "$TENANT" ]]; then
   base=$(basename "$P12")
-  # Correct derivation: prefix before first '.' in <tenant>.console.ves.volterra.io...
-  # Example: f5-amer-ent.console.ves.volterra.io.api-creds.p12 -> f5-amer-ent
   name_no_ext=${base%.p12}
-  TENANT=${name_no_ext%%.*}
+
+  # Detect environment type from filename patterns:
+  # Production: <tenant>.console.ves.volterra.io.api-creds.p12 -> tenant=<tenant>, url=console.ves.volterra.io
+  # Staging: <tenant>.staging.api-creds.p12 -> tenant=<tenant>, url=staging.volterra.us
+  if [[ "$name_no_ext" =~ ^([^.]+)\.console\.ves\.volterra\.io ]]; then
+    # Production format: f5-amer-ent.console.ves.volterra.io.api-creds
+    TENANT="${BASH_REMATCH[1]}"
+    XC_API_URL="https://${TENANT}.console.ves.volterra.io"
+    ENV_TYPE="production"
+  elif [[ "$name_no_ext" =~ ^([^.]+)\.staging ]]; then
+    # Staging format: nferreira.staging.api-creds
+    TENANT="${BASH_REMATCH[1]}"
+    XC_API_URL="https://${TENANT}.staging.volterra.us"
+    ENV_TYPE="staging"
+  else
+    # Fallback: assume production format with first segment as tenant
+    TENANT=${name_no_ext%%.*}
+    XC_API_URL="https://${TENANT}.console.ves.volterra.io"
+    ENV_TYPE="production (assumed)"
+  fi
+
   if [[ -z "$TENANT" ]]; then
     echo "Could not derive tenant; pass --tenant <id>" >&2
     exit 1
   fi
 fi
 
+# If API URL not set, default to production format
+if [[ -z "$XC_API_URL" ]]; then
+  XC_API_URL="https://${TENANT}.console.ves.volterra.io"
+  ENV_TYPE="production (default)"
+fi
+
 echo "Using TENANT_ID=$TENANT"
+echo "Using XC_API_URL=$XC_API_URL ($ENV_TYPE)"
 
 mkdir -p secrets
 CERT_PATH="secrets/cert.pem"
@@ -146,10 +185,10 @@ else
   fi
 fi
 
-# Split p12 to PEM cert and key (no password on key), with -legacy fallback, atomically
+# Split p12 to PEM cert chain and key (no password on key), with -legacy fallback, atomically
 TMP_CERT=$(mktemp secrets/cert.pem.XXXXXX)
 TMP_KEY=$(mktemp secrets/key.pem.XXXXXX)
-pkcs12_extract -in "$P12" -clcerts -nokeys -out "$TMP_CERT" -passin pass:"$P12_PASS"
+pkcs12_extract -in "$P12" -nokeys -out "$TMP_CERT" -passin pass:"$P12_PASS"
 pkcs12_extract -in "$P12" -nocerts -nodes -out "$TMP_KEY" -passin pass:"$P12_PASS"
 
 # Some keys may be encrypted; ensure passwordless key
@@ -176,6 +215,7 @@ if [[ "$WRITE_ENV" == "true" ]]; then
   TMP_ENV=$(mktemp "$ENV_DIR/.env.XXXXXX")
   cat >"$TMP_ENV" <<ENV
 TENANT_ID=$TENANT
+XC_API_URL=$XC_API_URL
 VOLT_API_CERT_FILE=$(pwd)/$CERT_PATH
 VOLT_API_CERT_KEY_FILE=$(pwd)/$KEY_PATH
 # If you prefer p12 in other tooling, keep for reference:
