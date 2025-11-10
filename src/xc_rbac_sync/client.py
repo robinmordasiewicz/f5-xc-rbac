@@ -33,6 +33,7 @@ class XCClient:
         api_token: Optional[str] = None,
         cert_file: Optional[str] = None,
         key_file: Optional[str] = None,
+        api_url: Optional[str] = None,
         timeout: int = 30,
         max_retries: int = 3,
         backoff_multiplier: float = 1.0,
@@ -46,6 +47,7 @@ class XCClient:
             api_token: API token for authentication (mutually exclusive with cert/key)
             cert_file: Path to API certificate file (requires key_file)
             key_file: Path to API key file (requires cert_file)
+            api_url: Optional API base URL (defaults to production endpoint)
             timeout: HTTP request timeout in seconds
             max_retries: Maximum number of retry attempts for failed requests
             backoff_multiplier: Exponential backoff multiplier
@@ -57,7 +59,7 @@ class XCClient:
 
         """
         self.tenant_id = tenant_id
-        self.base_url = f"https://{tenant_id}.console.ves.volterra.io"
+        self.base_url = api_url or f"https://{tenant_id}.console.ves.volterra.io"
         self.session = requests.Session()
         self.timeout = timeout
         self.max_retries = max_retries

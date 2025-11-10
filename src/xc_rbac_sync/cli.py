@@ -25,6 +25,7 @@ def _create_client(
     api_token: str | None,
     cert_file: str | None,
     key_file: str | None,
+    api_url: str | None,
     timeout: int,
     max_retries: int,
 ) -> XCClient:
@@ -35,6 +36,7 @@ def _create_client(
         api_token: Optional API token for authentication
         cert_file: Optional certificate file path
         key_file: Optional key file path
+        api_url: Optional API base URL
         timeout: HTTP request timeout in seconds
         max_retries: Maximum number of retries for failed requests
 
@@ -50,6 +52,7 @@ def _create_client(
             tenant_id=tenant_id,
             cert_file=cert_file,
             key_file=key_file,
+            api_url=api_url,
             timeout=timeout,
             max_retries=max_retries,
         )
@@ -57,6 +60,7 @@ def _create_client(
         return XCClient(
             tenant_id=tenant_id,
             api_token=api_token,
+            api_url=api_url,
             timeout=timeout,
             max_retries=max_retries,
         )
@@ -138,6 +142,7 @@ def sync(
         raise click.UsageError("TENANT_ID must be set in env or .env")
 
     api_token = os.getenv("XC_API_TOKEN")
+    api_url = os.getenv("XC_API_URL")
     p12_file = os.getenv("VOLT_API_P12_FILE")
     cert_file = os.getenv("VOLT_API_CERT_FILE")
     key_file = os.getenv("VOLT_API_CERT_KEY_FILE")
@@ -151,7 +156,7 @@ def sync(
     # Create authenticated client
     try:
         client = _create_client(
-            tenant_id, api_token, cert_file, key_file, timeout, max_retries
+            tenant_id, api_token, cert_file, key_file, api_url, timeout, max_retries
         )
     except click.UsageError:
         raise
@@ -293,6 +298,7 @@ def sync_users(
         raise click.UsageError("TENANT_ID must be set in env or .env")
 
     api_token = os.getenv("XC_API_TOKEN")
+    api_url = os.getenv("XC_API_URL")
     p12_file = os.getenv("VOLT_API_P12_FILE")
     cert_file = os.getenv("VOLT_API_CERT_FILE")
     key_file = os.getenv("VOLT_API_CERT_KEY_FILE")
@@ -306,7 +312,7 @@ def sync_users(
     # Create authenticated client
     try:
         client = _create_client(
-            tenant_id, api_token, cert_file, key_file, timeout, max_retries
+            tenant_id, api_token, cert_file, key_file, api_url, timeout, max_retries
         )
     except click.UsageError:
         raise
