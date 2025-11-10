@@ -50,11 +50,11 @@ class TestParseCSVToUsers:
         csv_content = (
             "Email,User Display Name,Employee Status,"
             "Entitlement Display Name\n"
-            "alice@example.com,Alice Anderson,A,"  # fmt: skip
-            "CN=EADMIN_STD,OU=Groups,DC=example,DC=com\n"  # noqa: E501
+            "alice@example.com,Alice Anderson,A,"
+            '"CN=EADMIN_STD,OU=Groups,DC=example,DC=com"\n'
             "bob@example.com,Bob Smith,I,"
-            "CN=DEVELOPERS,OU=Groups,DC=example,DC=com|"
-            "CN=TESTERS,OU=Groups,DC=example,DC=com"
+            '"CN=DEVELOPERS,OU=Groups,DC=example,DC=com|'
+            'CN=TESTERS,OU=Groups,DC=example,DC=com"'
         )
 
         csv_file = tmp_path / "test_users.csv"
@@ -63,22 +63,17 @@ class TestParseCSVToUsers:
         mock_repo = Mock()
         service = UserSyncService(mock_repo)
 
-        # This test should FAIL until we implement parse_csv_to_users
-        with pytest.raises(NotImplementedError):
-            service.parse_csv_to_users(str(csv_file))
-
-        # After implementation, these assertions should pass:
-        # users = service.parse_csv_to_users(str(csv_file))
-        # assert len(users) == 2
-        # assert users[0].email == "alice@example.com"
-        # assert users[0].first_name == "Alice"
-        # assert users[0].last_name == "Anderson"
-        # assert users[0].active is True
-        # assert "EADMIN_STD" in users[0].groups
-        # assert users[1].email == "bob@example.com"
-        # assert users[1].active is False
-        # assert "DEVELOPERS" in users[1].groups
-        # assert "TESTERS" in users[1].groups
+        users = service.parse_csv_to_users(str(csv_file))
+        assert len(users) == 2
+        assert users[0].email == "alice@example.com"
+        assert users[0].first_name == "Alice"
+        assert users[0].last_name == "Anderson"
+        assert users[0].active is True
+        assert "EADMIN_STD" in users[0].groups
+        assert users[1].email == "bob@example.com"
+        assert users[1].active is False
+        assert "DEVELOPERS" in users[1].groups
+        assert "TESTERS" in users[1].groups
 
     def test_parse_csv_missing_required_columns(self, tmp_path):
         """Test CSV parsing raises ValueError on missing columns (T015)."""
@@ -90,13 +85,8 @@ class TestParseCSVToUsers:
         mock_repo = Mock()
         service = UserSyncService(mock_repo)
 
-        # This test should FAIL until we implement parse_csv_to_users
-        with pytest.raises(NotImplementedError):
+        with pytest.raises(ValueError, match="Missing required columns"):
             service.parse_csv_to_users(str(csv_file))
-
-        # After implementation, should raise ValueError:
-        # with pytest.raises(ValueError, match="Missing required columns"):
-        #     service.parse_csv_to_users(str(csv_file))
 
     def test_parse_csv_name_variations(self, tmp_path):
         """Test CSV parsing with name variations (T016)."""
@@ -113,17 +103,13 @@ class TestParseCSVToUsers:
         mock_repo = Mock()
         service = UserSyncService(mock_repo)
 
-        with pytest.raises(NotImplementedError):
-            service.parse_csv_to_users(str(csv_file))
-
-        # After implementation:
-        # users = service.parse_csv_to_users(str(csv_file))
-        # assert users[0].first_name == "Madonna"
-        # assert users[0].last_name == ""
-        # assert users[1].first_name == "John Paul"
-        # assert users[1].last_name == "Smith"
-        # assert users[2].first_name == "Alice"
-        # assert users[2].last_name == "Anderson"
+        users = service.parse_csv_to_users(str(csv_file))
+        assert users[0].first_name == "Madonna"
+        assert users[0].last_name == ""
+        assert users[1].first_name == "John Paul"
+        assert users[1].last_name == "Smith"
+        assert users[2].first_name == "Alice"
+        assert users[2].last_name == "Anderson"
 
     def test_parse_csv_status_mapping(self, tmp_path):
         """Test CSV parsing with status mapping (T017)."""
@@ -140,23 +126,18 @@ class TestParseCSVToUsers:
         mock_repo = Mock()
         service = UserSyncService(mock_repo)
 
-        with pytest.raises(NotImplementedError):
-            service.parse_csv_to_users(str(csv_file))
-
-        # After implementation:
-        # users = service.parse_csv_to_users(str(csv_file))
-        # assert users[0].active is True
-        # assert users[1].active is False
-        # assert users[2].active is False
+        users = service.parse_csv_to_users(str(csv_file))
+        assert users[0].active is True
+        assert users[1].active is False
+        assert users[2].active is False
 
     def test_parse_csv_pipe_separated_groups(self, tmp_path):
         """Test CSV parsing with pipe-separated group DNs (T018)."""
         csv_content = (
             "Email,User Display Name,Employee Status,Entitlement Display Name\n"
-            "alice@example.com,Alice Anderson,A,"
-            "CN=GROUP1,OU=Groups,DC=ex,DC=com|"
+            'alice@example.com,Alice Anderson,A,"CN=GROUP1,OU=Groups,DC=ex,DC=com|'
             "CN=GROUP2,OU=Groups,DC=ex,DC=com|"
-            "CN=GROUP3,OU=Groups,DC=ex,DC=com"
+            'CN=GROUP3,OU=Groups,DC=ex,DC=com"'
         )
 
         csv_file = tmp_path / "groups.csv"
@@ -165,15 +146,11 @@ class TestParseCSVToUsers:
         mock_repo = Mock()
         service = UserSyncService(mock_repo)
 
-        with pytest.raises(NotImplementedError):
-            service.parse_csv_to_users(str(csv_file))
-
-        # After implementation:
-        # users = service.parse_csv_to_users(str(csv_file))
-        # assert len(users[0].groups) == 3
-        # assert "GROUP1" in users[0].groups
-        # assert "GROUP2" in users[0].groups
-        # assert "GROUP3" in users[0].groups
+        users = service.parse_csv_to_users(str(csv_file))
+        assert len(users[0].groups) == 3
+        assert "GROUP1" in users[0].groups
+        assert "GROUP2" in users[0].groups
+        assert "GROUP3" in users[0].groups
 
 
 class TestSyncUsersOperations:
@@ -196,18 +173,13 @@ class TestSyncUsersOperations:
         ]
         existing = {}
 
-        with pytest.raises(NotImplementedError):
-            service.sync_users(planned, existing, dry_run=False, delete_users=False)
-
-        # After implementation:
-        # stats = service.sync_users(planned, existing, dry_run=False,
-        #     delete_users=False)
-        # assert stats.created == 1
-        # assert stats.unchanged == 0
-        # assert stats.updated == 0
-        # assert stats.deleted == 0
-        # assert stats.errors == 0
-        # mock_repo.create_user.assert_called_once()
+        stats = service.sync_users(planned, existing, dry_run=False, delete_users=False)
+        assert stats.created == 1
+        assert stats.unchanged == 0
+        assert stats.updated == 0
+        assert stats.deleted == 0
+        assert stats.errors == 0
+        mock_repo.create_user.assert_called_once()
 
     def test_sync_updates_changed_user(self):
         """Test sync_users updates user when attributes differ (T020)."""
@@ -235,16 +207,11 @@ class TestSyncUsersOperations:
             }
         }
 
-        with pytest.raises(NotImplementedError):
-            service.sync_users(planned, existing, dry_run=False, delete_users=False)
-
-        # After implementation:
-        # stats = service.sync_users(planned, existing, dry_run=False,
-        #     delete_users=False)
-        # assert stats.updated == 1
-        # assert stats.created == 0
-        # assert stats.unchanged == 0
-        # mock_repo.update_user.assert_called_once()
+        stats = service.sync_users(planned, existing, dry_run=False, delete_users=False)
+        assert stats.updated == 1
+        assert stats.created == 0
+        assert stats.unchanged == 0
+        mock_repo.update_user.assert_called_once()
 
     def test_sync_skips_unchanged_user(self):
         """Test sync_users skips user when attributes match (T021)."""
@@ -275,18 +242,13 @@ class TestSyncUsersOperations:
             }
         }
 
-        with pytest.raises(NotImplementedError):
-            service.sync_users(planned, existing, dry_run=False, delete_users=False)
-
-        # After implementation:
-        # stats = service.sync_users(planned, existing, dry_run=False,
-        #     delete_users=False)
-        # assert stats.unchanged == 1
-        # assert stats.created == 0
-        # assert stats.updated == 0
-        # assert stats.deleted == 0
-        # mock_repo.create_user.assert_not_called()
-        # mock_repo.update_user.assert_not_called()
+        stats = service.sync_users(planned, existing, dry_run=False, delete_users=False)
+        assert stats.unchanged == 1
+        assert stats.created == 0
+        assert stats.updated == 0
+        assert stats.deleted == 0
+        mock_repo.create_user.assert_not_called()
+        mock_repo.update_user.assert_not_called()
 
 
 class TestIntegration:
@@ -297,7 +259,7 @@ class TestIntegration:
         # Create test CSV
         csv_content = (
             "Email,User Display Name,Employee Status,Entitlement Display Name\n"
-            "alice@example.com,Alice Anderson,A,CN=GROUP1,OU=Groups,DC=example,DC=com"
+            'alice@example.com,Alice Anderson,A,"CN=GROUP1,OU=Groups,DC=example,DC=com"'
         )
         csv_file = tmp_path / "test.csv"
         csv_file.write_text(csv_content)
@@ -309,18 +271,12 @@ class TestIntegration:
 
         service = UserSyncService(mock_repo)
 
-        # This test should FAIL until fully implemented
-        with pytest.raises(NotImplementedError):
-            service.parse_csv_to_users(str(csv_file))
-
-        # After implementation:
-        # planned = service.parse_csv_to_users(str(csv_file))
-        # existing = service.fetch_existing_users()
-        # stats = service.sync_users(planned, existing, dry_run=False,
-        #     delete_users=False)
-        # assert stats.created == 1
-        # assert stats.errors == 0
-        # mock_repo.create_user.assert_called_once()
+        planned = service.parse_csv_to_users(str(csv_file))
+        existing = service.fetch_existing_users()
+        stats = service.sync_users(planned, existing, dry_run=False, delete_users=False)
+        assert stats.created == 1
+        assert stats.errors == 0
+        mock_repo.create_user.assert_called_once()
 
     def test_idempotency_no_changes_on_rerun(self):
         """Test running sync twice produces no changes on second run (T023)."""
@@ -340,28 +296,25 @@ class TestIntegration:
             )
         ]
 
-        with pytest.raises(NotImplementedError):
-            service.sync_users(planned, {}, dry_run=False, delete_users=False)
+        # First run - creates user
+        stats1 = service.sync_users(planned, {}, dry_run=False, delete_users=False)
+        assert stats1.created == 1
 
-        # After implementation:
-        # # First run - creates user
-        # stats1 = service.sync_users(planned, {}, dry_run=False, delete_users=False)
-        # assert stats1.created == 1
-        #
-        # # Second run - user now exists and matches
-        # existing = {
-        #     "alice@example.com": {
-        #         "email": "alice@example.com",
-        #         "username": "alice@example.com",
-        #         "display_name": "Alice Anderson",
-        #         "first_name": "Alice",
-        #         "last_name": "Anderson",
-        #         "active": True,
-        #         "groups": [],
-        #     }
-        # }
-        # stats2 = service.sync_users(planned, existing, dry_run=False,
-        #     delete_users=False)
-        # assert stats2.unchanged == 1
-        # assert stats2.created == 0
-        # assert stats2.updated == 0
+        # Second run - user now exists and matches
+        existing = {
+            "alice@example.com": {
+                "email": "alice@example.com",
+                "username": "alice@example.com",
+                "display_name": "Alice Anderson",
+                "first_name": "Alice",
+                "last_name": "Anderson",
+                "active": True,
+                "groups": [],
+            }
+        }
+        stats2 = service.sync_users(
+            planned, existing, dry_run=False, delete_users=False
+        )
+        assert stats2.unchanged == 1
+        assert stats2.created == 0
+        assert stats2.updated == 0
