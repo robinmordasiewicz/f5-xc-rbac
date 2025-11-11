@@ -49,8 +49,10 @@ You need F5 XC API credentials (`.p12` file). Download from:
 
 # The script will:
 # - Extract your TENANT_ID from the filename
+# - Auto-detect environment type (production/staging) from filename pattern
+# - Derive XC_API_URL based on detected environment
 # - Split .p12 to PEM cert/key files (stored in secrets/)
-# - Create secrets/.env with credentials
+# - Create secrets/.env with TENANT_ID, XC_API_URL, and credential paths
 # - Set GitHub repository secrets (if gh CLI is installed)
 ```
 
@@ -64,7 +66,6 @@ You need F5 XC API credentials (`.p12` file). Download from:
 --tenant <id>         Tenant ID (extracted from filename if omitted)
 --no-secrets          Skip GitHub secret creation
 --no-env              Skip .env file creation
---tidy-legacy-env     Remove old root .env if present
 ```
 
 #### Option B: Manual Setup
@@ -85,12 +86,16 @@ openssl pkcs12 -in your-tenant.p12 -nocerts -nodes -out secrets/key.pem
 
 ```bash
 TENANT_ID=your-tenant-id
+XC_API_URL=https://your-tenant-id.console.ves.volterra.io
 VOLT_API_CERT_FILE=/absolute/path/to/secrets/cert.pem
 VOLT_API_CERT_KEY_FILE=/absolute/path/to/secrets/key.pem
 ```
 
-**Important:** Replace `your-tenant-id` with the prefix from your XC console URL:
-`https://<tenant-id>.console.ves.volterra.io`
+**Important:**
+- Replace `your-tenant-id` with the prefix from your XC console URL
+- The `XC_API_URL` will be auto-derived if not specified (defaults to production format)
+- For production: `https://<tenant-id>.console.ves.volterra.io`
+- For staging: `https://<tenant-id>.staging.volterra.us`
 
 ### 4. Prepare CSV File
 
@@ -157,12 +162,60 @@ xc-group-sync sync --csv ./User-Database.csv --cleanup-groups --cleanup-users --
 
 ### Workflow
 
-1. **Load Credentials**: Reads `TENANT_ID` and API credentials from environment/`.env`
+1. **Load Credentials**: Reads `TENANT_ID`, `XC_API_URL`, and API credentials from environment/`.env`
 2. **Parse CSV**: Extracts LDAP DNs and group memberships
 3. **Fetch XC Users**: Retrieves all users from F5 XC `user_roles` API
 4. **Validate**: Checks all CSV emails exist in XC
 5. **Calculate Changes**: Determines groups to create/update/delete
 6. **Apply Changes**: Executes API calls (unless `--dry-run`)
+
+### Environment Variables
+
+The tool uses the following environment variables (loaded from `secrets/.env` or system environment):
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `TENANT_ID` | Yes | Your F5 XC tenant identifier (e.g., `f5-amer-ent`) |
+| `XC_API_URL` | No | F5 XC API endpoint URL (auto-derived if not set) |
+| `VOLT_API_CERT_FILE` | Yes* | Path to PEM certificate file for API authentication |
+| `VOLT_API_CERT_KEY_FILE` | Yes* | Path to PEM private key file for API authentication |
+| `XC_API_TOKEN` | Yes* | API token for authentication (alternative to cert/key) |
+
+**Note:** Either cert/key pair OR API token must be provided for authentication.
+
+### API URL Auto-Detection
+
+The `XC_API_URL` is automatically derived based on environment type:
+
+**Production (default):**
+- Format: `https://{TENANT_ID}.console.ves.volterra.io`
+- Example: `https://f5-amer-ent.console.ves.volterra.io`
+- Used when `XC_API_URL` is not explicitly set
+- P12 filename pattern: `{tenant}.console.ves.volterra.io.api-creds.p12`
+
+**Staging:**
+- Format: `https://{TENANT_ID}.staging.volterra.us`
+- Example: `https://nferreira.staging.volterra.us`
+- Auto-detected from P12 filename pattern: `{tenant}.staging.api-creds.p12`
+- Can be manually set via `XC_API_URL` environment variable
+
+**Setup Script Detection:**
+
+The `scripts/setup_xc_credentials.sh` script automatically:
+1. Extracts `TENANT_ID` from P12 filename
+2. Detects environment type (production/staging) from filename patterns
+3. Constructs appropriate `XC_API_URL`
+4. Writes both to `secrets/.env`
+
+**Example P12 filenames:**
+
+```bash
+# Production
+f5-amer-ent.console.ves.volterra.io.api-creds.p12 → XC_API_URL=https://f5-amer-ent.console.ves.volterra.io
+
+# Staging
+nferreira.staging.api-creds.p12 → XC_API_URL=https://nferreira.staging.volterra.us
+```
 
 ### Technical Details
 
@@ -232,9 +285,16 @@ XC_P12_PASSWORD    P12 passphrase
 
 ```bash
 TENANT_ID                  # Your tenant ID
+XC_API_URL                 # Optional: F5 XC API endpoint (auto-derived if omitted)
 VOLT_API_CERT_FILE         # Path to cert.pem
 VOLT_API_CERT_KEY_FILE     # Path to key.pem
 ```
+
+**XC_API_URL Derivation:**
+- If `XC_API_URL` is not set, the tool automatically constructs the production endpoint
+- Production format: `https://{TENANT_ID}.console.ves.volterra.io`
+- For staging environments, explicitly set `XC_API_URL=https://{TENANT_ID}.staging.volterra.us`
+- The setup script automatically detects environment type from P12 filename patterns
 
 **Example GitLab CI:**
 
