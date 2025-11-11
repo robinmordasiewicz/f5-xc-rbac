@@ -44,13 +44,13 @@ class TestCLIBasics:
 class TestCLISyncCommand:
     """Test sync command execution."""
 
-    def test_sync_missing_tenant_id(self, runner, temp_csv_file):
+    def test_sync_missing_tenant_id(self, runner, temp_csv_file, clean_env):
         """Test that missing TENANT_ID raises error."""
         result = runner.invoke(cli, ["sync", "--csv", temp_csv_file])
         assert result.exit_code != 0
         assert "TENANT_ID must be set" in result.output
 
-    def test_sync_missing_auth(self, runner, temp_csv_file, monkeypatch):
+    def test_sync_missing_auth(self, runner, temp_csv_file, clean_env, monkeypatch):
         """Test that missing authentication raises error."""
         monkeypatch.setenv("TENANT_ID", "test-tenant")
         result = runner.invoke(cli, ["sync", "--csv", temp_csv_file])
@@ -109,7 +109,7 @@ class TestCLISyncCommand:
         mock_service.cleanup_orphaned_groups.return_value = 0
 
         result = runner.invoke(
-            cli, ["sync", "--csv", temp_csv_file, "--cleanup", "--dry-run"]
+            cli, ["sync", "--csv", temp_csv_file, "--cleanup-groups", "--dry-run"]
         )
 
         assert result.exit_code == 0
@@ -231,14 +231,20 @@ class TestCLIAuthentication:
                 assert call_kwargs.get("cert_file") == "/path/to/cert.pem"
                 assert call_kwargs.get("key_file") == "/path/to/key.pem"
 
-    def test_auth_with_api_token(self, runner, temp_csv_file, mock_env):
+    def test_auth_with_api_token(self, runner, temp_csv_file, clean_env, monkeypatch):
         """Test authentication with API token."""
+        # Set ONLY API token (no cert/key) to test token auth path
+        monkeypatch.setenv("TENANT_ID", "test-tenant")
+        monkeypatch.setenv("XC_API_TOKEN", "test-token")
+
         with patch("xc_rbac_sync.cli.XCClient") as mock_client:
             with patch("xc_rbac_sync.cli.GroupSyncService"):
                 runner.invoke(cli, ["sync", "--csv", temp_csv_file, "--dry-run"])
 
                 call_kwargs = mock_client.call_args[1]
                 assert call_kwargs.get("api_token") == "test-token"
+                assert call_kwargs.get("cert_file") is None
+                assert call_kwargs.get("key_file") is None
 
     def test_p12_warning_logged(self, runner, temp_csv_file, mock_env, monkeypatch):
         """Test that P12 file triggers informational message."""

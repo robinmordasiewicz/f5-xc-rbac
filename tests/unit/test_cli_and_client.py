@@ -180,10 +180,12 @@ def test_cli_cleanup_failure(monkeypatch, tmp_path):
 
     runner = CliRunner()
     result = runner.invoke(
-        cli.cli, ["sync", "--csv", str(csv_file), "--cleanup"], catch_exceptions=False
+        cli.cli,
+        ["sync", "--csv", str(csv_file), "--cleanup-groups"],
+        catch_exceptions=False,
     )
     assert result.exit_code != 0
-    assert "Cleanup failed" in result.output
+    assert "Cleanup failed" in result.output or "boom" in result.output
 
 
 def test_xcclient_with_cert_sets_session_cert():

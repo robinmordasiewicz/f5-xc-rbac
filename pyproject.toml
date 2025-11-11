@@ -73,6 +73,16 @@ addopts = [
 ]
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = [
+  "unit: Fast unit tests with heavy mocking",
+  "integration: Integration tests with real component interaction",
+  "slow: Tests that take >1 second to execute",
+  "cli: Tests for CLI interface and commands",
+  "api: Tests for API client functionality",
+  "service: Tests for service layer business logic",
+  "edge_case: Tests for edge cases and error handling",
+  "security: Tests for security-related functionality",
+]
 
 [tool.coverage.run]
 source = ["src"]

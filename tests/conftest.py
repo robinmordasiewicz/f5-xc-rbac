@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import Any, Dict
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 from requests import Response
@@ -112,3 +112,36 @@ def sample_users_response():
             },
         ]
     }
+
+
+@pytest.fixture
+def clean_env(monkeypatch):
+    """Clean environment fixture that removes credential environment variables.
+
+    This ensures tests don't accidentally use real credentials from secrets/.env
+    and provides a clean slate for setting up test-specific environment variables.
+
+    Usage:
+        def test_something(clean_env, monkeypatch):
+            monkeypatch.setenv("TENANT_ID", "test-tenant")
+            # Test with clean environment
+    """
+    # List of all credential and configuration environment variables
+    env_vars_to_clear = [
+        "TENANT_ID",
+        "XC_API_TOKEN",
+        "XC_API_URL",
+        "VOLT_API_P12_FILE",
+        "VES_P12_PASSWORD",
+        "VOLT_API_CERT_FILE",
+        "VOLT_API_CERT_KEY_FILE",
+        "DOTENV_PATH",
+    ]
+
+    # Clear all credential environment variables
+    for var in env_vars_to_clear:
+        monkeypatch.delenv(var, raising=False)
+
+    # Mock load_dotenv to prevent loading from any .env files
+    with patch("xc_rbac_sync.cli.load_dotenv"):
+        yield
