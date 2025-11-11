@@ -9,7 +9,7 @@ This tool:
 - **Reads** user group memberships from CSV exports (e.g., from Active Directory)
 - **Syncs** RBAC groups to F5 Distributed Cloud via API
 - **Validates** all users exist in XC before creating groups
-- **Manages** group lifecycle (create, update, delete with `--cleanup`)
+- **Manages** group and user lifecycle (create, update, delete with `--cleanup-groups` and `--cleanup-users`)
 - **Provides** dry-run mode for safe testing
 - **Integrates** with CI/CD pipelines (GitHub Actions)
 
@@ -135,18 +135,19 @@ xc-group-sync sync --csv ./User-Database.csv --dry-run --log-level info
 # Apply sync (create/update groups)
 xc-group-sync sync --csv ./User-Database.csv --log-level info
 
-# Apply with cleanup (also delete groups not in CSV)
-xc-group-sync sync --csv ./User-Database.csv --cleanup --log-level info
+# Apply with cleanup (also delete groups and users not in CSV)
+xc-group-sync sync --csv ./User-Database.csv --cleanup-groups --cleanup-users --log-level info
 ```
 
-**⚠️ Warning:** `--cleanup` flag will **delete** F5 XC groups that don't exist in your CSV. Use with caution.
+**⚠️ Warning:** `--cleanup-groups` and `--cleanup-users` flags will **delete** F5 XC groups and users that don't exist in your CSV. Use with caution.
 
 ## Command Options
 
 ```text
 --csv <path>          Path to CSV file with user data (required)
 --dry-run             Preview changes without applying (no API calls)
---cleanup             Delete XC groups not present in CSV (opt-in, use carefully)
+--cleanup-groups      Delete XC groups not present in CSV (opt-in, use carefully)
+--cleanup-users       Delete XC users not present in CSV (opt-in, use carefully)
 --log-level <level>   Logging verbosity: debug|info|warn|error (default: info)
 --timeout <seconds>   HTTP request timeout (default: 30)
 --max-retries <n>     Max retries for transient API errors (default: 3)
@@ -179,7 +180,9 @@ xc-group-sync sync --csv ./User-Database.csv --cleanup --log-level info
 - Adds missing members
 - Removes extra members (if they exist in XC)
 
-**Delete** (with `--cleanup`): Groups in XC but not in CSV are deleted
+**Delete** (with `--cleanup-groups`): Groups in XC but not in CSV are deleted
+
+**Delete Users** (with `--cleanup-users`): Users in XC but not in CSV are deleted
 
 ## CI/CD Integration
 
@@ -258,9 +261,9 @@ sync-xc-groups:
 
 1. **Always dry-run first**: Test with `--dry-run` before applying
 2. **Review changes**: Check dry-run output for unexpected modifications
-3. **Start without cleanup**: Omit `--cleanup` until confident
+3. **Start without cleanup**: Omit `--cleanup-groups` and `--cleanup-users` until confident
 4. **Monitor logs**: Use `--log-level debug` for troubleshooting
-5. **Backup groups**: Document current XC group state before bulk changes
+5. **Backup groups and users**: Document current XC state before bulk changes
 
 ### File Permissions
 
