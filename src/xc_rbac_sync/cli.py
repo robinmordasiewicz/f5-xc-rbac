@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 
 from .client import XCClient
 from .sync_service import CSVParseError, GroupSyncService
-from .user_sync_service import UserSyncService
+from .user_sync_service import CSVValidationResult, UserSyncService
 
 
 def _create_client(
@@ -244,6 +244,71 @@ def sync(
     click.echo("Sync complete.")
 
 
+def _display_csv_validation(result: CSVValidationResult, dry_run: bool = False) -> None:
+    """Display CSV validation results with enhanced feedback.
+
+    Args:
+        result: CSV validation result with users and warnings
+        dry_run: Whether this is a dry-run operation
+    """
+    # Dry-run banner
+    if dry_run:
+        click.echo("\n" + "=" * 60)
+        click.echo("🔍 DRY RUN MODE - No changes will be made to F5 XC")
+        click.echo("=" * 60)
+
+    # Basic counts
+    click.echo(f"\nUsers planned from CSV: {result.total_count}")
+    click.echo(f" - Active: {result.active_count}, Inactive: {result.inactive_count}")
+
+    # Sample users (first 3)
+    if result.users:
+        click.echo("\nSample of parsed users:")
+        for user in result.users[:3]:
+            icon = "✓" if user.active else "⚠"
+            status = "Active" if user.active else "Inactive"
+            group_count = len(user.groups)
+            click.echo(
+                f"  {icon} {user.email} ({user.display_name}) - "
+                f"{status} [{group_count} groups]"
+            )
+        if len(result.users) > 3:
+            click.echo(f"  ... and {len(result.users) - 3} more users")
+
+    # Unique groups count
+    if result.unique_groups:
+        click.echo(f"\nGroups assigned: {len(result.unique_groups)} unique LDAP groups")
+
+    # Validation warnings
+    if result.has_warnings():
+        click.echo("\n⚠️  Validation Warnings:")
+
+        if result.duplicate_emails:
+            click.echo(f"  - {len(result.duplicate_emails)} duplicate email(s) found:")
+            for email, rows in list(result.duplicate_emails.items())[:5]:
+                click.echo(f"    • {email} (rows: {', '.join(map(str, rows))})")
+            if len(result.duplicate_emails) > 5:
+                click.echo(f"    ... and {len(result.duplicate_emails) - 5} more")
+
+        if result.invalid_emails:
+            click.echo(f"  - {len(result.invalid_emails)} invalid email format(s):")
+            for email, row_num in result.invalid_emails[:5]:
+                click.echo(f"    • {email} (row {row_num})")
+            if len(result.invalid_emails) > 5:
+                click.echo(f"    ... and {len(result.invalid_emails) - 5} more")
+
+        if result.users_without_groups > 0:
+            click.echo(
+                f"  - {result.users_without_groups} user(s) have no group assignments"
+            )
+
+        if result.users_without_names > 0:
+            click.echo(
+                f"  - {result.users_without_names} user(s) missing display names "
+                f"(will use email prefix)"
+            )
+
+
 @cli.command()
 @click.option(
     "--csv",
@@ -320,7 +385,7 @@ def sync_users(
 
     # Parse CSV file
     try:
-        planned_users = service.parse_csv_to_users(csv_path)
+        validation_result = service.parse_csv_to_users(csv_path)
     except FileNotFoundError as e:
         raise click.UsageError(str(e))
     except ValueError as e:
@@ -328,11 +393,8 @@ def sync_users(
     except Exception as e:
         raise click.ClickException(f"Failed to parse CSV: {e}")
 
-    # Display planned users
-    click.echo(f"Users planned from CSV: {len(planned_users)}")
-    active_count = sum(1 for u in planned_users if u.active)
-    inactive_count = len(planned_users) - active_count
-    click.echo(f" - Active: {active_count}, Inactive: {inactive_count}")
+    # Display CSV validation results with enhanced feedback
+    _display_csv_validation(validation_result, dry_run)
 
     # Fetch existing users (validates authentication)
     try:
@@ -347,7 +409,9 @@ def sync_users(
     # Synchronize users with execution time tracking (T077)
     start_time = time.time()
     try:
-        stats = service.sync_users(planned_users, existing_users, dry_run, delete_users)
+        stats = service.sync_users(
+            validation_result.users, existing_users, dry_run, delete_users
+        )
     except Exception as e:
         raise click.ClickException(f"Sync failed: {e}")
     execution_time = time.time() - start_time
