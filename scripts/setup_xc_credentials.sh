@@ -10,20 +10,19 @@ umask 077
 
 usage() {
   cat <<'USAGE'
-Usage: scripts/setup_xc_credentials.sh [--p12 <path>] [--tenant <id>] [--no-secrets] [--no-env] [--tidy-legacy-env]
+Usage: scripts/setup_xc_credentials.sh [--p12 <path>] [--tenant <id>] [--no-secrets] [--no-env]
 
 Options:
   --p12 <path>       Path to p12 file; if omitted, auto-detect in ~/Downloads when exactly one .p12 exists
   --tenant <id>      Tenant ID (prefix before '.' in https://<tenant>.console.ves.volterra.io)
   --no-secrets       Do NOT set GitHub repo secrets (default is to set them)
   --no-env           Do NOT write a .env file (default writes secrets/.env)
-  --tidy-legacy-env  Remove legacy root .env if it points to secrets/ paths (off by default)
 
 This script will:
   - Split p12 to PEM (cert.pem/key.pem) in ./secrets/ (created if missing)
   - Write secrets/.env with TENANT_ID and either VOLT_API_P12_FILE/VES_P12_PASSWORD or VOLT_API_CERT_FILE/VOLT_API_CERT_KEY_FILE (unless --no-env)
   - Set repo secrets (TENANT_ID, XC_CERT, XC_CERT_KEY, XC_P12, XC_P12_PASSWORD) via gh CLI by default (unless --no-secrets)
-  - Avoid leftover temporary files; optionally tidy a legacy root .env when --tidy-legacy-env is provided
+  - Avoid leftover temporary files
 USAGE
 }
 
@@ -31,7 +30,6 @@ P12=""
 TENANT=""
 SET_SECRETS="true"
 WRITE_ENV="true"
-TIDY_LEGACY_ENV="false"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -54,10 +52,6 @@ while [[ $# -gt 0 ]]; do
       ;;
     --no-env)
       WRITE_ENV="false"
-      shift
-      ;;
-    --tidy-legacy-env)
-      TIDY_LEGACY_ENV="true"
       shift
       ;;
     -h | --help)
@@ -256,14 +250,6 @@ if [[ "$SET_SECRETS" == "true" ]]; then
     base64 <"$P12" | tr -d '\n' | gh secret set XC_P12 --body - 1>/dev/null || true
   printf "%s" "$P12_PASS" | gh secret set XC_P12_PASSWORD --body - 1>/dev/null || true
   echo "Secrets set."
-fi
-
-# Optionally remove a legacy root .env if it points to secrets/ paths
-if [[ "$TIDY_LEGACY_ENV" == "true" && -f .env ]]; then
-  if grep -q '^TENANT_ID=' .env && grep -q 'VOLT_API_CERT_FILE=.*/secrets/cert\.pem' .env; then
-    rm -f .env || true
-    echo "Removed legacy root .env"
-  fi
 fi
 
 # Always clean up any historical temp-suffix files left by prior runs
