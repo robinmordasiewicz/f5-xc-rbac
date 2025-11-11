@@ -146,6 +146,15 @@ fi
 echo "Using TENANT_ID=$TENANT"
 echo "Using XC_API_URL=$XC_API_URL ($ENV_TYPE)"
 
+# Warn about staging SSL limitations
+if [[ "$ENV_TYPE" == "staging" ]]; then
+  echo ""
+  echo "⚠️  WARNING: Staging environments use self-signed CAs"
+  echo "Python requests library may fail SSL verification."
+  echo "See README 'SSL Certificate Verification Issues' for solutions."
+  echo ""
+fi
+
 mkdir -p secrets
 CERT_PATH="secrets/cert.pem"
 KEY_PATH="secrets/key.pem"
