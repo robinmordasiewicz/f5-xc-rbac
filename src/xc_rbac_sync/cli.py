@@ -75,6 +75,47 @@ def cli() -> None:
     """XC Group Sync CLI."""
 
 
+def _load_configuration() -> tuple[str, str | None, str | None, str | None, str | None]:
+    """Load configuration from environment variables.
+
+    Checks for secrets/.env first (GitHub Actions), then fallback to default .env.
+
+    Returns:
+        Tuple of (tenant_id, api_token, api_url, cert_file, key_file)
+
+    Raises:
+        click.UsageError: If TENANT_ID is not set
+    """
+    # Load environment variables
+    dotenv_path = os.getenv("DOTENV_PATH")
+    if dotenv_path and os.path.exists(dotenv_path):
+        load_dotenv(dotenv_path)
+    elif os.path.exists("secrets/.env"):
+        load_dotenv("secrets/.env")
+    else:
+        load_dotenv()
+
+    tenant_id = os.getenv("TENANT_ID")
+    if not tenant_id:
+        raise click.UsageError("TENANT_ID must be set in env or .env")
+
+    api_token = os.getenv("XC_API_TOKEN")
+    api_url = os.getenv("XC_API_URL")
+    p12_file = os.getenv("VOLT_API_P12_FILE")
+    cert_file = os.getenv("VOLT_API_CERT_FILE")
+    key_file = os.getenv("VOLT_API_CERT_KEY_FILE")
+
+    # P12 not supported by requests - warn only if no cert/key available
+    if p12_file and not (cert_file and key_file):
+        logging.warning(
+            "P12 file provided but Python requests library cannot use it "
+            "directly. Please run setup_xc_credentials.sh to extract "
+            "cert/key files."
+        )
+
+    return tenant_id, api_token, api_url, cert_file, key_file
+
+
 @cli.command()
 @click.option(
     "--csv",
@@ -127,33 +168,8 @@ def sync(
         format="%(levelname)s %(message)s",
     )
 
-    # Load environment variables
-    # Check for secrets/.env first (GitHub Actions), then fallback to default .env
-    dotenv_path = os.getenv("DOTENV_PATH")
-    if dotenv_path and os.path.exists(dotenv_path):
-        load_dotenv(dotenv_path)
-    elif os.path.exists("secrets/.env"):
-        load_dotenv("secrets/.env")
-    else:
-        load_dotenv()
-
-    tenant_id = os.getenv("TENANT_ID")
-    if not tenant_id:
-        raise click.UsageError("TENANT_ID must be set in env or .env")
-
-    api_token = os.getenv("XC_API_TOKEN")
-    api_url = os.getenv("XC_API_URL")
-    p12_file = os.getenv("VOLT_API_P12_FILE")
-    cert_file = os.getenv("VOLT_API_CERT_FILE")
-    key_file = os.getenv("VOLT_API_CERT_KEY_FILE")
-
-    # P12 not supported by requests - warn only if no cert/key available
-    if p12_file and not (cert_file and key_file):
-        logging.warning(
-            "P12 file provided but Python requests library cannot use it "
-            "directly. Please run setup_xc_credentials.sh to extract "
-            "cert/key files."
-        )
+    # Load configuration from environment
+    tenant_id, api_token, api_url, cert_file, key_file = _load_configuration()
 
     # Create authenticated client
     try:
@@ -286,32 +302,8 @@ def sync_users(
         format="%(levelname)s %(message)s",
     )
 
-    # Load environment variables
-    dotenv_path = os.getenv("DOTENV_PATH")
-    if dotenv_path and os.path.exists(dotenv_path):
-        load_dotenv(dotenv_path)
-    elif os.path.exists("secrets/.env"):
-        load_dotenv("secrets/.env")
-    else:
-        load_dotenv()
-
-    tenant_id = os.getenv("TENANT_ID")
-    if not tenant_id:
-        raise click.UsageError("TENANT_ID must be set in env or .env")
-
-    api_token = os.getenv("XC_API_TOKEN")
-    api_url = os.getenv("XC_API_URL")
-    p12_file = os.getenv("VOLT_API_P12_FILE")
-    cert_file = os.getenv("VOLT_API_CERT_FILE")
-    key_file = os.getenv("VOLT_API_CERT_KEY_FILE")
-
-    # P12 not supported by requests - warn only if no cert/key available
-    if p12_file and not (cert_file and key_file):
-        logging.warning(
-            "P12 file provided but Python requests library cannot use it "
-            "directly. Please run setup_xc_credentials.sh to extract "
-            "cert/key files."
-        )
+    # Load configuration from environment
+    tenant_id, api_token, api_url, cert_file, key_file = _load_configuration()
 
     # Create authenticated client
     try:
