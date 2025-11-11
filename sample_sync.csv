@@ -1,3 +1,0 @@
-Email,Entitlement Display Name
-admin@example.com,"CN=admins,OU=Groups,DC=example,DC=com"
-user1@example.com,"CN=developers,OU=Groups,DC=example,DC=com"

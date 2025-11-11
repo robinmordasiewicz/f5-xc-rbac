@@ -11,7 +11,7 @@ This quickstart shows how to prepare credentials, create a sample CSV, and run t
 bash scripts/setup_xc_credentials.sh --p12 /path/to/tenant.api-creds.p12 --no-secrets
 ```
 
-1. Create a sample CSV (`sample_sync.csv`):
+1. Create a sample CSV (`User-Database.csv`):
 
 ```csv
 Email,Entitlement Display Name
@@ -22,13 +22,13 @@ bob@example.com,"CN=developers,OU=Groups,DC=example,DC=com"
 1. Run a safe dry-run to see planned actions (no API changes):
 
 ```bash
-python -m xc_rbac_sync.cli sync --csv sample_sync.csv --dry-run --log-level info
+python -m xc_rbac_sync.cli sync --csv User-Database.csv --dry-run --log-level info
 ```
 
 1. When ready to apply changes, run without `--dry-run` (careful; this will modify your tenant):
 
 ```bash
-python -m xc_rbac_sync.cli sync --csv sample_sync.csv
+python -m xc_rbac_sync.cli sync --csv User-Database.csv
 ```
 
 Notes:
