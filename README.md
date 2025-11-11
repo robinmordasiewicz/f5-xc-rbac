@@ -313,6 +313,86 @@ openssl rsa -in secrets/key.pem -check
 ./scripts/setup_xc_credentials.sh --p12 your-file.p12
 ```
 
+#### SSL Certificate Verification Issues (Staging Environments)
+
+**Problem**: Python `requests` library fails with SSL verification errors when connecting to staging F5 XC environments:
+
+```text
+SSLError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed
+```
+
+**Root Cause**: F5 XC staging environments (e.g., `*.staging.ves.volterra.io`, `*.nferreira.staging`) use self-signed root Certificate Authorities (CAs) that are not trusted by the standard Python `certifi` trust store.
+
+**Why curl works but Python fails:**
+
+- **curl**: Uses system certificate stores (macOS Keychain, Linux ca-certificates) which may include custom CAs
+- **Python requests**: Uses bundled `certifi` package with only standard public CAs
+- Staging self-signed CAs are not in `certifi` trust store
+
+**Solutions:**
+
+##### Option 1: Disable SSL Verification (Testing Only)
+
+Add `--no-verify-ssl` flag (if implemented) or set environment variable:
+
+```bash
+# DANGER: Only for non-production testing
+export REQUESTS_CA_BUNDLE=""
+xc-group-sync sync --csv file.csv
+```
+
+**⚠️ Security Warning**: Disabling SSL verification exposes you to man-in-the-middle attacks. **Never use in production.**
+
+##### Option 2: Add Staging CA to Python Trust Store
+
+1. Export staging root CA certificate:
+
+```bash
+# Get the CA from staging endpoint
+openssl s_client -showcerts -connect tenant.staging.ves.volterra.io:443 </dev/null 2>/dev/null | \
+  openssl x509 -outform PEM > staging-ca.pem
+```
+
+1. Append to certifi bundle:
+
+```bash
+python3 -c "import certifi; print(certifi.where())"  # Find certifi location
+cat staging-ca.pem >> $(python3 -c "import certifi; print(certifi.where())")
+```
+
+1. Or set `REQUESTS_CA_BUNDLE`:
+
+```bash
+export REQUESTS_CA_BUNDLE=/path/to/staging-ca.pem
+xc-group-sync sync --csv file.csv
+```
+
+##### Option 3: Use Production Environment
+
+Production F5 XC environments (`*.console.ves.volterra.io`) use standard publicly-trusted certificates and work without modification:
+
+```bash
+# Production environments don't have SSL issues
+TENANT_ID=your-prod-tenant xc-group-sync sync --csv file.csv
+```
+
+##### Verify Your Environment
+
+Check if your tenant uses staging:
+
+```bash
+echo $TENANT_ID
+# If it ends in .staging, you're using staging environment
+```
+
+Test SSL connectivity:
+
+```bash
+curl -v https://${TENANT_ID}.console.ves.volterra.io 2>&1 | grep -i "SSL certificate verify"
+```
+
+**Best Practice**: Use production credentials for CI/CD pipelines to avoid SSL verification issues entirely.
+
 ### Debug Mode
 
 ```bash
