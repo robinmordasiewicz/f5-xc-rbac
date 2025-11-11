@@ -125,7 +125,10 @@ def _load_configuration() -> tuple[str, str | None, str | None, str | None, str 
     help="Path to CSV export",
 )
 @click.option("--dry-run", is_flag=True, help="Log actions without calling the API")
-@click.option("--cleanup", is_flag=True, help="Delete XC groups missing from CSV")
+@click.option(
+    "--cleanup-groups", is_flag=True, help="Delete XC groups missing from CSV"
+)
+@click.option("--cleanup-users", is_flag=True, help="Delete XC users missing from CSV")
 @click.option(
     "--log-level",
     type=click.Choice(["debug", "info", "warn", "error"], case_sensitive=False),
@@ -137,7 +140,8 @@ def _load_configuration() -> tuple[str, str | None, str | None, str | None, str 
 def sync(
     csv_path: str,
     dry_run: bool,
-    cleanup: bool,
+    cleanup_groups: bool,
+    cleanup_users: bool,
     log_level: str,
     max_retries: int,
     timeout: int,
@@ -156,7 +160,8 @@ def sync(
     Args:
         csv_path: Path to CSV file with Email and Entitlement Display Name columns
         dry_run: If True, log actions without making API changes
-        cleanup: If True, delete groups that exist in XC but not in CSV
+        cleanup_groups: If True, delete groups that exist in XC but not in CSV
+        cleanup_users: If True, delete users that exist in XC but not in CSV
         log_level: Logging verbosity level
         max_retries: Maximum retries for failed API requests
         timeout: HTTP timeout in seconds
@@ -222,14 +227,42 @@ def sync(
         raise click.ClickException(f"Sync failed: {e}")
 
     # Cleanup orphaned groups if requested
-    if cleanup:
+    if cleanup_groups:
         try:
             deleted = service.cleanup_orphaned_groups(
                 planned_groups, existing_groups, dry_run
             )
             stats.deleted = deleted
         except Exception as e:
-            raise click.ClickException(f"Cleanup failed: {e}")
+            raise click.ClickException(f"Group cleanup failed: {e}")
+
+    # Cleanup orphaned users if requested
+    if cleanup_users:
+        try:
+            from xc_rbac_sync.user_sync_service import UserSyncService
+
+            user_service = UserSyncService(client)
+
+            # Parse CSV to get planned users
+            validation_result = user_service.parse_csv_to_users(csv_path)
+
+            # Fetch existing users if not already fetched
+            if existing_users is None:
+                existing_users = user_service.fetch_existing_users()
+
+            # Cleanup orphaned users
+            user_stats = user_service.cleanup_orphaned_users(
+                validation_result.users, existing_users, dry_run
+            )
+
+            # Display user cleanup summary
+            click.echo(
+                f"\nUser cleanup: {user_stats.deleted} deleted, "
+                f"{user_stats.errors} errors"
+            )
+        except Exception as e:
+            raise click.ClickException(f"User cleanup failed: {e}")
+
     execution_time = time.time() - start_time
 
     # Display summary with execution time

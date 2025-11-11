@@ -404,6 +404,97 @@ class TestUserDeletion:
         assert stats.error_details[0]["email"] == "orphan@example.com"
         assert stats.error_details[0]["operation"] == "delete"
 
+    def test_cleanup_orphaned_users_deletes_extra_users(self):
+        """Test cleanup_orphaned_users deletes users not in CSV."""
+        mock_repo = Mock()
+        mock_repo.delete_user.return_value = None
+
+        service = UserSyncService(mock_repo)
+
+        # CSV has one user, but XC has two users
+        from xc_rbac_sync.models import User
+
+        planned = [
+            User(
+                email="keep@example.com",
+                display_name="Keep User",
+                first_name="Keep",
+                last_name="User",
+                active=True,
+                groups=[],
+            )
+        ]
+        existing = {
+            "keep@example.com": {"email": "keep@example.com"},
+            "delete@example.com": {"email": "delete@example.com"},
+        }
+
+        stats = service.cleanup_orphaned_users(planned, existing, dry_run=False)
+        assert stats.deleted == 1
+        assert stats.errors == 0
+        mock_repo.delete_user.assert_called_once_with("delete@example.com")
+
+    def test_cleanup_orphaned_users_dry_run(self):
+        """Test cleanup_orphaned_users in dry-run mode doesn't delete."""
+        mock_repo = Mock()
+
+        service = UserSyncService(mock_repo)
+
+        # CSV has no users, but XC has one user
+        planned = []
+        existing = {"orphan@example.com": {"email": "orphan@example.com"}}
+
+        stats = service.cleanup_orphaned_users(planned, existing, dry_run=True)
+        assert stats.deleted == 1  # Count shows what would be deleted
+        assert stats.errors == 0
+        mock_repo.delete_user.assert_not_called()  # But no actual deletion
+
+    def test_cleanup_orphaned_users_handles_errors(self):
+        """Test cleanup_orphaned_users handles deletion errors gracefully."""
+        mock_repo = Mock()
+        mock_repo.delete_user.side_effect = Exception("API Error")
+
+        service = UserSyncService(mock_repo)
+
+        planned = []
+        existing = {"orphan@example.com": {"email": "orphan@example.com"}}
+
+        stats = service.cleanup_orphaned_users(planned, existing, dry_run=False)
+        assert stats.errors == 1
+        assert stats.deleted == 0
+        assert len(stats.error_details) == 1
+        assert stats.error_details[0]["email"] == "orphan@example.com"
+
+    def test_cleanup_orphaned_users_case_insensitive(self):
+        """Test cleanup_orphaned_users handles email case insensitivity."""
+        mock_repo = Mock()
+
+        service = UserSyncService(mock_repo)
+
+        # CSV has user with lowercase email
+        from xc_rbac_sync.models import User
+
+        planned = [
+            User(
+                email="keep@example.com",
+                display_name="Keep User",
+                first_name="Keep",
+                last_name="User",
+                active=True,
+                groups=[],
+            )
+        ]
+        # XC has same user with uppercase email
+        existing = {
+            "Keep@Example.Com": {"email": "Keep@Example.Com"},
+            "delete@example.com": {"email": "delete@example.com"},
+        }
+
+        stats = service.cleanup_orphaned_users(planned, existing, dry_run=False)
+        assert stats.deleted == 1  # Only delete@example.com should be deleted
+        assert stats.errors == 0
+        mock_repo.delete_user.assert_called_once_with("delete@example.com")
+
 
 class TestDryRunMode:
     """Test dry-run mode functionality (Phase 5 - US5)."""
