@@ -154,7 +154,9 @@ class GroupSyncService:
         """
         list_resp = self.repository.list_groups()
         existing = {
-            g.get("name"): g for g in list_resp.get("items", []) if isinstance(g, dict)
+            g["name"]: g
+            for g in list_resp.get("items", [])
+            if isinstance(g, dict) and "name" in g
         }
         return existing
 
@@ -171,14 +173,62 @@ class GroupSyncService:
         try:
             roles = self.repository.list_user_roles()
             existing_users = {
-                u.get("username") or u.get("email")
+                user_id
                 for u in roles.get("items", [])
                 if isinstance(u, dict)
+                and (user_id := u.get("username") or u.get("email"))
             }
             return existing_users
         except Exception as e:
             logging.warning("Could not pre-validate users (user_roles): %s", e)
             return None
+
+    def _validate_and_ensure_users(
+        self,
+        desired_users: List[str],
+        current_users: Set[str],
+        existing_users: Set[str] | None,
+        dry_run: bool,
+        stats: SyncStats,
+    ) -> tuple[List[str], Set[str], SyncStats]:
+        """Validate and ensure all desired users exist.
+
+        Args:
+            desired_users: List of user emails/usernames needed for group
+            current_users: Set of currently known existing users
+            existing_users: Original set from caller (None if we should create users)
+            dry_run: If True, only log actions without making changes
+            stats: Current sync statistics
+
+        Returns:
+            Tuple of (unknown_users, updated_current_users, updated_stats)
+        """
+        unknown = [u for u in desired_users if u not in current_users]
+
+        # If caller provided existing_users for strict validation, don't create users
+        if unknown and existing_users is not None:
+            return unknown, current_users, stats
+
+        # Attempt to create missing users (only when existing_users was None)
+        for u in unknown:
+            if dry_run:
+                logging.info("Would create user %s", u)
+            else:
+                try:
+                    self._create_user_with_retry({"email": u})
+                    logging.info("Created user %s", u)
+                    current_users.add(u)
+                except Exception as e:
+                    stats.errors += 1
+                    logging.error(
+                        "Failed to create user %s after retries: %s",
+                        u,
+                        e,
+                    )
+
+        # Recompute unknown after attempted creations
+        unknown = [u for u in desired_users if u not in current_users]
+        return unknown, current_users, stats
 
     def sync_groups(
         self,
@@ -210,9 +260,10 @@ class GroupSyncService:
             try:
                 roles = self.repository.list_user_roles()
                 current_users = {
-                    u.get("username") or u.get("email")
+                    user_id
                     for u in roles.get("items", [])
                     if isinstance(u, dict)
+                    and (user_id := u.get("username") or u.get("email"))
                 }
             except Exception as e:
                 logging.warning("Could not fetch existing users: %s", e)
@@ -223,63 +274,27 @@ class GroupSyncService:
         for grp in planned_groups:
             desired_users = sorted(grp.users)
 
-            # Identify users that are not present in the repository snapshot.
-            unknown = [u for u in desired_users if u not in current_users]
+            # Validate and ensure users exist
+            unknown, current_users, stats = self._validate_and_ensure_users(
+                desired_users, current_users, existing_users, dry_run, stats
+            )
 
-            # If the caller provided an `existing_users` set we **must not** attempt
-            # to provision missing users on their behalf; instead treat this as a
-            # validation failure and skip the group. When the service fetched the
-            # users itself (existing_users was None on entry) it is permitted to
-            # attempt to create missing users.
+            # Skip group if users are still unknown after validation/creation
             if unknown:
-                if existing_users is not None:
-                    # Caller asked for strict validation; skip the group and record
-                    # the occurrence as an error so callers can be alerted.
-                    stats.skipped_due_to_unknown += 1
-                    stats.errors += 1
-                    logging.error(
-                        "Skipping group %s due to unknown users (validation only): %s",
-                        grp.name,
-                        ", ".join(unknown),
-                    )
-                    continue
-
-                # At this point we are allowed to attempt provisioning missing users
-                # (we previously fetched the current users ourselves). Try to create
-                # each missing user unless running a dry-run.
-                for u in unknown:
-                    if dry_run:
-                        logging.info("Would create user %s", u)
-                    else:
-                        try:
-                            # Attempt to create a minimal user record with retries for
-                            # transient failures. The repository interface may implement
-                            # create_user(email) or create_user(dict). We pass a dict.
-                            self._create_user_with_retry({"email": u})
-                            logging.info("Created user %s", u)
-                            current_users.add(u)
-                        except Exception as e:
-                            # If user creation fails after retries, record an error and
-                            # we'll decide below whether to skip the group.
-                            stats.errors += 1
-                            logging.error(
-                                "Failed to create user %s after retries: %s",
-                                u,
-                                e,
-                            )
-
-                # Recompute unknown after attempted creations and skip if still missing
-                unknown = [u for u in desired_users if u not in current_users]
-                if unknown:
-                    stats.skipped_due_to_unknown += 1
-                    logging.error(
-                        "Skipping group %s due to unknown users after create "
-                        "attempts: %s",
-                        grp.name,
-                        ", ".join(unknown),
-                    )
-                    stats.errors += 1
-                    continue
+                stats.skipped_due_to_unknown += 1
+                stats.errors += 1
+                error_context = (
+                    "validation only"
+                    if existing_users is not None
+                    else "after create attempts"
+                )
+                logging.error(
+                    "Skipping group %s due to unknown users (%s): %s",
+                    grp.name,
+                    error_context,
+                    ", ".join(unknown),
+                )
+                continue
 
             if grp.name in existing_groups:
                 # Update existing group
@@ -387,6 +402,12 @@ class GroupSyncService:
 
         Uses tenacity.Retrying with the instance's retry/backoff configuration.
         Raises after retries are exhausted.
+
+        Args:
+            user: User data dictionary to create
+
+        Returns:
+            Created user response from repository
         """
         from tenacity import Retrying
 
@@ -402,6 +423,10 @@ class GroupSyncService:
         ):
             with attempt:
                 return self.repository.create_user(user)
+
+        # This line should never be reached due to reraise=True,
+        # but included for type checker satisfaction
+        raise RuntimeError("Retry logic failed unexpectedly")
 
     def cleanup_orphaned_groups(
         self,

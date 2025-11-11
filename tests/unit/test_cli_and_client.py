@@ -192,7 +192,9 @@ def test_xcclient_with_cert_sets_session_cert():
 
 
 def test__create_client_with_cert_returns_client():
-    client = cli._create_client("tenant", None, "/tmp/cert.pem", "/tmp/key.pem", 10, 2)
+    client = cli._create_client(
+        "tenant", None, "/tmp/cert.pem", "/tmp/key.pem", None, 10, 2
+    )
     assert hasattr(client, "session")
     assert client.session.cert == ("/tmp/cert.pem", "/tmp/key.pem")
 
