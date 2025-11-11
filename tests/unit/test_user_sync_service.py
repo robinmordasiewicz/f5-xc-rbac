@@ -63,7 +63,11 @@ class TestParseCSVToUsers:
         mock_repo = Mock()
         service = UserSyncService(mock_repo)
 
-        users = service.parse_csv_to_users(str(csv_file))
+        result = service.parse_csv_to_users(str(csv_file))
+        assert result.total_count == 2
+        assert result.active_count == 1
+        assert result.inactive_count == 1
+        users = result.users
         assert len(users) == 2
         assert users[0].email == "alice@example.com"
         assert users[0].first_name == "Alice"
@@ -103,7 +107,8 @@ class TestParseCSVToUsers:
         mock_repo = Mock()
         service = UserSyncService(mock_repo)
 
-        users = service.parse_csv_to_users(str(csv_file))
+        result = service.parse_csv_to_users(str(csv_file))
+        users = result.users
         assert users[0].first_name == "Madonna"
         assert users[0].last_name == ""
         assert users[1].first_name == "John Paul"
@@ -126,7 +131,8 @@ class TestParseCSVToUsers:
         mock_repo = Mock()
         service = UserSyncService(mock_repo)
 
-        users = service.parse_csv_to_users(str(csv_file))
+        result = service.parse_csv_to_users(str(csv_file))
+        users = result.users
         assert users[0].active is True
         assert users[1].active is False
         assert users[2].active is False
@@ -146,7 +152,8 @@ class TestParseCSVToUsers:
         mock_repo = Mock()
         service = UserSyncService(mock_repo)
 
-        users = service.parse_csv_to_users(str(csv_file))
+        result = service.parse_csv_to_users(str(csv_file))
+        users = result.users
         assert len(users[0].groups) == 3
         assert "GROUP1" in users[0].groups
         assert "GROUP2" in users[0].groups
@@ -271,9 +278,11 @@ class TestIntegration:
 
         service = UserSyncService(mock_repo)
 
-        planned = service.parse_csv_to_users(str(csv_file))
+        result = service.parse_csv_to_users(str(csv_file))
         existing = service.fetch_existing_users()
-        stats = service.sync_users(planned, existing, dry_run=False, delete_users=False)
+        stats = service.sync_users(
+            result.users, existing, dry_run=False, delete_users=False
+        )
         assert stats.created == 1
         assert stats.errors == 0
         mock_repo.create_user.assert_called_once()

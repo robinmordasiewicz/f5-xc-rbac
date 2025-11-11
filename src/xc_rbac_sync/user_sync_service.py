@@ -5,13 +5,63 @@ and F5 Distributed Cloud, treating CSV as the source of truth.
 """
 
 import logging
+import re
 from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import Dict, List, Set
 
 from xc_rbac_sync.models import User
 from xc_rbac_sync.protocols import UserRepository
 
 logger = logging.getLogger(__name__)
+
+
+def validate_email_format(email: str) -> bool:
+    """Validate email format using simple RFC-compliant pattern.
+
+    Args:
+        email: Email address to validate
+
+    Returns:
+        True if email format is valid, False otherwise
+    """
+    pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+    return bool(re.match(pattern, email))
+
+
+@dataclass
+class CSVValidationResult:
+    """Result of CSV parsing with validation warnings.
+
+    Attributes:
+        users: List of successfully parsed User objects
+        total_count: Total number of users in CSV
+        active_count: Number of active users
+        inactive_count: Number of inactive users
+        duplicate_emails: Map of duplicate emails to their row numbers
+        invalid_emails: List of (email, row_number) tuples with invalid format
+        users_without_groups: Number of users with no group assignments
+        users_without_names: Number of users with missing display names
+        unique_groups: Set of unique group names found across all users
+    """
+
+    users: List[User]
+    total_count: int
+    active_count: int
+    inactive_count: int
+    duplicate_emails: Dict[str, List[int]] = field(default_factory=dict)
+    invalid_emails: List[tuple[str, int]] = field(default_factory=list)
+    users_without_groups: int = 0
+    users_without_names: int = 0
+    unique_groups: Set[str] = field(default_factory=set)
+
+    def has_warnings(self) -> bool:
+        """Check if any validation warnings were found."""
+        return (
+            len(self.duplicate_emails) > 0
+            or len(self.invalid_emails) > 0
+            or self.users_without_groups > 0
+            or self.users_without_names > 0
+        )
 
 
 @dataclass
@@ -66,14 +116,14 @@ class UserSyncService:
         self.retry_wait = retry_wait
         self.retry_stop = retry_stop
 
-    def parse_csv_to_users(self, csv_path: str) -> List[User]:
-        """Parse CSV file to User objects with enhanced attributes.
+    def parse_csv_to_users(self, csv_path: str) -> CSVValidationResult:
+        """Parse CSV file to User objects with validation warnings.
 
         Args:
             csv_path: Absolute path to CSV file
 
         Returns:
-            List of User objects parsed from CSV
+            CSVValidationResult with parsed users and validation warnings
 
         Raises:
             FileNotFoundError: If CSV file doesn't exist
@@ -90,6 +140,12 @@ class UserSyncService:
             raise FileNotFoundError(f"CSV file not found: {csv_path}")
 
         users = []
+        email_tracker: Dict[str, List[int]] = {}  # Track emails for duplicates
+        invalid_emails: List[tuple[str, int]] = []
+        users_without_groups = 0
+        users_without_names = 0
+        unique_groups: Set[str] = set()
+
         required_columns = {
             "Email",
             "User Display Name",
@@ -115,8 +171,24 @@ class UserSyncService:
                         logger.warning(f"Row {row_num}: Empty email, skipping")
                         continue
 
+                    # Track email for duplicate detection (case-insensitive)
+                    email_lower = email.lower()
+                    if email_lower in email_tracker:
+                        email_tracker[email_lower].append(row_num)
+                    else:
+                        email_tracker[email_lower] = [row_num]
+
+                    # Validate email format
+                    if not validate_email_format(email):
+                        invalid_emails.append((email, row_num))
+                        logger.warning(f"Row {row_num}: Invalid email format: {email}")
+
                     display_name = row["User Display Name"].strip()
                     first_name, last_name = parse_display_name(display_name)
+
+                    # Track users without display names
+                    if not display_name:
+                        users_without_names += 1
 
                     active = parse_active_status(row["Employee Status"])
 
@@ -130,6 +202,11 @@ class UserSyncService:
                                 cn = extract_cn(dn)
                                 if cn:
                                     groups.append(cn)
+                                    unique_groups.add(cn)
+
+                    # Track users without group assignments
+                    if not groups:
+                        users_without_groups += 1
 
                     user = User(
                         email=email,
@@ -146,7 +223,27 @@ class UserSyncService:
                     raise ValueError(f"Row {row_num}: {e}") from e
 
         logger.info(f"Parsed {len(users)} users from {csv_path}")
-        return users
+
+        # Identify duplicate emails (only those that appear more than once)
+        duplicate_emails = {
+            email: rows for email, rows in email_tracker.items() if len(rows) > 1
+        }
+
+        # Count active/inactive users
+        active_count = sum(1 for u in users if u.active)
+        inactive_count = len(users) - active_count
+
+        return CSVValidationResult(
+            users=users,
+            total_count=len(users),
+            active_count=active_count,
+            inactive_count=inactive_count,
+            duplicate_emails=duplicate_emails,
+            invalid_emails=invalid_emails,
+            users_without_groups=users_without_groups,
+            users_without_names=users_without_names,
+            unique_groups=unique_groups,
+        )
 
     def fetch_existing_users(self) -> Dict[str, Dict]:
         """Fetch users from F5 XC, return email -> user_data map.
