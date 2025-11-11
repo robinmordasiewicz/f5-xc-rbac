@@ -129,14 +129,15 @@ As an operator, I can run a setup script that discovers my F5 XC API certificate
 - **FR-006a**: The tool MUST be idempotent: a second run with unchanged CSV MUST produce zero changes (created=0, updated=0).
 - **FR-007**: The tool MUST support a dry-run mode (`--dry-run` flag) that logs intended actions without performing create/update/delete operations.
 - **FR-008**: The tool MUST produce a summary report including counts of: groups created, groups updated, groups deleted, groups skipped (no change), errors.
-- **FR-009**: When cleanup mode is enabled (`--cleanup` flag), the tool MUST identify groups present in XC but absent from CSV and delete them via `DELETE /api/web/custom/namespaces/system/user_groups/{name}`.
+- **FR-009**: When group cleanup mode is enabled (`--cleanup-groups` flag), the tool MUST identify groups present in XC but absent from CSV and delete them via `DELETE /api/web/custom/namespaces/system/user_groups/{name}`.
+- **FR-009a**: When user cleanup mode is enabled (`--cleanup-users` flag), the tool MUST identify users present in XC but absent from CSV and delete them via the F5 XC API. This flag is independent of `--cleanup-groups` and must be explicitly enabled.
 - **FR-010**: The tool MUST pre-validate that all unique user emails from the CSV exist in F5 XC via `GET /api/web/custom/namespaces/system/user_roles` before performing group operations. The CSV is the authoritative source of truth.
 - **FR-010a**: If users exist in F5 XC but are not present in the CSV, the tool MUST remove them from all XC user groups during sync operations (treating CSV as complete user roster).
 - **FR-011**: The tool MUST implement retry with exponential backoff for transient API failures (5xx errors, rate limit 429) with configurable max retries (default: 3).
 - **FR-012**: The tool MUST log errors with sufficient context (group name, operation, HTTP status, response message) without exposing API tokens in logs.
 - **FR-013**: The tool MUST support configuration via CLI flags for: API base URL, auth token, dry-run, cleanup mode, logging level (debug/info/warn/error), max retries.
 - **FR-014**: The tool MUST use HTTPS/TLS for all API calls (enforce certificate validation) and never print API tokens in logs or stdout.
-- **FR-015**: Destructive operations (deleting groups via `--cleanup`) MUST be disabled by default and require explicit opt-in flag.
+- **FR-015**: Destructive operations (deleting groups via `--cleanup-groups` and users via `--cleanup-users`) MUST be disabled by default and require explicit opt-in flags.
 - **FR-016**: The tool MUST exit with status code 0 if all operations succeed; non-zero (1) if any operation fails or validation errors occur.
 - **FR-017**: The tool MUST operate exclusively in the "system" namespace for all user group operations (hardcoded), as mandated by F5 XC API design. Multi-namespace support is out of scope.
 - **FR-018**: The tool MUST set the `display_name` field for each user group to the extracted CN value (same as `name`), providing consistent human-readable group identifiers.

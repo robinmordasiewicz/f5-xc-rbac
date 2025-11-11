@@ -404,3 +404,38 @@ class UserSyncService:
             stats.error_details.append(
                 {"email": email, "operation": "delete", "error": str(e)}
             )
+
+    def cleanup_orphaned_users(
+        self,
+        planned_users: List["User"],
+        existing_users: Dict[str, Dict],
+        dry_run: bool = False,
+    ) -> UserSyncStats:
+        """Delete users that exist in XC but not in planned list.
+
+        Args:
+            planned_users: Users from CSV
+            existing_users: Currently existing users from XC
+            dry_run: If True, only log without deleting
+
+        Returns:
+            UserSyncStats with deletion results
+
+        """
+        stats = UserSyncStats()
+        planned_emails = {u.email.lower() for u in planned_users}
+        extra_emails = [
+            email
+            for email in existing_users.keys()
+            if email.lower() not in planned_emails
+        ]
+
+        if extra_emails:
+            logger.info(f"Extra users in XC not in CSV: {len(extra_emails)}")
+            for email in extra_emails:
+                logger.info(f" - {email}")
+
+            for email in extra_emails:
+                self._delete_user(email, dry_run, stats)
+
+        return stats

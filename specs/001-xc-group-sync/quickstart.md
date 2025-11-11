@@ -53,7 +53,8 @@ Required repo secrets:
 
 ```text
 --dry-run          Log actions without calling the API
---cleanup          Delete XC groups missing from CSV (opt-in)
+--cleanup-groups   Delete XC groups missing from CSV (opt-in)
+--cleanup-users    Delete XC users missing from CSV (opt-in)
 --log-level        debug|info|warn|error (default: info)
 --timeout          HTTP timeout in seconds (default: 30)
 --max-retries      Max retries for transient API errors (default: 3)
