@@ -1,15 +1,23 @@
-# F5 Distributed Cloud RBAC Group Sync
+# F5 Distributed Cloud RBAC Sync
 
-Automated synchronization tool for managing F5 Distributed Cloud (XC) RBAC groups from CSV user databases.
+Automated synchronization tool for managing F5 Distributed Cloud (XC) users and RBAC groups from CSV user databases.
 
 ## What Does This Tool Do?
 
-This tool keeps your F5 XC security groups synchronized with your authoritative user database (exported as CSV):
+This tool keeps your F5 XC security **users and groups** synchronized with your authoritative user database (exported as CSV):
 
+**User Synchronization:**
+- ✅ **Creates** users that exist in CSV but not in F5 XC
+- ✅ **Updates** user attributes (name, active status) to match CSV
+- ✅ **Deletes** users not in CSV (optional, with explicit flag)
+
+**Group Synchronization:**
 - ✅ **Creates** groups that exist in CSV but not in F5 XC
 - ✅ **Updates** group memberships to match CSV (adds/removes users)
-- ✅ **Validates** all users exist before making changes
-- ✅ **Deletes** groups/users not in CSV (optional, with explicit flags)
+- ✅ **Deletes** groups not in CSV (optional, with explicit flag)
+
+**Safety & Automation:**
+- ✅ **Validates** all data before making changes
 - ✅ **Dry-run mode** to preview changes safely before applying
 - ✅ **CI/CD ready** for automated synchronization workflows
 
@@ -313,59 +321,64 @@ This shows:
 
 ## CI/CD Integration
 
-### GitHub Actions
+This repository provides **sample CI/CD configurations** that serve as starting points for production deployments. The samples are **disabled by default** and require customization for your environment.
 
-The repository includes a GitHub Actions workflow that:
-- Runs automatically on push to `main` (dry-run mode)
-- Can be triggered manually via workflow_dispatch (apply mode)
-- Uses repository secrets for credentials
+### Available Samples
 
-#### Setup GitHub Secrets
+**📁 Location**: `samples/ci-cd/`
 
-If you used the setup script, secrets are already configured. Otherwise:
+**GitHub Actions:**
+- `xc-group-sync.yml.sample` - Main synchronization workflow
+- `pre-commit.yml.sample` - Code quality and linting
 
-1. Go to: **Settings** → **Secrets and variables** → **Actions**
-2. Add these secrets:
+**Jenkins:**
+- `Jenkinsfile.declarative.sample` - Declarative Pipeline syntax
+- `Jenkinsfile.scripted.sample` - Scripted Pipeline syntax
 
-```text
-TENANT_ID          Your F5 XC tenant ID
-XC_CERT            PEM certificate (raw text, not base64)
-XC_CERT_KEY        PEM private key (raw text, not base64)
-```
+### Quick Start
 
-#### Workflow Behavior
+**For GitHub Actions:**
 
-**Automatic (on push to main):**
-- Runs dry-run sync
-- Shows what would change
-- No modifications applied
+1. Copy the sample workflow:
+   ```bash
+   cp samples/ci-cd/github-actions/xc-group-sync.yml.sample \
+      .github/workflows/xc-group-sync.yml
+   ```
 
-**Manual (workflow_dispatch):**
-- Run from Actions tab → "XC Group Sync" → "Run workflow"
-- Applies actual changes to F5 XC
-- Use for production sync
+2. Configure secrets in **Settings → Secrets and variables → Actions**:
+   ```text
+   TENANT_ID          Your F5 XC tenant ID
+   XC_CERT            PEM certificate (raw text, not base64)
+   XC_CERT_KEY        PEM private key (raw text, not base64)
+   ```
 
-### Other CI/CD Platforms
+3. Review and customize the workflow, then commit to enable it
 
-**Required Environment Variables:**
+**For Jenkins:**
 
-```bash
-TENANT_ID                  # Your tenant ID
-XC_API_URL                 # Optional: Auto-derived if not set
-VOLT_API_CERT_FILE         # Path to cert.pem
-VOLT_API_CERT_KEY_FILE     # Path to key.pem
-```
+1. Copy the sample Jenkinsfile:
+   ```bash
+   cp samples/ci-cd/jenkins/Jenkinsfile.declarative.sample Jenkinsfile
+   ```
 
-**Example GitLab CI:**
+2. Configure Jenkins credentials with IDs:
+   - `TENANT_ID` (Secret text)
+   - `XC_CERT` (Secret text - PEM certificate content)
+   - `XC_CERT_KEY` (Secret text - PEM private key content)
 
-```yaml
-sync-xc-groups:
-  script:
-    - pip install -e .
-    - xc-group-sync sync --csv ./User-Database.csv --dry-run
-  only:
-    - main
-```
+3. Create a Pipeline job pointing to your repository
+
+### Detailed Documentation
+
+For complete setup instructions, customization guide, and troubleshooting:
+
+**📖 See**: [`samples/ci-cd/README.md`](samples/ci-cd/README.md)
+
+Includes:
+- Authentication options (PEM vs P12)
+- Customization examples (cleanup flags, scheduling, notifications)
+- Security best practices
+- Troubleshooting common issues
 
 ## Security Best Practices
 

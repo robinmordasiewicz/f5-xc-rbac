@@ -1,0 +1,190 @@
+// Declarative Pipeline for F5 XC RBAC Sync
+// This is a sample Jenkinsfile demonstrating how to run the XC sync tool in Jenkins
+//
+// Prerequisites:
+// 1. Install Python plugin or ensure Python 3.12+ is available on Jenkins agents
+// 2. Configure Jenkins credentials:
+//    - XC_CERT: Secret text (PEM certificate content)
+//    - XC_CERT_KEY: Secret text (PEM private key content)
+//    - TENANT_ID: Secret text (your F5 XC tenant ID)
+// 3. Store your User-Database.csv in the repository or configure as a build parameter
+
+pipeline {
+    agent any
+
+    options {
+        // Keep last 10 builds
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        // Timeout after 30 minutes
+        timeout(time: 30, unit: 'MINUTES')
+        // Disable concurrent builds
+        disableConcurrentBuilds()
+    }
+
+    parameters {
+        choice(
+            name: 'SYNC_MODE',
+            choices: ['dry-run', 'apply'],
+            description: 'Run mode: dry-run (preview) or apply (execute changes)'
+        )
+        booleanParam(
+            name: 'CLEANUP_GROUPS',
+            defaultValue: false,
+            description: 'Delete XC groups not in CSV (use with caution)'
+        )
+        booleanParam(
+            name: 'CLEANUP_USERS',
+            defaultValue: false,
+            description: 'Delete XC users not in CSV (use with caution)'
+        )
+        string(
+            name: 'CSV_FILE',
+            defaultValue: 'User-Database.csv',
+            description: 'Path to CSV file relative to workspace'
+        )
+    }
+
+    environment {
+        // Python virtual environment
+        VENV_DIR = "${WORKSPACE}/.venv"
+        // Secrets directory
+        SECRETS_DIR = "${WORKSPACE}/secrets"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                // Checkout code from SCM
+                checkout scm
+
+                script {
+                    echo "Building from branch: ${env.GIT_BRANCH}"
+                    echo "Commit: ${env.GIT_COMMIT}"
+                }
+            }
+        }
+
+        stage('Setup Python Environment') {
+            steps {
+                sh '''
+                    # Create virtual environment
+                    python3 -m venv ${VENV_DIR}
+
+                    # Activate and upgrade pip
+                    . ${VENV_DIR}/bin/activate
+                    python -m pip install --upgrade pip
+
+                    # Install project
+                    pip install -e .
+
+                    # Verify installation
+                    xc-group-sync --version || echo "Tool installed successfully"
+                '''
+            }
+        }
+
+        stage('Prepare Credentials') {
+            steps {
+                script {
+                    // Create secrets directory
+                    sh "mkdir -p ${SECRETS_DIR}"
+
+                    // Write credentials from Jenkins secrets to files
+                    withCredentials([
+                        string(credentialsId: 'XC_CERT', variable: 'XC_CERT_CONTENT'),
+                        string(credentialsId: 'XC_CERT_KEY', variable: 'XC_CERT_KEY_CONTENT'),
+                        string(credentialsId: 'TENANT_ID', variable: 'TENANT_ID_VALUE')
+                    ]) {
+                        sh '''
+                            # Write certificate files
+                            printf "%s" "$XC_CERT_CONTENT" > ${SECRETS_DIR}/cert.pem
+                            printf "%s" "$XC_CERT_KEY_CONTENT" > ${SECRETS_DIR}/key.pem
+
+                            # Set restrictive permissions
+                            chmod 600 ${SECRETS_DIR}/*.pem
+
+                            # Create .env file
+                            cat > ${SECRETS_DIR}/.env << EOF
+TENANT_ID=${TENANT_ID_VALUE}
+VOLT_API_CERT_FILE=${SECRETS_DIR}/cert.pem
+VOLT_API_CERT_KEY_FILE=${SECRETS_DIR}/key.pem
+EOF
+
+                            echo "Credentials prepared successfully"
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Validate CSV') {
+            steps {
+                sh '''
+                    if [ ! -f "${CSV_FILE}" ]; then
+                        echo "ERROR: CSV file not found: ${CSV_FILE}"
+                        exit 1
+                    fi
+
+                    echo "CSV file found: ${CSV_FILE}"
+                    wc -l ${CSV_FILE}
+                '''
+            }
+        }
+
+        stage('Run Sync') {
+            steps {
+                script {
+                    // Build command based on parameters
+                    def syncCmd = ". ${VENV_DIR}/bin/activate && xc-group-sync sync --csv ${params.CSV_FILE}"
+
+                    // Add dry-run flag if selected
+                    if (params.SYNC_MODE == 'dry-run') {
+                        syncCmd += ' --dry-run'
+                    }
+
+                    // Add cleanup flags if enabled
+                    if (params.CLEANUP_GROUPS) {
+                        syncCmd += ' --cleanup-groups'
+                    }
+                    if (params.CLEANUP_USERS) {
+                        syncCmd += ' --cleanup-users'
+                    }
+
+                    // Add logging and retry configuration
+                    syncCmd += ' --log-level info --timeout 30 --max-retries 3'
+
+                    echo "Executing: ${syncCmd}"
+
+                    // Run sync
+                    sh syncCmd
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            // Clean up secrets
+            sh '''
+                if [ -d "${SECRETS_DIR}" ]; then
+                    rm -rf ${SECRETS_DIR}
+                    echo "Secrets cleaned up"
+                fi
+            '''
+        }
+
+        success {
+            echo 'XC RBAC Sync completed successfully'
+        }
+
+        failure {
+            echo 'XC RBAC Sync failed - check logs for details'
+        }
+
+        cleanup {
+            // Optional: clean workspace
+            // cleanWs()
+            echo 'Build cleanup complete'
+        }
+    }
+}
