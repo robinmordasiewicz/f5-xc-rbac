@@ -30,15 +30,15 @@ class TestCLIBasics:
         """Test CLI help output."""
         result = runner.invoke(cli, ["--help"])
         assert result.exit_code == 0
-        assert "XC Group Sync CLI" in result.output
+        assert "Synchronize F5 XC" in result.output
 
     def test_sync_help(self, runner):
         """Test sync command help."""
-        result = runner.invoke(cli, ["sync", "--help"])
+        result = runner.invoke(cli, ["--help"])
         assert result.exit_code == 0
         assert "--csv" in result.output
         assert "--dry-run" in result.output
-        assert "--cleanup" in result.output
+        assert "--prune" in result.output
 
 
 class TestCLISyncCommand:
@@ -46,134 +46,256 @@ class TestCLISyncCommand:
 
     def test_sync_missing_tenant_id(self, runner, temp_csv_file, clean_env):
         """Test that missing TENANT_ID raises error."""
-        result = runner.invoke(cli, ["sync", "--csv", temp_csv_file])
+        result = runner.invoke(cli, ["--csv", temp_csv_file])
         assert result.exit_code != 0
         assert "TENANT_ID must be set" in result.output
 
     def test_sync_missing_auth(self, runner, temp_csv_file, clean_env, monkeypatch):
         """Test that missing authentication raises error."""
         monkeypatch.setenv("TENANT_ID", "test-tenant")
-        result = runner.invoke(cli, ["sync", "--csv", temp_csv_file])
+        result = runner.invoke(cli, ["--csv", temp_csv_file])
         assert result.exit_code != 0
         assert "XC_API_TOKEN" in result.output or "VOLT_API_CERT" in result.output
 
     def test_sync_missing_csv(self, runner, mock_env):
         """Test that missing CSV file raises error."""
-        result = runner.invoke(cli, ["sync", "--csv", "/nonexistent/file.csv"])
+        result = runner.invoke(cli, ["--csv", "/nonexistent/file.csv"])
         assert result.exit_code != 0
 
+    @patch("xc_rbac_sync.cli.UserSyncService")
     @patch("xc_rbac_sync.cli.GroupSyncService")
     @patch("xc_rbac_sync.cli.XCClient")
     def test_sync_dry_run_success(
-        self, mock_client_class, mock_service_class, runner, temp_csv_file, mock_env
+        self,
+        mock_client_class,
+        mock_group_service_class,
+        mock_user_service_class,
+        runner,
+        temp_csv_file,
+        mock_env,
     ):
         """Test successful dry-run sync."""
-        # Setup mocks
-        mock_service = Mock()
-        mock_service_class.return_value = mock_service
-        mock_service.parse_csv_to_groups.return_value = []
-        mock_service.fetch_existing_groups.return_value = {}
-        mock_service.fetch_existing_users.return_value = set()
+        # Setup group service mock
+        mock_group_service = Mock()
+        mock_group_service_class.return_value = mock_group_service
+        mock_group_service.parse_csv_to_groups.return_value = []
+        mock_group_service.fetch_existing_groups.return_value = {}
+        mock_group_service.fetch_existing_users.return_value = set()
 
-        stats_mock = Mock()
-        stats_mock.summary.return_value = (
+        group_stats_mock = Mock()
+        group_stats_mock.summary.return_value = (
             "Summary: created=0, updated=0, deleted=0, skipped=0, errors=0"
         )
-        stats_mock.has_errors.return_value = False
-        mock_service.sync_groups.return_value = stats_mock
+        group_stats_mock.has_errors.return_value = False
+        group_stats_mock.created = 0
+        group_stats_mock.updated = 0
+        group_stats_mock.deleted = 0
+        mock_group_service.sync_groups.return_value = group_stats_mock
 
-        result = runner.invoke(cli, ["sync", "--csv", temp_csv_file, "--dry-run"])
+        # Setup user service mock
+        mock_user_service = Mock()
+        mock_user_service_class.return_value = mock_user_service
+
+        # Mock CSV validation result
+        csv_validation_result = Mock()
+        csv_validation_result.total_count = 0
+        csv_validation_result.active_count = 0
+        csv_validation_result.inactive_count = 0
+        csv_validation_result.users = []
+        csv_validation_result.unique_groups = set()
+        csv_validation_result.has_warnings.return_value = False
+        mock_user_service.parse_csv_to_users.return_value = csv_validation_result
+        mock_user_service.fetch_existing_users.return_value = {}
+
+        user_stats_mock = Mock()
+        user_stats_mock.summary.return_value = (
+            "Summary: created=0, updated=0, deleted=0, skipped=0, errors=0"
+        )
+        user_stats_mock.has_errors.return_value = False
+        user_stats_mock.created = 0
+        user_stats_mock.updated = 0
+        user_stats_mock.deleted = 0
+        mock_user_service.sync_users.return_value = user_stats_mock
+
+        result = runner.invoke(cli, ["--csv", temp_csv_file, "--dry-run"])
 
         assert result.exit_code == 0
-        assert "Sync complete" in result.output
-        mock_service.sync_groups.assert_called_once()
+        assert "SYNCHRONIZATION COMPLETE" in result.output
+        mock_group_service.sync_groups.assert_called_once()
+        mock_user_service.sync_users.assert_called_once()
 
+    @patch("xc_rbac_sync.cli.UserSyncService")
     @patch("xc_rbac_sync.cli.GroupSyncService")
     @patch("xc_rbac_sync.cli.XCClient")
-    def test_sync_with_cleanup(
-        self, mock_client_class, mock_service_class, runner, temp_csv_file, mock_env
+    def test_sync_with_prune(
+        self,
+        mock_client_class,
+        mock_group_service_class,
+        mock_user_service_class,
+        runner,
+        temp_csv_file,
+        mock_env,
     ):
-        """Test sync with cleanup option."""
-        mock_service = Mock()
-        mock_service_class.return_value = mock_service
-        mock_service.parse_csv_to_groups.return_value = []
-        mock_service.fetch_existing_groups.return_value = {}
-        mock_service.fetch_existing_users.return_value = set()
+        """Test sync with prune option."""
+        # Setup group service mock
+        mock_group_service = Mock()
+        mock_group_service_class.return_value = mock_group_service
+        mock_group_service.parse_csv_to_groups.return_value = []
+        mock_group_service.fetch_existing_groups.return_value = {}
+        mock_group_service.fetch_existing_users.return_value = set()
 
-        stats_mock = Mock()
-        stats_mock.summary.return_value = (
+        group_stats_mock = Mock()
+        group_stats_mock.summary.return_value = (
             "Summary: created=0, updated=0, deleted=0, skipped=0, errors=0"
         )
-        stats_mock.has_errors.return_value = False
-        mock_service.sync_groups.return_value = stats_mock
-        mock_service.cleanup_orphaned_groups.return_value = 0
+        group_stats_mock.has_errors.return_value = False
+        group_stats_mock.created = 0
+        group_stats_mock.updated = 0
+        group_stats_mock.deleted = 0
+        mock_group_service.sync_groups.return_value = group_stats_mock
+        mock_group_service.cleanup_orphaned_groups.return_value = 0
 
-        result = runner.invoke(
-            cli, ["sync", "--csv", temp_csv_file, "--cleanup-groups", "--dry-run"]
+        # Setup user service mock
+        mock_user_service = Mock()
+        mock_user_service_class.return_value = mock_user_service
+
+        # Mock CSV validation result
+        csv_validation_result = Mock()
+        csv_validation_result.total_count = 0
+        csv_validation_result.active_count = 0
+        csv_validation_result.inactive_count = 0
+        csv_validation_result.users = []
+        csv_validation_result.unique_groups = set()
+        csv_validation_result.has_warnings.return_value = False
+        mock_user_service.parse_csv_to_users.return_value = csv_validation_result
+        mock_user_service.fetch_existing_users.return_value = {}
+
+        user_stats_mock = Mock()
+        user_stats_mock.summary.return_value = (
+            "Summary: created=0, updated=0, deleted=0, skipped=0, errors=0"
         )
+        user_stats_mock.has_errors.return_value = False
+        user_stats_mock.created = 0
+        user_stats_mock.updated = 0
+        user_stats_mock.deleted = 0
+        mock_user_service.sync_users.return_value = user_stats_mock
+        mock_user_service.cleanup_orphaned_users.return_value = 0
+
+        result = runner.invoke(cli, ["--csv", temp_csv_file, "--prune", "--dry-run"])
 
         assert result.exit_code == 0
-        mock_service.cleanup_orphaned_groups.assert_called_once()
+        mock_group_service.cleanup_orphaned_groups.assert_called_once()
+        # Note: cleanup_orphaned_users is not called separately;
+        # user deletion is handled inside sync_users() when prune_users=True
 
+    @patch("xc_rbac_sync.cli.UserSyncService")
     @patch("xc_rbac_sync.cli.GroupSyncService")
     @patch("xc_rbac_sync.cli.XCClient")
     def test_sync_with_errors(
-        self, mock_client_class, mock_service_class, runner, temp_csv_file, mock_env
+        self,
+        mock_client_class,
+        mock_group_service_class,
+        mock_user_service_class,
+        runner,
+        temp_csv_file,
+        mock_env,
     ):
         """Test sync that encounters errors."""
-        mock_service = Mock()
-        mock_service_class.return_value = mock_service
-        mock_service.parse_csv_to_groups.return_value = []
-        mock_service.fetch_existing_groups.return_value = {}
-        mock_service.fetch_existing_users.return_value = set()
+        # Setup group service mock
+        mock_group_service = Mock()
+        mock_group_service_class.return_value = mock_group_service
+        mock_group_service.parse_csv_to_groups.return_value = []
+        mock_group_service.fetch_existing_groups.return_value = {}
+        mock_group_service.fetch_existing_users.return_value = set()
 
-        stats_mock = Mock()
-        stats_mock.summary.return_value = (
+        group_stats_mock = Mock()
+        group_stats_mock.summary.return_value = (
             "Summary: created=0, updated=0, deleted=0, skipped=0, errors=1"
         )
-        stats_mock.has_errors.return_value = True
-        mock_service.sync_groups.return_value = stats_mock
+        group_stats_mock.has_errors.return_value = True
+        mock_group_service.sync_groups.return_value = group_stats_mock
 
-        result = runner.invoke(cli, ["sync", "--csv", temp_csv_file, "--dry-run"])
+        # Setup user service mock
+        mock_user_service = Mock()
+        mock_user_service_class.return_value = mock_user_service
+
+        # Mock CSV validation result
+        csv_validation_result = Mock()
+        csv_validation_result.total_count = 0
+        csv_validation_result.active_count = 0
+        csv_validation_result.inactive_count = 0
+        csv_validation_result.users = []
+        csv_validation_result.unique_groups = set()
+        csv_validation_result.has_warnings.return_value = False
+        mock_user_service.parse_csv_to_users.return_value = csv_validation_result
+        mock_user_service.fetch_existing_users.return_value = {}
+
+        user_stats_mock = Mock()
+        user_stats_mock.has_errors.return_value = False
+        mock_user_service.sync_users.return_value = user_stats_mock
+
+        result = runner.invoke(cli, ["--csv", temp_csv_file, "--dry-run"])
 
         assert result.exit_code != 0
         assert "operations failed" in result.output
 
+    @patch("xc_rbac_sync.cli.UserSyncService")
     @patch("xc_rbac_sync.cli.GroupSyncService")
     @patch("xc_rbac_sync.cli.XCClient")
     def test_sync_csv_parse_error(
-        self, mock_client_class, mock_service_class, runner, temp_csv_file, mock_env
+        self,
+        mock_client_class,
+        mock_group_service_class,
+        mock_user_service_class,
+        runner,
+        temp_csv_file,
+        mock_env,
     ):
         """Test sync with CSV parse error."""
         from xc_rbac_sync.sync_service import CSVParseError
 
-        mock_service = Mock()
-        mock_service_class.return_value = mock_service
-        mock_service.parse_csv_to_groups.side_effect = CSVParseError(
+        mock_group_service = Mock()
+        mock_group_service_class.return_value = mock_group_service
+        mock_group_service.parse_csv_to_groups.side_effect = CSVParseError(
             "Missing required columns"
         )
 
-        result = runner.invoke(cli, ["sync", "--csv", temp_csv_file])
+        # Setup user service mock
+        mock_user_service = Mock()
+        mock_user_service_class.return_value = mock_user_service
+
+        result = runner.invoke(cli, ["--csv", temp_csv_file])
 
         assert result.exit_code != 0
         assert "Missing required columns" in result.output
 
+    @patch("xc_rbac_sync.cli.UserSyncService")
     @patch("xc_rbac_sync.cli.GroupSyncService")
     @patch("xc_rbac_sync.cli.XCClient")
     def test_sync_api_error(
-        self, mock_client_class, mock_service_class, runner, temp_csv_file, mock_env
+        self,
+        mock_client_class,
+        mock_group_service_class,
+        mock_user_service_class,
+        runner,
+        temp_csv_file,
+        mock_env,
     ):
         """Test sync with API error."""
         import requests
 
-        mock_service = Mock()
-        mock_service_class.return_value = mock_service
-        mock_service.parse_csv_to_groups.return_value = []
-        mock_service.fetch_existing_groups.side_effect = requests.RequestException(
-            "API connection failed"
+        mock_group_service = Mock()
+        mock_group_service_class.return_value = mock_group_service
+        mock_group_service.parse_csv_to_groups.return_value = []
+        mock_group_service.fetch_existing_groups.side_effect = (
+            requests.RequestException("API connection failed")
         )
 
-        result = runner.invoke(cli, ["sync", "--csv", temp_csv_file])
+        # Setup user service mock
+        mock_user_service = Mock()
+        mock_user_service_class.return_value = mock_user_service
+
+        result = runner.invoke(cli, ["--csv", temp_csv_file])
 
         assert result.exit_code != 0
         assert "API error" in result.output
@@ -184,7 +306,7 @@ class TestCLISyncCommand:
             with patch("xc_rbac_sync.cli.XCClient"):
                 # Just test that the option is accepted
                 result = runner.invoke(
-                    cli, ["sync", "--csv", temp_csv_file, "--log-level", "debug"]
+                    cli, ["--csv", temp_csv_file, "--log-level", "debug"]
                 )
                 # May fail on other things, but shouldn't fail on log-level parsing
                 assert "log-level" not in result.output.lower() or result.exit_code == 0
@@ -195,7 +317,7 @@ class TestCLISyncCommand:
             with patch("xc_rbac_sync.cli.GroupSyncService"):
                 runner.invoke(
                     cli,
-                    ["sync", "--csv", temp_csv_file, "--timeout", "60", "--dry-run"],
+                    ["--csv", temp_csv_file, "--timeout", "60", "--dry-run"],
                 )
                 # Check that client was created with timeout=60
                 call_kwargs = mock_client.call_args[1]
@@ -207,7 +329,7 @@ class TestCLISyncCommand:
             with patch("xc_rbac_sync.cli.GroupSyncService"):
                 runner.invoke(
                     cli,
-                    ["sync", "--csv", temp_csv_file, "--max-retries", "5", "--dry-run"],
+                    ["--csv", temp_csv_file, "--max-retries", "5", "--dry-run"],
                 )
                 # Check that client was created with max_retries=5
                 call_kwargs = mock_client.call_args[1]
@@ -225,7 +347,7 @@ class TestCLIAuthentication:
 
         with patch("xc_rbac_sync.cli.XCClient") as mock_client:
             with patch("xc_rbac_sync.cli.GroupSyncService"):
-                runner.invoke(cli, ["sync", "--csv", temp_csv_file, "--dry-run"])
+                runner.invoke(cli, ["--csv", temp_csv_file, "--dry-run"])
 
                 call_kwargs = mock_client.call_args[1]
                 assert call_kwargs.get("cert_file") == "/path/to/cert.pem"
@@ -239,7 +361,7 @@ class TestCLIAuthentication:
 
         with patch("xc_rbac_sync.cli.XCClient") as mock_client:
             with patch("xc_rbac_sync.cli.GroupSyncService"):
-                runner.invoke(cli, ["sync", "--csv", temp_csv_file, "--dry-run"])
+                runner.invoke(cli, ["--csv", temp_csv_file, "--dry-run"])
 
                 call_kwargs = mock_client.call_args[1]
                 assert call_kwargs.get("api_token") == "test-token"
@@ -254,4 +376,4 @@ class TestCLIAuthentication:
             with patch("xc_rbac_sync.cli.GroupSyncService"):
                 # P12 should be recognized but not used
                 # The test just ensures no errors occur when P12 is set
-                runner.invoke(cli, ["sync", "--csv", temp_csv_file, "--dry-run"])
+                runner.invoke(cli, ["--csv", temp_csv_file, "--dry-run"])

@@ -4,19 +4,15 @@ Automated synchronization tool for managing F5 Distributed Cloud (XC) users and 
 
 ## What Does This Tool Do?
 
-This tool keeps your F5 XC security **users and groups** synchronized with your authoritative user database (exported as CSV):
+This tool reconciles F5 XC **users and groups** with your authoritative user database (CSV export):
 
-**User Synchronization:**
+**Reconciliation (Default):**
 
-- ✅ **Creates** users that exist in CSV but not in F5 XC
-- ✅ **Updates** user attributes (name, active status) to match CSV
-- ✅ **Deletes** users not in CSV (optional, with explicit flag)
+- ✅ **Creates** users and groups that exist in CSV but not in F5 XC
+- ✅ **Updates** user attributes (name, active status) and group memberships to match CSV
+- ✅ **Prunes** users and groups not in CSV (optional, with `--prune` flag)
 
-**Group Synchronization:**
-
-- ✅ **Creates** groups that exist in CSV but not in F5 XC
-- ✅ **Updates** group memberships to match CSV (adds/removes users)
-- ✅ **Deletes** groups not in CSV (optional, with explicit flag)
+**This is a reconciliation tool** - it ensures F5 XC matches your CSV source of truth.
 
 **Safety & Automation:**
 
@@ -129,15 +125,18 @@ Your CSV must include these columns:
 **Always test first** to see what changes will be made:
 
 ```bash
-xc-group-sync sync --csv ./User-Database.csv --dry-run
+# Preview reconciliation (no deletions)
+xc-group-sync --csv ./User-Database.csv --dry-run
+
+# Preview full reconciliation including pruning
+xc-group-sync --csv ./User-Database.csv --prune --dry-run
 ```
 
 This shows you:
 
-- ✅ Groups to be created
-- ✅ Groups to be updated (with membership changes)
-- ✅ Groups to be deleted (if using `--cleanup-groups`)
-- ✅ Users to be deleted (if using `--cleanup-users`)
+- ✅ Users and groups to be created
+- ✅ Users and groups to be updated (with membership/attribute changes)
+- ✅ Users and groups to be deleted (if using `--prune`)
 - ✅ Validation errors (missing users, invalid names)
 - ✅ **No actual changes are made**
 
@@ -146,78 +145,67 @@ This shows you:
 Once you're satisfied with the dry-run output:
 
 ```bash
-# Basic sync (create/update groups only)
-xc-group-sync sync --csv ./User-Database.csv
+# Reconcile users and groups (create/update only)
+xc-group-sync --csv ./User-Database.csv
 
-# Sync with cleanup (also delete groups/users not in CSV)
-xc-group-sync sync --csv ./User-Database.csv --cleanup-groups --cleanup-users
+# Full reconciliation including pruning
+xc-group-sync --csv ./User-Database.csv --prune
 ```
 
-> **⚠️ Important:** The `--cleanup-groups` and `--cleanup-users` flags will **permanently delete** F5 XC groups and users that don't exist in your CSV. Use these flags carefully and always test with `--dry-run` first.
+> **⚠️ Important:** The `--prune` flag will **permanently delete** F5 XC users and groups that don't exist in your CSV. Use this flag carefully and always test with `--dry-run` first.
 
 ## Command Reference
 
 ### Basic Commands
 
 ```bash
-# Preview changes without applying them
-xc-group-sync sync --csv file.csv --dry-run
+# Preview reconciliation (no deletions)
+xc-group-sync --csv file.csv --dry-run
 
-# Apply changes (create/update groups)
-xc-group-sync sync --csv file.csv
+# Apply reconciliation (create and update only)
+xc-group-sync --csv file.csv
+
+# Full reconciliation including pruning
+xc-group-sync --csv file.csv --prune
+
+# Dry-run with pruning preview
+xc-group-sync --csv file.csv --prune --dry-run
 
 # Apply with detailed logging
-xc-group-sync sync --csv file.csv --log-level debug
-```
-
-### Cleanup Options
-
-```bash
-# Delete groups not in CSV
-xc-group-sync sync --csv file.csv --cleanup-groups
-
-# Delete users not in CSV
-xc-group-sync sync --csv file.csv --cleanup-users
-
-# Delete both groups and users not in CSV
-xc-group-sync sync --csv file.csv --cleanup-groups --cleanup-users
+xc-group-sync --csv file.csv --log-level debug
 ```
 
 ### All Available Options
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--csv <path>` | Path to CSV file with user data | **(required)** |
+| `--csv <path>` | Path to CSV file with user/group data | **(required)** |
 | `--dry-run` | Preview changes without applying | `false` |
-| `--cleanup-groups` | Delete XC groups not in CSV | `false` |
-| `--cleanup-users` | Delete XC users not in CSV | `false` |
+| `--prune` | Delete users/groups in F5 XC not in CSV | `false` |
 | `--log-level <level>` | Logging verbosity: `debug`, `info`, `warn`, `error` | `info` |
 | `--timeout <seconds>` | HTTP request timeout | `30` |
 | `--max-retries <n>` | Max retries for API errors | `3` |
 
 ## How It Works
 
-### Synchronization Process
+### Reconciliation Process
 
 1. **Load Credentials** - Reads API credentials from `secrets/.env` or environment variables
-2. **Parse CSV** - Extracts user information and group memberships from CSV
-3. **Fetch XC Users** - Retrieves all users from F5 XC via API
-4. **Validate** - Checks that all CSV emails exist in XC
-5. **Calculate Changes** - Determines what groups need to be created/updated/deleted
+2. **Parse CSV** - Extracts user and group information from CSV
+3. **Fetch Current State** - Retrieves all users and groups from F5 XC via API
+4. **Validate** - Checks data integrity and dependencies
+5. **Calculate Changes** - Determines what needs to be created/updated/deleted
 6. **Apply Changes** - Makes API calls to F5 XC (unless using `--dry-run`)
 
-### Group Lifecycle
+### Reconciliation Behavior
 
-**Create**: Groups in CSV but not in XC → Created with member lists
+**Create**: Users/groups in CSV but not in F5 XC → Created
 
-**Update**: Groups in both CSV and XC → Memberships synchronized:
+**Update**: Users/groups in both CSV and F5 XC → Updated to match CSV:
+- User attributes (name, active status)
+- Group memberships synchronized
 
-- Adds users missing from XC group
-- Removes users not in CSV (if they exist in XC group)
-
-**Delete** (with `--cleanup-groups`): Groups in XC but not in CSV → Deleted
-
-**Delete Users** (with `--cleanup-users`): Users in XC but not in CSV → Deleted
+**Prune** (with `--prune`): Users/groups in F5 XC but not in CSV → Deleted
 
 ## Troubleshooting
 
@@ -250,7 +238,7 @@ source secrets/.env
 
 ```bash
 # Run with debug logging to see all XC emails
-xc-group-sync sync --csv file.csv --log-level debug --dry-run
+xc-group-sync --csv file.csv --log-level debug --dry-run
 ```
 
 #### "Invalid group name: GROUP-NAME"
@@ -267,7 +255,7 @@ xc-group-sync sync --csv file.csv --log-level debug --dry-run
 
 ```bash
 # Increase max retries
-xc-group-sync sync --csv file.csv --max-retries 5
+xc-group-sync --csv file.csv --max-retries 5
 ```
 
 #### Certificate/Authentication Errors
@@ -302,7 +290,7 @@ openssl rsa -in secrets/key.pem -check
 ```bash
 # ⚠️ DANGER: Only for non-production testing
 export REQUESTS_CA_BUNDLE=""
-xc-group-sync sync --csv file.csv
+xc-group-sync --csv file.csv
 ```
 
 **Option 2 (Recommended):** Add staging CA to Python trust store
@@ -323,7 +311,7 @@ cat staging-ca.pem >> $(python3 -c "import certifi; print(certifi.where())")
 
 ```bash
 # Production environments use standard certificates and work without issues
-TENANT_ID=your-prod-tenant xc-group-sync sync --csv file.csv
+TENANT_ID=your-prod-tenant xc-group-sync --csv file.csv
 ```
 
 ### Debug Mode
@@ -331,7 +319,7 @@ TENANT_ID=your-prod-tenant xc-group-sync sync --csv file.csv
 For maximum visibility into what the tool is doing:
 
 ```bash
-xc-group-sync sync --csv file.csv --dry-run --log-level debug
+xc-group-sync --csv file.csv --dry-run --log-level debug
 ```
 
 This shows:
@@ -341,6 +329,7 @@ This shows:
 - Validation logic decisions
 - Group membership calculations
 - LDAP DN parsing
+- User attribute processing
 
 ## CI/CD Integration
 
@@ -431,7 +420,7 @@ Includes:
 
 1. **Always dry-run first** - Test with `--dry-run` before applying
 2. **Review changes** - Check dry-run output for unexpected modifications
-3. **Start without cleanup** - Omit `--cleanup-groups` and `--cleanup-users` until confident
+3. **Start without prune** - Omit `--prune` until confident in your CSV data
 4. **Monitor logs** - Use `--log-level debug` for troubleshooting
 5. **Backup first** - Document current XC state before bulk changes
 

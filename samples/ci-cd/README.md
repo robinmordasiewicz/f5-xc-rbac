@@ -132,11 +132,10 @@ base64 -w 0 your-file.p12 > xc_p12_base64.txt
 ```yaml
 - name: Dry-run sync
   run: |
-    xc-group-sync sync \
+    xc-group-sync \
       --csv ./User-Database.csv \
       --dry-run \
-      --cleanup-groups \      # Add to delete groups not in CSV
-      --cleanup-users \       # Add to delete users not in CSV
+      --prune \               # Add to delete users and groups not in CSV
       --log-level debug \     # Change logging verbosity
       --timeout 60 \          # Increase timeout
       --max-retries 5         # Increase retry attempts
@@ -159,7 +158,7 @@ parameters {
 **GitHub Actions**:
 
 ```yaml
-run: xc-group-sync sync --csv ./data/production-users.csv --dry-run
+run: xc-group-sync --csv ./data/production-users.csv --dry-run
 ```
 
 **Jenkins** - Change parameter default:

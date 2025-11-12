@@ -24,7 +24,7 @@ def test_cli_requires_tenant_id(monkeypatch):
     # ensure TENANT_ID not set
     monkeypatch.delenv("TENANT_ID", raising=False)
     result = runner.invoke(
-        cli.cli, ["sync", "--csv", "nonexistent.csv"], catch_exceptions=False
+        cli.cli, ["--csv", "nonexistent.csv"], catch_exceptions=False
     )
     assert result.exit_code != 0
 
@@ -42,6 +42,11 @@ def test_cli_dry_run_happy_path(monkeypatch, tmp_path):
         def list_groups(self, namespace: str = "system"):
             return {"items": []}
 
+        def list_users(self, namespace: str = "system"):
+            return {
+                "items": [{"email": "joe@example.com", "username": "joe@example.com"}]
+            }
+
         def list_user_roles(self, namespace: str = "system"):
             return {"items": [{"username": "joe@example.com"}]}
 
@@ -57,7 +62,7 @@ def test_cli_dry_run_happy_path(monkeypatch, tmp_path):
 
     runner = CliRunner()
     result = runner.invoke(
-        cli.cli, ["sync", "--csv", str(csv_file), "--dry-run"], catch_exceptions=False
+        cli.cli, ["--csv", str(csv_file), "--dry-run"], catch_exceptions=False
     )
     assert result.exit_code == 0
     assert "Groups planned from CSV: 1" in result.output
@@ -77,9 +82,7 @@ def test_cli_create_client_failure(monkeypatch, tmp_path):
         lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")),
     )
     runner = CliRunner()
-    result = runner.invoke(
-        cli.cli, ["sync", "--csv", str(csv_file)], catch_exceptions=False
-    )
+    result = runner.invoke(cli.cli, ["--csv", str(csv_file)], catch_exceptions=False)
     assert result.exit_code != 0
     assert "Failed to create client" in result.output
 
@@ -97,13 +100,14 @@ def test_cli_api_list_groups_failure(monkeypatch, tmp_path):
 
             raise requests.RequestException("api down")
 
+        def list_users(self, namespace: str = "system"):
+            return {"items": []}
+
     monkeypatch.setenv("TENANT_ID", "tenant")
     monkeypatch.setenv("DOTENV_PATH", "/dev/null")
     monkeypatch.setattr(cli, "_create_client", lambda *args, **kwargs: BadRepo())
     runner = CliRunner()
-    result = runner.invoke(
-        cli.cli, ["sync", "--csv", str(csv_file)], catch_exceptions=False
-    )
+    result = runner.invoke(cli.cli, ["--csv", str(csv_file)], catch_exceptions=False)
     assert result.exit_code != 0
     assert "API error listing groups" in result.output
 
@@ -117,6 +121,9 @@ def test_cli_sync_reports_errors(monkeypatch, tmp_path):
 
     class Repo:
         def list_groups(self, namespace: str = "system"):
+            return {"items": []}
+
+        def list_users(self, namespace: str = "system"):
             return {"items": []}
 
         def list_user_roles(self, namespace: str = "system"):
@@ -141,9 +148,7 @@ def test_cli_sync_reports_errors(monkeypatch, tmp_path):
     )
 
     runner = CliRunner()
-    result = runner.invoke(
-        cli.cli, ["sync", "--csv", str(csv_file)], catch_exceptions=False
-    )
+    result = runner.invoke(cli.cli, ["--csv", str(csv_file)], catch_exceptions=False)
     assert result.exit_code != 0
     assert "One or more operations failed" in result.output
 
@@ -157,6 +162,9 @@ def test_cli_cleanup_failure(monkeypatch, tmp_path):
 
     class Repo:
         def list_groups(self, namespace: str = "system"):
+            return {"items": []}
+
+        def list_users(self, namespace: str = "system"):
             return {"items": []}
 
         def list_user_roles(self, namespace: str = "system"):
@@ -181,7 +189,7 @@ def test_cli_cleanup_failure(monkeypatch, tmp_path):
     runner = CliRunner()
     result = runner.invoke(
         cli.cli,
-        ["sync", "--csv", str(csv_file), "--cleanup-groups"],
+        ["--csv", str(csv_file), "--prune"],
         catch_exceptions=False,
     )
     assert result.exit_code != 0
@@ -215,6 +223,9 @@ def test_cli_sync_users_dry_run_happy_path(monkeypatch, tmp_path):
 
     # Mock repository
     class UserRepo:
+        def list_groups(self, namespace: str = "system"):
+            return {"items": []}
+
         def list_users(self, namespace: str = "system"):
             return {"items": []}
 
@@ -228,7 +239,7 @@ def test_cli_sync_users_dry_run_happy_path(monkeypatch, tmp_path):
     runner = CliRunner()
     result = runner.invoke(
         cli.cli,
-        ["sync-users", "--csv", str(csv_file), "--dry-run"],
+        ["--csv", str(csv_file), "--dry-run"],
         catch_exceptions=False,
     )
     assert result.exit_code == 0
@@ -248,9 +259,7 @@ def test_cli_sync_users_requires_tenant_id(monkeypatch, tmp_path):
     runner = CliRunner()
     monkeypatch.delenv("TENANT_ID", raising=False)
     monkeypatch.setenv("DOTENV_PATH", "/dev/null")
-    result = runner.invoke(
-        cli.cli, ["sync-users", "--csv", str(csv_file)], catch_exceptions=False
-    )
+    result = runner.invoke(cli.cli, ["--csv", str(csv_file)], catch_exceptions=False)
     assert result.exit_code != 0
     assert "TENANT_ID must be set" in result.output
 
@@ -261,6 +270,9 @@ def test_cli_sync_users_invalid_csv(monkeypatch, tmp_path):
     csv_file.write_text("Email\nalice@example.com\n")  # Missing required columns
 
     class UserRepo:
+        def list_groups(self, namespace: str = "system"):
+            return {"items": []}
+
         pass
 
     monkeypatch.setenv("TENANT_ID", "tenant")
@@ -268,9 +280,7 @@ def test_cli_sync_users_invalid_csv(monkeypatch, tmp_path):
     monkeypatch.setattr(cli, "_create_client", lambda *args, **kwargs: UserRepo())
 
     runner = CliRunner()
-    result = runner.invoke(
-        cli.cli, ["sync-users", "--csv", str(csv_file)], catch_exceptions=False
-    )
+    result = runner.invoke(cli.cli, ["--csv", str(csv_file)], catch_exceptions=False)
     assert result.exit_code != 0
     assert "CSV validation error" in result.output
 
@@ -284,6 +294,9 @@ def test_cli_sync_users_api_error(monkeypatch, tmp_path):
     )
 
     class BadUserRepo:
+        def list_groups(self, namespace: str = "system"):
+            return {"items": []}
+
         def list_users(self, namespace: str = "system"):
             import requests
 
@@ -294,9 +307,7 @@ def test_cli_sync_users_api_error(monkeypatch, tmp_path):
     monkeypatch.setattr(cli, "_create_client", lambda *args, **kwargs: BadUserRepo())
 
     runner = CliRunner()
-    result = runner.invoke(
-        cli.cli, ["sync-users", "--csv", str(csv_file)], catch_exceptions=False
-    )
+    result = runner.invoke(cli.cli, ["--csv", str(csv_file)], catch_exceptions=False)
     assert result.exit_code != 0
     assert "API error listing users" in result.output
 
@@ -310,6 +321,9 @@ def test_cli_sync_users_shows_error_details(monkeypatch, tmp_path):
     )
 
     class UserRepo:
+        def list_groups(self, namespace: str = "system"):
+            return {"items": []}
+
         def list_users(self, namespace: str = "system"):
             return {"items": []}
 
@@ -330,9 +344,7 @@ def test_cli_sync_users_shows_error_details(monkeypatch, tmp_path):
     )
 
     runner = CliRunner()
-    result = runner.invoke(
-        cli.cli, ["sync-users", "--csv", str(csv_file)], catch_exceptions=False
-    )
+    result = runner.invoke(cli.cli, ["--csv", str(csv_file)], catch_exceptions=False)
     assert result.exit_code != 0
     assert "Errors encountered:" in result.output
     assert "alice@example.com" in result.output
@@ -340,7 +352,7 @@ def test_cli_sync_users_shows_error_details(monkeypatch, tmp_path):
 
 
 def test_cli_sync_users_delete_flag(monkeypatch, tmp_path):
-    """Test sync-users with --delete-users flag (T049)."""
+    """Test sync-users with --prune flag (T049)."""
     csv_file = tmp_path / "users.csv"
     csv_file.write_text(
         "Email,User Display Name,Employee Status,Entitlement Display Name\n"
@@ -348,6 +360,9 @@ def test_cli_sync_users_delete_flag(monkeypatch, tmp_path):
     )
 
     class UserRepo:
+        def list_groups(self, namespace: str = "system"):
+            return {"items": []}
+
         def list_users(self, namespace: str = "system"):
             # Return existing user not in CSV
             return {
@@ -370,7 +385,7 @@ def test_cli_sync_users_delete_flag(monkeypatch, tmp_path):
     runner = CliRunner()
     result = runner.invoke(
         cli.cli,
-        ["sync-users", "--csv", str(csv_file), "--delete-users"],
+        ["--csv", str(csv_file), "--prune"],
         catch_exceptions=False,
     )
     assert result.exit_code == 0
