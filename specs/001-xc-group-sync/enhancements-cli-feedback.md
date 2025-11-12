@@ -168,34 +168,32 @@ Execution time: 8.45 seconds
 
 ---
 
-### Cleanup Operation Feedback
+### Prune Operation Feedback
 
-**FR-UX-007**: System MUST display cleanup operation summaries when `--cleanup-groups` or `--cleanup-users` flags are used
+**FR-UX-007**: System MUST display prune operation summaries when `--prune` flag is used
 
 **Implementation**: `cli.py:sync():229-237, 239-264`
 
 ```python
-# Group cleanup
-if cleanup_groups:
+# Group and user pruning
+if prune:
     deleted = service.cleanup_orphaned_groups(planned_groups, existing_groups, dry_run)
     stats.deleted = deleted
 
-# User cleanup
-if cleanup_users:
     user_stats = user_service.cleanup_orphaned_users(
         validation_result.users, existing_users, dry_run
     )
     click.echo(
-        f"\nUser cleanup: {user_stats.deleted} deleted, "
+        f"\nUser prune: {user_stats.deleted} deleted, "
         f"{user_stats.errors} errors"
     )
 ```text
 **Display Format**:
 
 ```text
-User cleanup: 5 deleted, 0 errors
+User prune: 5 deleted, 0 errors
 ```text
-**Rationale**: Separate cleanup feedback distinguishes cleanup operations from main sync operations, important for auditing
+**Rationale**: Separate prune feedback distinguishes prune operations from main sync operations, important for auditing
 
 ---
 
@@ -259,63 +257,34 @@ if p12_file and not (cert_file and key_file):
 
 ## CLI Command Structure
 
-### sync Command Options
+### Main Command Options
 
 ```python
 @click.option("--csv", required=True, help="Path to CSV export")
 @click.option("--dry-run", is_flag=True, help="Log actions without calling the API")
-@click.option("--cleanup-groups", is_flag=True, help="Delete XC groups missing from CSV")
-@click.option("--cleanup-users", is_flag=True, help="Delete XC users missing from CSV")
+@click.option("--prune", is_flag=True, help="Delete XC users and groups missing from CSV")
+@click.option("--sync-groups/--no-sync-groups", default=True, help="Sync groups from CSV")
+@click.option("--sync-users/--no-sync-users", default=False, help="Sync users from CSV")
 @click.option("--log-level", type=click.Choice([...]), default="info")
 @click.option("--max-retries", type=int, default=3)
 @click.option("--timeout", type=int, default=30)
 ```text
-**Undocumented Options**:
-
-- `--cleanup-users`: Enables user cleanup in group sync command (undocumented interaction)
-
----
-
-### sync_users Command Options
-
-```python
-@click.option("--csv", required=True, help="Path to user CSV export")
-@click.option("--dry-run", is_flag=True, help="Log actions without calling the API")
-@click.option("--delete-users", is_flag=True, help="Delete XC users missing from CSV")
-@click.option("--log-level", type=click.Choice([...]), default="info")
-@click.option("--max-retries", type=int, default=3)
-@click.option("--timeout", type=int, default=30)
-```text
-**Note**: `--delete-users` in `sync_users` is equivalent to `--cleanup-users` in `sync`, naming inconsistency exists
+**Note**: The `--prune` flag replaces the previous `--cleanup-groups`, `--cleanup-users`, and `--delete-users` flags, providing unified control for pruning both users and groups
 
 ---
 
 ## CLI Output Flow
 
-### Group Sync Output Sequence
+### Sync Output Sequence
 
 1. Load configuration
-2. Display planned groups summary
+2. Display planned groups/users summary
 3. Fetch and validate authentication
 4. Start execution timer
 5. Execute sync operations
-6. Execute cleanup (if requested)
+6. Execute prune operations (if `--prune` requested)
 7. Display summary with execution time
 8. Display completion message
-
-### User Sync Output Sequence
-
-1. Load configuration
-2. Display dry-run banner (if applicable)
-3. Display CSV validation results
-4. Display sample users
-5. Display validation warnings (if any)
-6. Display existing user count
-7. Start execution timer
-8. Execute sync operations
-9. Display summary with execution time
-10. Display error details (if any)
-11. Display completion message
 
 ---
 
@@ -326,7 +295,7 @@ if p12_file and not (cert_file and key_file):
 - **SC-UX-003**: Error messages categorized correctly (usage vs API vs sync failures)
 - **SC-UX-004**: Dry-run mode banner displayed prominently when `--dry-run` flag is used
 - **SC-UX-005**: Completion messages displayed after successful operations
-- **SC-UX-006**: Cleanup operation results displayed separately from main sync results
+- **SC-UX-006**: Prune operation results displayed separately from main sync results
 - **SC-UX-007**: Human-readable summaries use consistent `created/updated/deleted/unchanged/errors` format
 
 ---
@@ -336,8 +305,7 @@ if p12_file and not (cert_file and key_file):
 - **DOC-UX-001**: README MUST document dry-run mode usage and output interpretation
 - **DOC-UX-002**: README MUST document execution time measurement and performance expectations
 - **DOC-UX-003**: README MUST document error message categories and troubleshooting steps
-- **DOC-UX-004**: README MUST document cleanup operation behavior and safety considerations
-- **DOC-UX-005**: README MUST clarify `--cleanup-users` vs `--delete-users` flag naming inconsistency
+- **DOC-UX-004**: README MUST document prune operation behavior and safety considerations
 
 ---
 
@@ -359,12 +327,12 @@ xc-group-sync sync_users --csv test.csv --dry-run
 # Verify: Prominent banner with "🔍 DRY RUN MODE"
 
 # Test error reporting
-xc-group-sync sync_users --csv invalid.csv
+xc-group-sync --csv invalid.csv
 # Verify: Structured error list with operation details
 
-# Test cleanup feedback
-xc-group-sync sync --csv test.csv --cleanup-groups --dry-run
-# Verify: Separate cleanup summary displayed
+# Test prune feedback
+xc-group-sync --csv test.csv --prune --dry-run
+# Verify: Separate prune summary displayed
 ```text
 ### Integration Tests
 
@@ -402,7 +370,7 @@ def test_completion_message(capsys):
 | Pre-operation summaries | Validation before API changes, production safety |
 | Structured error reporting | Faster troubleshooting and remediation |
 | Dry-run banners | Clear distinction between test and production runs |
-| Cleanup operation feedback | Audit trail for destructive operations |
+| Prune operation feedback | Audit trail for destructive operations |
 | Human-readable summaries | Consistent, scannable operation results |
 | Completion messages | Confirmation of successful operation finish |
 
@@ -415,4 +383,4 @@ def test_completion_message(capsys):
 - **FR-UX-013** (Future): Add JSON output mode for CI/CD integration (`--output json`)
 - **FR-UX-014** (Future): Add verbose mode showing individual API call details (`--verbose`)
 - **FR-UX-015** (Future): Add confirmation prompts for destructive operations (`--interactive`)
-- **FR-UX-016** (Future): Standardize flag naming across commands (resolve `--cleanup-users` vs `--delete-users` inconsistency)
+- **FR-UX-016** (Completed): Standardized flag naming - consolidated `--cleanup-groups`, `--cleanup-users`, and `--delete-users` into unified `--prune` flag

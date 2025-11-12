@@ -70,9 +70,15 @@ jobs:
 
       - name: Dry-run sync
         run: |
-          xc-group-sync sync --csv ./User-Database.csv --dry-run --log-level info --timeout 30 --max-retries 3
+          # Default: groups only
+          # Add --sync-users to also sync users
+          # Add --prune to delete orphaned users and groups
+          xc-group-sync --csv ./User-Database.csv --dry-run --log-level info --timeout 30 --max-retries 3
 
       - name: Apply sync
         if: github.event_name == 'workflow_dispatch'
         run: |
-          xc-group-sync sync --csv ./User-Database.csv --log-level info --timeout 30 --max-retries 3
+          # Default: groups only
+          # Add --sync-users to also sync users
+          # Add --prune to delete orphaned users and groups
+          xc-group-sync --csv ./User-Database.csv --log-level info --timeout 30 --max-retries 3
