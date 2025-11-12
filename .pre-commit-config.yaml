@@ -1,4 +1,4 @@
-# Pre-commit hooks for f5-xc-rbac repository
+# Pre-commit hooks for f5-xc-user-group-sync repository
 # See https://pre-commit.com for more information
 
 repos:

@@ -3,7 +3,7 @@
 **Branch**: `41-precommit-requirements` | **Date**: 2025-11-05 | **Spec**: specs/041-precommit-requirements/spec.md
 **Input**: Feature specification from `/specs/041-precommit-requirements/spec.md`
 
-Note: Driving Issue: https://github.com/robinmordasiewicz/f5-xc-rbac/issues/41
+Note: Driving Issue: https://github.com/robinmordasiewicz/f5-xc-user-group-sync/issues/41
 
 ## Summary
 

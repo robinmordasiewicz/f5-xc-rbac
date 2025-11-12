@@ -143,8 +143,8 @@ As a repository administrator, I can configure security features (vulnerability 
     "required_conversation_resolution": true
   },
   "repository": {
-    "description": "F5 XC RBAC synchronization tool",
-    "homepage": "https://github.com/robinmordasiewicz/f5-xc-rbac",
+    "description": "F5 XC User and Group Synchronization Tool",
+    "homepage": "https://github.com/robinmordasiewicz/f5-xc-user-group-sync",
     "topics": ["f5", "xc", "rbac", "python", "automation"],
     "vulnerability_alerts": true,
     "automated_security_fixes": true,

@@ -1,4 +1,4 @@
-# f5-xc-rbac Development Guidelines
+# f5-xc-user-group-sync Development Guidelines
 
 ## Active Technologies
 
