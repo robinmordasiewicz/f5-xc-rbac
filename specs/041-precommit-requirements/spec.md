@@ -7,13 +7,8 @@
 
 ## Clarifications
 
-### Session 2025-11-05
-
 - Q: Should all pre-commit checks be mirrored and enforced in CI (PR-blocking) to guarantee parity and prevent bypass? → A: Enforce pre-commit checks in CI and block merges (Local + CI parity).
 - Q: Should we enforce a quantitative DRY threshold to block PRs on significant duplication? → A: Duplicate blocks ≥15 lines appearing in ≥2 locations must block PRs.
-
-### Session 2025-11-06
-
 - Q: CSV-driven sync behavior: should the CSV be authoritative for group existence and membership, including creating groups, creating users when missing, and adding users to groups when absent? → A: Yes. The CSV MUST be used to ensure groups exist (create if missing), create users when they do not exist, and add users to the groups defined in the CSV when they are not already members.
 
 ## User Scenarios & Testing *(mandatory)*

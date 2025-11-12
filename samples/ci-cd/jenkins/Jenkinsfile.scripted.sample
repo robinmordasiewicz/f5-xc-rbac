@@ -18,14 +18,9 @@ properties([
             description: 'Run mode: dry-run (preview) or apply (execute changes)'
         ),
         booleanParam(
-            name: 'CLEANUP_GROUPS',
+            name: 'PRUNE',
             defaultValue: false,
-            description: 'Delete XC groups not in CSV (use with caution)'
-        ),
-        booleanParam(
-            name: 'CLEANUP_USERS',
-            defaultValue: false,
-            description: 'Delete XC users not in CSV (use with caution)'
+            description: 'Delete XC users and groups not in CSV (use with caution)'
         ),
         string(
             name: 'CSV_FILE',
@@ -111,26 +106,24 @@ EOF
             }
 
             stage('Run Sync') {
-                // Build command based on parameters
-                def syncCmd = ". ${venvDir}/bin/activate && xc-group-sync sync --csv ${params.CSV_FILE}"
+                // Build command based on parameters (new simplified syntax)
+                def syncCmd = ". ${venvDir}/bin/activate && xc-group-sync --csv ${params.CSV_FILE}"
 
                 // Add dry-run flag if selected
                 if (params.SYNC_MODE == 'dry-run') {
                     syncCmd += ' --dry-run'
                 }
 
-                // Add cleanup flags if enabled
-                if (params.CLEANUP_GROUPS) {
-                    syncCmd += ' --cleanup-groups'
-                }
-                if (params.CLEANUP_USERS) {
-                    syncCmd += ' --cleanup-users'
+                // Add prune flag if enabled
+                if (params.PRUNE) {
+                    syncCmd += ' --prune'
                 }
 
                 // Add logging and retry configuration
                 syncCmd += ' --log-level info --timeout 30 --max-retries 3'
 
                 echo "Executing: ${syncCmd}"
+                echo "Note: Default behavior syncs groups only. Add --sync-users for user sync."
 
                 // Run sync
                 sh syncCmd

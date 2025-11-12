@@ -9,7 +9,7 @@ Automated synchronization tool for managing F5 Distributed Cloud (XC) RBAC group
 - Reads user group memberships from CSV exports (e.g., from Active Directory)
 - Syncs RBAC groups to F5 Distributed Cloud via API
 - Validates all users exist in XC before creating groups
-- Manages group lifecycle (create, update, delete with `--cleanup`)
+- Manages group and user lifecycle (create, update, prune with `--prune`)
 - Provides dry-run mode for safe testing
 - Integrates with CI/CD pipelines (GitHub Actions)
 

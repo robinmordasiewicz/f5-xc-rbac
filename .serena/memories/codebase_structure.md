@@ -38,7 +38,7 @@ f5-xc-rbac/
 ### CLI Layer (`cli.py`)
 
 - Entry point: `xc-group-sync` command
-- Commands: `sync` (with --dry-run, --cleanup, --log-level options)
+- Commands: Main command (with --dry-run, --prune, --log-level options)
 - Handles environment loading, authentication, error reporting
 
 ### API Client (`client.py`)

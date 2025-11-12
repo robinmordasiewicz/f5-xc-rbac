@@ -104,7 +104,7 @@ For each unique group_name:
 2. Compare CSV groups vs XC groups:
   - CREATE: Group in CSV, not in XC
   - UPDATE: Group in CSV and XC, but usernames differ
-  - DELETE: Group in XC, not in CSV (only if --cleanup flag enabled)
+  - DELETE: Group in XC, not in CSV (only if --prune flag enabled)
   - NO-OP: Group in CSV and XC with identical usernames
 3. Execute operations (or log if --dry-run)
 ```text

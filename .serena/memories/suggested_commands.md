@@ -46,16 +46,16 @@ ruff format . && ruff check .
 
 ```bash
 # Dry-run sync (safe, no API changes)
-xc-group-sync sync --csv ./User-Database.csv --dry-run --log-level info
+xc-group-sync --csv ./User-Database.csv --dry-run --log-level info
 
-# Apply sync (create/update groups)
-xc-group-sync sync --csv ./User-Database.csv --log-level info
+# Apply sync (create/update groups and users)
+xc-group-sync --csv ./User-Database.csv --log-level info
 
-# Apply with cleanup (also delete groups not in CSV)
-xc-group-sync sync --csv ./User-Database.csv --cleanup --log-level info
+# Apply with prune (also delete users/groups not in CSV)
+xc-group-sync --csv ./User-Database.csv --prune --log-level info
 
 # Debug mode
-xc-group-sync sync --csv ./User-Database.csv --dry-run --log-level debug
+xc-group-sync --csv ./User-Database.csv --dry-run --log-level debug
 ```text
 ## Credential Setup
 
