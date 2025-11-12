@@ -1,1 +1,1 @@
-"""Test suite for f5-xc-rbac."""
+"""Test suite for f5-xc-user-group-sync."""
