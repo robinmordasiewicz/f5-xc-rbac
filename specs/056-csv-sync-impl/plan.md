@@ -100,7 +100,7 @@ ios/ or android/
 **Structure Decision**: [Document the selected structure and reference the real
 directories captured above]
 
-Selected structure: keep the existing project layout under `src/xc_rbac_sync` and add feature docs under `specs/056-csv-sync-impl/`. Implementation changes will live in `src/xc_rbac_sync/sync_service.py` (extend GroupSyncService) and `src/xc_rbac_sync/cli.py` (add user creation flags/options and reporting). Tests will be added under `tests/` with unit tests for user creation and membership flows.
+Selected structure: keep the existing project layout under `src/xc_user_group_sync` and add feature docs under `specs/056-csv-sync-impl/`. Implementation changes will live in `src/xc_user_group_sync/sync_service.py` (extend GroupSyncService) and `src/xc_user_group_sync/cli.py` (add user creation flags/options and reporting). Tests will be added under `tests/` with unit tests for user creation and membership flows.
 
 Generated artifacts for Phase 0/1 (created):
 

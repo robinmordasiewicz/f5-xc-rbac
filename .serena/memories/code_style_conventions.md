@@ -40,7 +40,7 @@
 
 ## Code Organization
 
-- **Source**: All code in `src/xc_rbac_sync/`
+- **Source**: All code in `src/xc_user_group_sync/`
 - **Tests**: All tests in `tests/` mirroring source structure
 - **Test Files**: Prefix with `test_` (e.g., `test_sync_service.py`)
 - **Protocol Pattern**: Use Protocol classes for interfaces, enabling dependency injection and testability

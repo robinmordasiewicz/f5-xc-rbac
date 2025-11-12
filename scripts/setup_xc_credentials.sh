@@ -109,12 +109,12 @@ if [[ -z "$TENANT" ]]; then
   # Production: <tenant>.console.ves.volterra.io.api-creds.p12 -> tenant=<tenant>, url=console.ves.volterra.io
   # Staging: <tenant>.staging.api-creds.p12 -> tenant=<tenant>, url=staging.volterra.us
   if [[ "$name_no_ext" =~ ^([^.]+)\.console\.ves\.volterra\.io ]]; then
-    # Production format: f5-amer-ent.console.ves.volterra.io.api-creds
+    # Production format: acme-corp.console.ves.volterra.io.api-creds
     TENANT="${BASH_REMATCH[1]}"
     XC_API_URL="https://${TENANT}.console.ves.volterra.io"
     ENV_TYPE="production"
   elif [[ "$name_no_ext" =~ ^([^.]+)\.staging ]]; then
-    # Staging format: nferreira.staging.api-creds
+    # Staging format: acme-staging.staging.api-creds
     TENANT="${BASH_REMATCH[1]}"
     XC_API_URL="https://${TENANT}.staging.volterra.us"
     ENV_TYPE="staging"

@@ -1,6 +1,6 @@
 """Unit tests for user utility functions."""
 
-from xc_rbac_sync.user_utils import parse_active_status, parse_display_name
+from xc_user_group_sync.user_utils import parse_active_status, parse_display_name
 
 
 class TestParseDisplayName:

@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 import pytest
 import requests
 
-from xc_rbac_sync.client import XCClient
+from xc_user_group_sync.client import XCClient
 
 
 class TestXCClientInit:

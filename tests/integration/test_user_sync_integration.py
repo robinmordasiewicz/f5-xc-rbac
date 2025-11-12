@@ -6,8 +6,8 @@ summary reporting, and multi-operation scenarios.
 
 from unittest.mock import Mock
 
-from xc_rbac_sync.models import User
-from xc_rbac_sync.user_sync_service import UserSyncService
+from xc_user_group_sync.models import User
+from xc_user_group_sync.user_sync_service import UserSyncService
 
 
 class TestFullSyncSummaryWithErrors:

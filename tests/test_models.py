@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from xc_rbac_sync.models import Config, Group, User
+from xc_user_group_sync.models import Config, Group, User
 
 
 class TestGroup:

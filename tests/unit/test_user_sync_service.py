@@ -4,8 +4,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from xc_rbac_sync.models import User
-from xc_rbac_sync.user_sync_service import UserSyncService, UserSyncStats
+from xc_user_group_sync.models import User
+from xc_user_group_sync.user_sync_service import UserSyncService, UserSyncStats
 
 
 class TestUserSyncStats:
@@ -412,7 +412,7 @@ class TestUserDeletion:
         service = UserSyncService(mock_repo)
 
         # CSV has one user, but XC has two users
-        from xc_rbac_sync.models import User
+        from xc_user_group_sync.models import User
 
         planned = [
             User(
@@ -472,7 +472,7 @@ class TestUserDeletion:
         service = UserSyncService(mock_repo)
 
         # CSV has user with lowercase email
-        from xc_rbac_sync.models import User
+        from xc_user_group_sync.models import User
 
         planned = [
             User(

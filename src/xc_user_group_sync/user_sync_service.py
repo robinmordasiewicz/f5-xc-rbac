@@ -1,4 +1,4 @@
-"""User synchronization service for F5 XC RBAC management.
+"""User synchronization service for F5 Distributed Cloud.
 
 This module provides business logic for synchronizing users between CSV files
 and F5 Distributed Cloud, treating CSV as the source of truth.
@@ -9,8 +9,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Set
 
-from xc_rbac_sync.models import User
-from xc_rbac_sync.protocols import UserRepository
+from xc_user_group_sync.models import User
+from xc_user_group_sync.protocols import UserRepository
 
 logger = logging.getLogger(__name__)
 
@@ -132,8 +132,11 @@ class UserSyncService:
         import csv
         from pathlib import Path
 
-        from xc_rbac_sync.ldap_utils import extract_cn
-        from xc_rbac_sync.user_utils import parse_active_status, parse_display_name
+        from xc_user_group_sync.ldap_utils import extract_cn
+        from xc_user_group_sync.user_utils import (
+            parse_active_status,
+            parse_display_name,
+        )
 
         csv_file = Path(csv_path)
         if not csv_file.exists():

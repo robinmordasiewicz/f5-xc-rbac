@@ -1,7 +1,7 @@
 from click.testing import CliRunner
 
-from xc_rbac_sync import cli
-from xc_rbac_sync.client import XCClient
+from xc_user_group_sync import cli
+from xc_user_group_sync.client import XCClient
 
 
 def test_create_xcclient_no_auth_raises():
@@ -140,10 +140,10 @@ def test_cli_sync_reports_errors(monkeypatch, tmp_path):
     monkeypatch.setattr(cli, "_create_client", lambda *args, **kwargs: Repo())
 
     # force sync_groups to report an error
-    from xc_rbac_sync.sync_service import SyncStats
+    from xc_user_group_sync.sync_service import SyncStats
 
     monkeypatch.setattr(
-        "xc_rbac_sync.sync_service.GroupSyncService.sync_groups",
+        "xc_user_group_sync.sync_service.GroupSyncService.sync_groups",
         lambda self, *a, **k: SyncStats(errors=1),
     )
 
@@ -182,7 +182,7 @@ def test_cli_cleanup_failure(monkeypatch, tmp_path):
 
     # make cleanup_orphaned_groups raise
     monkeypatch.setattr(
-        "xc_rbac_sync.sync_service.GroupSyncService.cleanup_orphaned_groups",
+        "xc_user_group_sync.sync_service.GroupSyncService.cleanup_orphaned_groups",
         lambda self, *a, **k: (_ for _ in ()).throw(RuntimeError("boom")),
     )
 
@@ -332,14 +332,14 @@ def test_cli_sync_users_shows_error_details(monkeypatch, tmp_path):
     monkeypatch.setattr(cli, "_create_client", lambda *args, **kwargs: UserRepo())
 
     # Mock sync_users to return stats with errors
-    from xc_rbac_sync.user_sync_service import UserSyncStats
+    from xc_user_group_sync.user_sync_service import UserSyncStats
 
     mock_stats = UserSyncStats(errors=1)
     mock_stats.error_details.append(
         {"email": "alice@example.com", "operation": "create", "error": "test error"}
     )
     monkeypatch.setattr(
-        "xc_rbac_sync.user_sync_service.UserSyncService.sync_users",
+        "xc_user_group_sync.user_sync_service.UserSyncService.sync_users",
         lambda self, *a, **k: mock_stats,
     )
 

@@ -53,4 +53,4 @@
 
 ## Notes
 
-This specification enhances existing F5 XC RBAC sync functionality with user lifecycle management. All existing features (credential management, group sync, LDAP parsing) are preserved. Focus is on adding user create/update/delete operations with CSV-based state reconciliation.
+This specification enhances existing F5 XC user and group synchronization functionality with user lifecycle management. All existing features (credential management, group sync, LDAP parsing) are preserved. Focus is on adding user create/update/delete operations with CSV-based state reconciliation.

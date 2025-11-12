@@ -51,8 +51,8 @@ As a repository administrator, I can define repository description, homepage URL
 
 **Acceptance Scenarios**:
 
-1. **Given** configuration defines description "F5 XC RBAC sync tool", **When** script executes, **Then** repository description is updated
-2. **Given** configuration defines topics ["f5", "xc", "rbac", "automation"], **When** script executes, **Then** repository topics are set
+1. **Given** configuration defines description "F5 XC User and Group Sync", **When** script executes, **Then** repository description is updated
+2. **Given** configuration defines topics ["f5", "xc", "user-management", "automation"], **When** script executes, **Then** repository topics are set
 3. **Given** configuration defines homepage URL, **When** script executes, **Then** repository homepage is updated
 
 ---
@@ -145,7 +145,7 @@ As a repository administrator, I can configure security features (vulnerability 
   "repository": {
     "description": "F5 XC User and Group Synchronization Tool",
     "homepage": "https://github.com/robinmordasiewicz/f5-xc-user-group-sync",
-    "topics": ["f5", "xc", "rbac", "python", "automation"],
+    "topics": ["f5", "xc", "user-management", "python", "automation"],
     "vulnerability_alerts": true,
     "automated_security_fixes": true,
     "security_and_analysis": {
