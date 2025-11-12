@@ -10,8 +10,7 @@ Auto-generated from all feature plans. Last updated: [DATE]
 
 ```text
 [ACTUAL STRUCTURE FROM PLANS]
-```
-
+```text
 ## Commands
 
 [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES]

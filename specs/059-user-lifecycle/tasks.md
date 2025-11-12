@@ -17,6 +17,7 @@
 ## Path Conventions
 
 Single project structure (from plan.md):
+
 - Source: `src/xc_rbac_sync/`
 - Tests: `tests/unit/`, `tests/integration/`
 - Scripts: `scripts/`
@@ -61,6 +62,7 @@ Single project structure (from plan.md):
 **Goal**: Implement complete user synchronization workflow: parse CSV with enhanced attributes (US4), create new users (US1), and update existing users (US2). These three stories are tightly coupled and form the minimum viable product.
 
 **Independent Test**:
+
 1. Create CSV with test users (new and existing with changes)
 2. Run `xc-group-sync sync --csv test.csv --dry-run`
 3. Verify: Dry-run logs show correct creates and updates
@@ -71,7 +73,7 @@ Single project structure (from plan.md):
 
 ### Tests for US1, US2, US4 (TDD - Write FIRST)
 
-> **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
+#### NOTE: Write these tests FIRST, ensure they FAIL before implementation
 
 - [ ] T014 [P] [US4] Unit test: CSV parsing with valid data in tests/unit/test_user_sync_service.py
 - [ ] T015 [P] [US4] Unit test: CSV parsing with missing required columns in tests/unit/test_user_sync_service.py
@@ -128,6 +130,7 @@ Single project structure (from plan.md):
 **Goal**: Add optional user deletion capability with explicit flag for safety
 
 **Independent Test**:
+
 1. Create CSV without a user that exists in F5 XC
 2. Run `xc-group-sync sync --csv test.csv --dry-run` (WITHOUT --delete-users)
 3. Verify: No deletion logged (safe default)
@@ -138,7 +141,7 @@ Single project structure (from plan.md):
 
 ### Tests for US3 (TDD - Write FIRST)
 
-> **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
+#### NOTE for US3: Write these tests FIRST, ensure they FAIL before implementation
 
 - [ ] T045 [P] [US3] Unit test: sync_users deletes user when --delete-users=True in tests/unit/test_user_sync_service.py
 - [ ] T046 [P] [US3] Unit test: sync_users preserves user when --delete-users=False in tests/unit/test_user_sync_service.py
@@ -170,6 +173,7 @@ Single project structure (from plan.md):
 **Goal**: Enhance existing dry-run mode to work with user operations
 
 **Independent Test**:
+
 1. Create CSV with mix of new users, updates, and deletions
 2. Run `xc-group-sync sync --csv test.csv --delete-users --dry-run`
 3. Verify: All operations logged with "Would create/update/delete" prefix
@@ -178,7 +182,7 @@ Single project structure (from plan.md):
 
 ### Tests for US5 (TDD - Write FIRST)
 
-> **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
+#### NOTE for US5: Write these tests FIRST, ensure they FAIL before implementation
 
 - [ ] T059 [P] [US5] Unit test: dry_run logs creates without executing in tests/unit/test_user_sync_service.py
 - [ ] T060 [P] [US5] Unit test: dry_run logs updates without executing in tests/unit/test_user_sync_service.py
@@ -208,6 +212,7 @@ Single project structure (from plan.md):
 **Goal**: Provide comprehensive summary reporting with execution time and error details
 
 **Independent Test**:
+
 1. Run sync with mix of successful and failed operations
 2. Verify summary shows: created, updated, deleted, unchanged, error counts
 3. Verify execution time is displayed
@@ -215,7 +220,7 @@ Single project structure (from plan.md):
 
 ### Tests for US6 (TDD - Write FIRST)
 
-> **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
+#### NOTE for US6: Write these tests FIRST, ensure they FAIL before implementation
 
 - [ ] T071 [P] [US6] Unit test: UserSyncStats.summary() generates correct format in tests/unit/test_user_sync_service.py
 - [ ] T072 [P] [US6] Unit test: UserSyncStats.has_errors() detects errors in tests/unit/test_user_sync_service.py
@@ -277,13 +282,15 @@ Single project structure (from plan.md):
 ### User Story Dependencies
 
 **CRITICAL MVP Path** (must be completed first):
+
 1. **Phase 2: Foundational** - BLOCKS everything
 2. **Phase 3: US1 + US2 + US4** - Core sync (tightly coupled, forms MVP)
 
 **Post-MVP Features** (can proceed after Phase 3):
-3. **Phase 4: US3** - User deletion (depends on core sync)
-4. **Phase 5: US5** - Dry-run (depends on US3 for delete dry-run)
-5. **Phase 6: US6** - Summary (independent, can run parallel with US3/US5)
+
+1. **Phase 4: US3** - User deletion (depends on core sync)
+2. **Phase 5: US5** - Dry-run (depends on US3 for delete dry-run)
+3. **Phase 6: US6** - Summary (independent, can run parallel with US3/US5)
 
 ### Within Each User Story
 
@@ -298,29 +305,35 @@ Single project structure (from plan.md):
 **Phase 1 (Setup)**: All 4 tasks can run in parallel
 
 **Phase 2 (Foundational)**:
+
 - T005, T006 can run in parallel (different functions)
 - T007, T008 can run in parallel (different test files)
 - T009, T010, T011 can run in parallel (different files)
 - T012 runs after T009 (same file)
 
 **Phase 3 (Core Sync - MVP)**:
+
 - All test tasks T014-T023 can run in parallel (different test files)
 - XCClient extensions T024-T029 can run in parallel (different methods)
 - UserSyncService tasks must be sequential (same file, dependencies)
 
 **Phase 4 (User Deletion)**:
+
 - All test tasks T045-T049 can run in parallel
 - Implementation tasks T050-T051 can run in parallel
 
 **Phase 5 (Dry-Run)**:
+
 - All test tasks T059-T062 can run in parallel
 - Implementation tasks T063-T065 can run in parallel
 
 **Phase 6 (Summary)**:
+
 - All test tasks T071-T074 can run in parallel
 - Implementation tasks mostly sequential (same files)
 
 **Phase 7 (Polish)**:
+
 - All quality checks T083-T087 can run in parallel
 
 ---
@@ -328,7 +341,9 @@ Single project structure (from plan.md):
 ## Parallel Example: Core Sync MVP (Phase 3)
 
 ```bash
+
 # Launch all tests together (TDD - write FIRST):
+
 Task T014: "Unit test: CSV parsing with valid data"
 Task T015: "Unit test: CSV parsing with missing columns"
 Task T016: "Unit test: CSV parsing with name variations"
@@ -341,13 +356,14 @@ Task T022: "Integration test: Full sync workflow"
 Task T023: "Integration test: Idempotency"
 
 # Launch all XCClient extensions together (after tests written):
+
 Task T024: "Add list_users() to XCClient"
 Task T025: "Add update_user() to XCClient"
 Task T026: "Add get_user() to XCClient"
 Task T027: "Unit test: create_user success"
 Task T028: "Unit test: update_user success and retry"
 Task T029: "Unit test: get_user success"
-```
+```text
 
 ---
 
@@ -380,8 +396,8 @@ With 2 developers:
 
 1. **Both**: Complete Setup + Foundational together (4 hours)
 2. **After Foundational**:
-   - Developer A: Phase 3 (Core Sync MVP) → Phase 4 (User Deletion)
-   - Developer B: Phase 6 (Summary) → Phase 5 (Dry-Run)
+  - Developer A: Phase 3 (Core Sync MVP) → Phase 4 (User Deletion)
+  - Developer B: Phase 6 (Summary) → Phase 5 (Dry-Run)
 3. **Both**: Phase 7 (Polish) together (2 hours)
 
 **Parallel Completion**: ~16-20 hours with 2 developers

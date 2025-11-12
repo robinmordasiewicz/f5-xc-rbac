@@ -1,13 +1,12 @@
 ---
-description: Create or update the feature specification from a natural language feature description.
+description: Create or update the feature specification from a natural language feature description
 ---
 
 ## User Input
 
 ```text
 $ARGUMENTS
-```
-
+```text
 You **MUST** consider the user input before proceeding (if not empty).
 
 ## Outline
@@ -31,26 +30,31 @@ Given that feature description, do this:
 2. **Check for existing branches before creating new one**:
 
    a. First, fetch all remote branches to ensure we have the latest information:
-      ```bash
+
+   ```bash
       git fetch --all --prune
       ```
 
    b. Find the highest feature number across all sources for the short-name:
-      - Remote branches: `git ls-remote --heads origin | grep -E 'refs/heads/[0-9]+-<short-name>$'`
-      - Local branches: `git branch | grep -E '^[* ]*[0-9]+-<short-name>$'`
-      - Specs directories: Check for directories matching `specs/[0-9]+-<short-name>`
+
+   - Remote branches: `git ls-remote --heads origin | grep -E 'refs/heads/[0-9]+-<short-name>$'`
+     - Local branches: `git branch | grep -E '^[* ]*[0-9]+-<short-name>$'`
+     - Specs directories: Check for directories matching `specs/[0-9]+-<short-name>`
 
    c. Determine the next available number:
-      - Extract all numbers from all three sources
-      - Find the highest number N
-      - Use N+1 for the new branch number
+
+   - Extract all numbers from all three sources
+     - Find the highest number N
+     - Use N+1 for the new branch number
 
    d. Run the script `.specify/scripts/bash/create-new-feature.sh --json "$ARGUMENTS"` with the calculated number and short-name:
-      - Pass `--number N+1` and `--short-name "your-short-name"` along with the feature description
-      - Bash example: `.specify/scripts/bash/create-new-feature.sh --json "$ARGUMENTS" --json --number 5 --short-name "user-auth" "Add user authentication"`
-      - PowerShell example: `.specify/scripts/bash/create-new-feature.sh --json "$ARGUMENTS" -Json -Number 5 -ShortName "user-auth" "Add user authentication"`
+
+   - Pass `--number N+1` and `--short-name "your-short-name"` along with the feature description
+     - Bash example: `.specify/scripts/bash/create-new-feature.sh --json "$ARGUMENTS" --json --number 5 --short-name "user-auth" "Add user authentication"`
+     - PowerShell example: `.specify/scripts/bash/create-new-feature.sh --json "$ARGUMENTS" -Json -Number 5 -ShortName "user-auth" "Add user authentication"`
 
    **IMPORTANT**:
+
    - Check all three sources (remote branches, local branches, specs directories) to find the highest number
    - Only match branches/directories with the exact short-name pattern
    - If no existing branches/directories found with this short-name, start with number 1
@@ -64,9 +68,13 @@ Given that feature description, do this:
 4. Follow this execution flow:
 
     1. Parse user description from Input
+
        If empty: ERROR "No feature description provided"
+
     2. Extract key concepts from description
+
        Identify: actors, actions, data, constraints
+
     3. For unclear aspects:
        - Make informed guesses based on context and industry standards
        - Only mark with [NEEDS CLARIFICATION: specific question] if:
@@ -76,14 +84,20 @@ Given that feature description, do this:
        - **LIMIT: Maximum 3 [NEEDS CLARIFICATION] markers total**
        - Prioritize clarifications by impact: scope > security/privacy > user experience > technical details
     4. Fill User Scenarios & Testing section
+
        If no clear user flow: ERROR "Cannot determine user scenarios"
+
     5. Generate Functional Requirements
+
        Each requirement must be testable
        Use reasonable defaults for unspecified details (document assumptions in Assumptions section)
+
     6. Define Success Criteria
+
        Create measurable, technology-agnostic outcomes
        Include both quantitative metrics (time, performance, volume) and qualitative measures (user satisfaction, task completion)
        Each criterion must be verifiable without implementation details
+
     7. Identify Key Entities (if data involved)
     8. Return: SUCCESS (spec ready for planning)
 
@@ -131,20 +145,21 @@ Given that feature description, do this:
       ```
 
    b. **Run Validation Check**: Review the spec against each checklist item:
-      - For each item, determine if it passes or fails
-      - Document specific issues found (quote relevant spec sections)
+
+   - For each item, determine if it passes or fails
+     - Document specific issues found (quote relevant spec sections)
 
    c. **Handle Validation Results**:
 
-      - **If all items pass**: Mark checklist complete and proceed to step 6
+   - **If all items pass**: Mark checklist complete and proceed to step 6
 
-      - **If items fail (excluding [NEEDS CLARIFICATION])**:
+     - **If items fail (excluding [NEEDS CLARIFICATION])**:
         1. List the failing items and specific issues
         2. Update the spec to address each issue
         3. Re-run validation until all items pass (max 3 iterations)
         4. If still failing after 3 iterations, document remaining issues in checklist notes and warn user
 
-      - **If [NEEDS CLARIFICATION] markers remain**:
+     - **If [NEEDS CLARIFICATION] markers remain**:
         1. Extract all [NEEDS CLARIFICATION: ...] markers from the spec
         2. **LIMIT CHECK**: If more than 3 markers exist, keep only the 3 most critical (by scope/security/UX impact) and make informed guesses for the rest
         3. For each clarification needed (max 3), present options to user in this format:

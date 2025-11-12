@@ -4,7 +4,7 @@ This directory contains sample configurations for integrating F5 XC RBAC Sync in
 
 ## Available Samples
 
-### GitHub Actions
+### GitHub Actions Integration
 
 Located in `github-actions/`:
 
@@ -17,7 +17,7 @@ Located in `github-actions/`:
   - Runs linting and validation on pull requests and pushes
   - Uses pre-commit hooks for consistent code quality
 
-### Jenkins
+### Jenkins Integration
 
 Located in `jenkins/`:
 
@@ -36,36 +36,43 @@ Located in `jenkins/`:
 ### GitHub Actions
 
 1. Copy the sample workflow you want to use:
-   ```bash
-   cp samples/ci-cd/github-actions/xc-group-sync.yml.sample .github/workflows/xc-group-sync.yml
-   ```
+
+    ```bash
+    cp samples/ci-cd/github-actions/xc-group-sync.yml.sample .github/workflows/xc-group-sync.yml
+    ```
 
 2. Configure GitHub repository secrets:
-   - Go to: **Settings → Secrets and variables → Actions**
-   - Add required secrets:
-     - `TENANT_ID` - Your F5 XC tenant ID
-     - **Option A (PEM)**: `XC_CERT` and `XC_CERT_KEY`
-     - **Option B (P12)**: `XC_P12` (base64 encoded) and `XC_P12_PASSWORD`
+
+- Go to: **Settings → Secrets and variables → Actions**
+- Add required secrets:
+  - `TENANT_ID` - Your F5 XC tenant ID
+  - **Option A (PEM)**: `XC_CERT` and `XC_CERT_KEY`
+  - **Option B (P12)**: `XC_P12` (base64 encoded) and `XC_P12_PASSWORD`
 
 3. Commit and push to trigger the workflow
 
 ### Jenkins
 
 1. Copy the sample Jenkinsfile you prefer:
-   ```bash
-   cp samples/ci-cd/jenkins/Jenkinsfile.declarative.sample Jenkinsfile
-   # OR
-   cp samples/ci-cd/jenkins/Jenkinsfile.scripted.sample Jenkinsfile
-   ```
+
+    ```bash
+    cp samples/ci-cd/jenkins/Jenkinsfile.declarative.sample Jenkinsfile
+
+    # OR
+
+    cp samples/ci-cd/jenkins/Jenkinsfile.scripted.sample Jenkinsfile
+    ```
 
 2. Configure Jenkins credentials:
-   - Go to: **Jenkins → Credentials → System → Global credentials**
-   - Add secrets with these IDs:
-     - `TENANT_ID` (Secret text)
-     - `XC_CERT` (Secret text - PEM certificate content)
-     - `XC_CERT_KEY` (Secret text - PEM private key content)
+
+- Go to: **Jenkins → Credentials → System → Global credentials**
+- Add secrets with these IDs:
+  - `TENANT_ID` (Secret text)
+  - `XC_CERT` (Secret text - PEM certificate content)
+  - `XC_CERT_KEY` (Secret text - PEM private key content)
 
 3. Create a new Pipeline job:
+
    - Point it to your repository
    - Configure SCM to use the Jenkinsfile
    - Run the job with parameters
@@ -77,21 +84,23 @@ Both GitHub Actions and Jenkins samples support two authentication methods:
 ### Option 1: PEM Certificate/Key (Recommended)
 
 **GitHub Actions Secrets:**
+
 ```yaml
 XC_CERT: |
   -----BEGIN CERTIFICATE-----
-  [certificate content]
+  [certificate content - full certificate data]
   -----END CERTIFICATE-----
 
 XC_CERT_KEY: |
-  -----BEGIN PRIVATE KEY-----
-  [private key content]
-  -----END PRIVATE KEY-----
+  -----BEGIN <TYPE> KEY-----
+  [private key content - replace <TYPE> with RSA, EC, or PRIVATE]
+  -----END <TYPE> KEY-----
 
 TENANT_ID: your-tenant-id
 ```
 
 **Jenkins Credentials:**
+
 - Type: Secret text
 - IDs: `XC_CERT`, `XC_CERT_KEY`, `TENANT_ID`
 - Content: Raw PEM file contents (including header/footer)
@@ -99,6 +108,7 @@ TENANT_ID: your-tenant-id
 ### Option 2: P12 Certificate (GitHub Actions Only)
 
 **GitHub Actions Secrets:**
+
 ```yaml
 XC_P12: [base64-encoded P12 file]
 XC_P12_PASSWORD: [P12 passphrase]
@@ -106,6 +116,7 @@ TENANT_ID: your-tenant-id
 ```
 
 Generate base64:
+
 ```bash
 base64 -w 0 your-file.p12 > xc_p12_base64.txt
 ```
@@ -117,6 +128,7 @@ base64 -w 0 your-file.p12 > xc_p12_base64.txt
 #### Change Sync Behavior
 
 **GitHub Actions** - Edit the "Dry-run sync" or "Apply sync" steps:
+
 ```yaml
 - name: Dry-run sync
   run: |
@@ -131,6 +143,7 @@ base64 -w 0 your-file.p12 > xc_p12_base64.txt
 ```
 
 **Jenkins** - Modify parameters in the Jenkinsfile:
+
 ```groovy
 parameters {
     booleanParam(
@@ -144,11 +157,13 @@ parameters {
 #### Use Different CSV File
 
 **GitHub Actions**:
+
 ```yaml
 run: xc-group-sync sync --csv ./data/production-users.csv --dry-run
 ```
 
 **Jenkins** - Change parameter default:
+
 ```groovy
 string(
     name: 'CSV_FILE',
@@ -160,6 +175,7 @@ string(
 #### Add Notifications
 
 **GitHub Actions** - Add Slack notification:
+
 ```yaml
 - name: Notify Slack
   if: always()
@@ -173,6 +189,7 @@ string(
 ```
 
 **Jenkins** - Add email notification in `post` block:
+
 ```groovy
 post {
     failure {
@@ -188,6 +205,7 @@ post {
 #### Schedule Automatic Runs
 
 **GitHub Actions** - Add cron schedule:
+
 ```yaml
 on:
   schedule:
@@ -198,6 +216,7 @@ on:
 ```
 
 **Jenkins** - Use Pipeline triggers:
+
 ```groovy
 properties([
     pipelineTriggers([
@@ -243,33 +262,40 @@ stage('Approval for Apply Mode') {
 
 ## Troubleshooting
 
-### GitHub Actions
+### GitHub Actions Issues
 
 **Problem**: Workflow fails with "No XC credentials found"
+
 - **Solution**: Verify secrets are set in repository settings
 - Check secret names match exactly (case-sensitive)
 
 **Problem**: Certificate format errors
+
 - **Solution**: Ensure PEM certificates include headers:
-  ```
+
+  ```text
   -----BEGIN CERTIFICATE-----
   -----END CERTIFICATE-----
   ```
 
-### Jenkins
+### Jenkins Issues
 
 **Problem**: "python3: command not found"
+
 - **Solution**: Install Python plugin or configure Python tool in Global Tool Configuration
 
 **Problem**: Credential binding fails
+
 - **Solution**: Verify credential IDs match exactly in Jenkinsfile (`XC_CERT`, not `xc-cert`)
 
 **Problem**: Permission denied on certificate files
+
 - **Solution**: Pipeline should set `chmod 600` on certificate files after writing them
 
 ## Support
 
 For issues with:
+
 - **Sample configurations**: Open an issue in this repository
 - **F5 XC API**: Contact F5 support or consult [F5 XC Documentation](https://docs.cloud.f5.com/docs/api)
 - **Jenkins**: See [Jenkins Pipeline Documentation](https://www.jenkins.io/doc/book/pipeline/)

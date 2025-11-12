@@ -33,9 +33,9 @@ def __init__(
     self.backoff_multiplier = backoff_multiplier
     self.backoff_min = backoff_min
     self.backoff_max = backoff_max
-```
-
+```text
 **Default Values**:
+
 - `retry_attempts`: 3 (total attempts including initial)
 - `backoff_multiplier`: 1.0 (linear backoff)
 - `backoff_min`: 1.0 second (minimum wait)
@@ -44,6 +44,7 @@ def __init__(
 **Rationale**: Enables service consumers to tune retry behavior based on API characteristics, network conditions, or operational requirements without modifying core logic
 
 **Testing**:
+
 ```python
 # Default retry behavior (3 attempts)
 service = GroupSyncService(client)
@@ -63,8 +64,7 @@ service = GroupSyncService(
     backoff_min=2.0,
     backoff_max=10.0
 )
-```
-
+```text
 ---
 
 **FR-RETRY-002**: System MUST apply exponential backoff with configurable multiplier for retry delays
@@ -80,15 +80,15 @@ service = GroupSyncService(
 )
 def _create_user_with_retry(self, email: str, dry_run: bool) -> None:
     # User creation with automatic retry
-```
-
+```text
 **Backoff Calculation**:
+
 ```python
 wait_time = min(backoff_multiplier * (2 ** (attempt - 1)), backoff_max)
 wait_time = max(wait_time, backoff_min)
-```
-
+```text
 **Examples**:
+
 - **Attempt 1**: No wait (initial)
 - **Attempt 2**: Wait 1.0s (multiplier * 2^0)
 - **Attempt 3**: Wait 2.0s (multiplier * 2^1)
@@ -107,15 +107,16 @@ wait_time = max(wait_time, backoff_min)
     retry=retry_if_exception_type(requests.RequestException),
     # Only retry network/API errors, not validation or logic errors
 )
-```
-
+```text
 **Retriable Errors**:
+
 - Connection errors (network unreachable)
 - Timeout errors (request/response timeout)
 - HTTP 5xx server errors (temporary server issues)
 - HTTP 429 rate limit errors
 
 **Non-Retriable Errors** (fail fast):
+
 - HTTP 400 bad request (invalid data)
 - HTTP 401/403 authentication/authorization failures
 - HTTP 404 not found (endpoint doesn't exist)
@@ -144,8 +145,7 @@ def _ensure_user_exists(self, email: str, dry_run: bool) -> None:
     except Exception as e:
         logger.error(f"Failed to create user {email} after retries: {e}")
         raise
-```
-
+```text
 **Retry Scope Comparison**:
 
 | Operation | Retry Logic | Rationale |
@@ -156,6 +156,7 @@ def _ensure_user_exists(self, email: str, dry_run: bool) -> None:
 | Group deletion | ❌ No retry | Deletion failures need investigation, not retry |
 
 **Rationale**: User auto-creation is most likely to experience transient failures due to:
+
 - Concurrent user creation from multiple sources
 - Temporary directory sync delays
 - Network issues during batch operations
@@ -180,19 +181,18 @@ service = GroupSyncService(client)
 #     backoff_min=args.backoff_min,
 #     backoff_max=args.backoff_max,
 # )
-```
-
+```text
 **Current Behavior**: Uses hardcoded defaults (3 attempts, 1-4s backoff)
 
 **Future Enhancement**: Add CLI flags for runtime configuration
+
 ```bash
 xc-group-sync sync --csv test.csv \
     --retry-attempts 5 \
     --backoff-multiplier 2.0 \
     --backoff-min 0.5 \
     --backoff-max 10.0
-```
-
+```text
 **Rationale**: Currently defaults are sufficient for most use cases, but parameterization enables advanced users to tune for specific environments
 
 ---
@@ -200,7 +200,8 @@ xc-group-sync sync --csv test.csv \
 ## Retry Behavior Examples
 
 ### Successful Retry Scenario
-```
+
+```text
 [Attempt 1] POST /api/users/john@example.com
   ← Connection timeout (network issue)
 [Wait 1.0s]
@@ -210,10 +211,10 @@ xc-group-sync sync --csv test.csv \
 [Attempt 3] POST /api/users/john@example.com
   ← HTTP 201 Created ✅
 Result: User created successfully after 2 retries
-```
-
+```text
 ### Failed Retry Scenario
-```
+
+```text
 [Attempt 1] POST /api/users/john@example.com
   ← Connection timeout
 [Wait 1.0s]
@@ -223,28 +224,28 @@ Result: User created successfully after 2 retries
 [Attempt 3] POST /api/users/john@example.com
   ← Connection timeout
 Result: User creation failed after 3 attempts, operation aborted
-```
-
+```text
 ### Fast-Fail Scenario (Non-Retriable)
-```
+
+```text
 [Attempt 1] POST /api/users/invalid-email
   ← HTTP 400 Bad Request (invalid email format)
 Result: User creation failed immediately, no retry (permanent error)
-```
-
+```text
 ---
 
 ## Integration with Tenacity Library
 
 ### Dependency
+
 ```python
 # pyproject.toml
 dependencies = [
     "tenacity>=8.2.0",
 ]
-```
-
+```text
 ### Decorator Pattern
+
 ```python
 from tenacity import (
     retry,
@@ -261,9 +262,9 @@ from tenacity import (
 )
 def _create_user_with_retry(self, email: str, dry_run: bool) -> None:
     # Implementation
-```
-
+```text
 **Decorator Parameters**:
+
 - `retry`: Condition for retry (exception type)
 - `wait`: Wait strategy (exponential backoff)
 - `stop`: Stop condition (max attempts)
@@ -295,6 +296,7 @@ def _create_user_with_retry(self, email: str, dry_run: bool) -> None:
 ## Testing Recommendations
 
 ### Unit Tests
+
 ```python
 def test_user_creation_retry_success():
     """User creation succeeds after transient failure."""
@@ -337,9 +339,9 @@ def test_custom_retry_configuration():
     assert service.retry_attempts == 5
     assert service.backoff_min == 0.5
     assert service.backoff_max == 2.0
-```
-
+```text
 ### Integration Tests
+
 ```bash
 # Test retry with simulated network failure
 # (requires test harness with network fault injection)
@@ -350,8 +352,7 @@ pytest tests/integration/test_retry_behavior.py -k test_exponential_backoff -v
 
 # Test permanent failure fast-fail
 pytest tests/integration/test_retry_behavior.py -k test_permanent_error_no_retry
-```
-
+```text
 ---
 
 ## Performance Considerations
@@ -359,18 +360,22 @@ pytest tests/integration/test_retry_behavior.py -k test_permanent_error_no_retry
 ### Retry Impact on Execution Time
 
 **Best Case** (no failures):
+
 - No retry overhead
 - Execution time = API call time
 
 **Average Case** (1 transient failure):
+
 - 1 retry with 1s backoff
 - Execution time = API call time + 1s + retry API call time
 
 **Worst Case** (all retries exhausted):
+
 - 3 attempts with exponential backoff (1s, 2s)
 - Execution time = API call time × 3 + 3s backoff total
 
 **Batch Operations** (100 users):
+
 - If 5% experience transient failures → ~5 extra seconds
 - If 10% experience transient failures → ~10 extra seconds
 
@@ -402,6 +407,7 @@ pytest tests/integration/test_retry_behavior.py -k test_permanent_error_no_retry
 ## Comparison with XCClient Retry Logic
 
 **XCClient** (`client.py`) also has retry logic for ALL operations:
+
 ```python
 def __init__(self, ..., max_retries: int = 3):
     retry_strategy = Retry(
@@ -409,13 +415,14 @@ def __init__(self, ..., max_retries: int = 3):
         status_forcelist=[429, 500, 502, 503, 504],
         backoff_factor=1,
     )
-```
-
+```text
 **Layered Retry Architecture**:
+
 1. **XCClient level** (urllib3 Retry): HTTP-level retries for network/server errors
 2. **GroupSyncService level** (tenacity): Business-logic retries for specific operations
 
 **Why Two Layers?**
+
 - **XCClient retries**: Low-level, applies to ALL HTTP requests automatically
 - **GroupSyncService retries**: High-level, applies to specific business operations with custom backoff
 

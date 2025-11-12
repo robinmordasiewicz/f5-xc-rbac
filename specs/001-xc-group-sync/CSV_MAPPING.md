@@ -119,6 +119,7 @@ Entitlement Display Name: "CN=EADMIN_STD,OU=Groups,DC=example,DC=com"
 ```text
 
 ### Edge Cases (Q6)
+
 - Multiple CN components: "CN=Users,CN=Admin,OU=..."
 - Special characters in CN: "CN=Group (Test),OU=..."
 - Escaped characters: "CN=Group\, Inc,OU=..."
@@ -183,19 +184,23 @@ Authorization: APIToken <token>
 ## Validation Rules
 
 ### Pre-Flight Checks
+
 1. **CSV schema**: Validate required columns present
 2. **LDAP DN format**: Validate `Entitlement Display Name` contains "CN="
 3. **Email format**: Validate `Email` column contains valid email addresses
 4. **Entitlement attribute**: Validate `Entitlement Attribute` == "memberOf"
 
 ### F5 XC API Constraints
+
 (Need to verify from API docs or testing)
+
 - Group `name` length: likely max 64-320 characters
 - Allowed characters: likely alphanumeric, hyphen, underscore
 - Email format: standard RFC 5322
 - Usernames array: likely no hard limit, but practical limit ~1000s
 
 ### Error Handling
+
 - **Malformed LDAP DN**: Skip row, log error, continue
 - **Duplicate group names in CSV**: Error, halt processing
 - **Empty usernames for group**: Skip group creation, log warning

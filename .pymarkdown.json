@@ -1,4 +1,9 @@
 {
+  "extensions": {
+    "front-matter": {
+      "enabled": true
+    }
+  },
   "plugins": {
     "line-length": {
       "enabled": false,
@@ -13,8 +18,7 @@
       "style": "dash"
     },
     "ol-prefix": {
-      "enabled": true,
-      "style": "ordered"
+      "enabled": false
     },
     "no-inline-html": {
       "enabled": false
@@ -24,6 +28,16 @@
     },
     "first-line-heading": {
       "enabled": false
+    },
+    "commands-show-output": {
+      "enabled": false
+    },
+    "no-emphasis-as-heading": {
+      "enabled": false
+    },
+    "ul-indent": {
+      "enabled": true,
+      "indent": 4
     }
   }
 }

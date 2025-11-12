@@ -13,6 +13,7 @@ Enhance the existing F5 XC RBAC sync tool with full user lifecycle management, a
 
 **Language/Version**: Python 3.9+ (target: Python 3.12)
 **Primary Dependencies**:
+
 - `click` 8.1.7+ (CLI framework)
 - `pydantic` 2.9.2+ (data validation)
 - `requests` 2.32.3+ (HTTP client)
@@ -26,10 +27,13 @@ Enhance the existing F5 XC RBAC sync tool with full user lifecycle management, a
 **Project Type**: Single CLI application (existing structure preserved)
 **Performance Goals**: Synchronize 1,000 users in under 5 minutes, 100% idempotent
 **Constraints**:
+
 - F5 XC API rate limits (defensive: 5 concurrent max, exponential backoff)
 - Must preserve existing group sync functionality
 - Stateless execution (no local state persistence)
+
 **Scale/Scope**:
+
 - CSV files: up to 10,000 user records
 - API operations: create, read, update, delete users
 - Enhancement scope: ~7 new files, ~15 modified files
@@ -43,6 +47,7 @@ Enhance the existing F5 XC RBAC sync tool with full user lifecycle management, a
 Since `.specify/memory/constitution.md` contains only template placeholders, there are no project-specific constitutional principles to validate against. The implementation will follow existing project patterns and Python best practices captured in Serena memories.
 
 **Existing Project Patterns** (from Serena memories):
+
 - ✅ Protocol-based dependency injection (following existing `GroupRepository` pattern)
 - ✅ Pydantic models for validation (following existing `Group` model pattern)
 - ✅ Service layer with business logic (following existing `GroupSyncService` pattern)
@@ -69,8 +74,7 @@ specs/059-user-lifecycle/
 ├── checklists/          # Quality validation
 │   └── requirements.md  # Spec quality checklist (completed)
 └── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
-```
-
+```text
 ### Source Code (repository root)
 
 ```text
@@ -104,8 +108,7 @@ scripts/
 
 .github/workflows/
 └── xc-group-sync.yml     # CI/CD pipeline (MODIFY: add user sync testing)
-```
-
+```text
 **Structure Decision**: Single project structure maintained (existing). All enhancements add to `src/xc_rbac_sync/` package following established patterns. Tests mirror source structure in `tests/` directory. No new top-level directories created - pure enhancement of existing codebase.
 
 ## Complexity Tracking
@@ -118,42 +121,56 @@ scripts/
 
 Based on Technical Context unknowns and feature requirements:
 
-1. **F5 XC user_roles API Schema** ✅ (Already researched - see conversation history)
-   - Decision: Use `/api/web/custom/namespaces/system/user_roles` endpoint
-   - Supported fields: email, username, display_name, first_name, last_name, active (based on existing tests and client code)
-   - Operations: GET (list), POST (create), PUT (update), DELETE (delete)
+#### F5 XC user_roles API Schema
 
-2. **CSV Parsing Strategy for Multiple Groups** ✅ (Clarified in conversation)
-   - Decision: One row per user with pipe-separated groups in "Entitlement Display Name"
-   - Example: `CN=GROUP1,OU=...|CN=GROUP2,OU=...`
-   - Already handled by existing code - split on pipe and extract CN from each
+✅ (Already researched - see conversation history)
 
-3. **Name Parsing Edge Cases** ✅ (Clarified in spec)
-   - Decision: Last space-separated word = last name, rest = first name
-   - Edge cases: Single name → first_name only, last_name empty
-   - Whitespace: Trim before parsing
+- Decision: Use `/api/web/custom/namespaces/system/user_roles` endpoint
+- Supported fields: email, username, display_name, first_name, last_name, active (based on existing tests and client code)
+- Operations: GET (list), POST (create), PUT (update), DELETE (delete)
 
-4. **User Deletion Safety Mechanisms** ✅ (Clarified in conversation)
-   - Decision: Explicit `--delete-users` flag required (safe default: no deletion)
-   - Dry-run mode logs deletions without executing
-   - No automatic safeguards against bulk deletion (user responsibility with dry-run)
+#### CSV Parsing Strategy for Multiple Groups
 
-5. **State Reconciliation Algorithm**
-   - Research: Existing `GroupSyncService.sync_groups` pattern
-   - Apply same idempotency logic to users:
-     - Check existence before create
-     - Compare attributes before update
-     - Calculate diff (creates, updates, deletes)
-     - Execute only necessary operations
-   - Decision: Mirror GroupSyncService reconciliation pattern for consistency
+✅ (Clarified in conversation)
 
-6. **Error Handling and Partial Failures**
-   - Research: Existing `SyncStats` tracking and error collection
-   - Apply same pattern:
-     - Continue on individual failures
-     - Collect errors for summary
-     - Return partial success
-   - Decision: Reuse existing error handling patterns
+- Decision: One row per user with pipe-separated groups in "Entitlement Display Name"
+- Example: `CN=GROUP1,OU=...|CN=GROUP2,OU=...`
+- Already handled by existing code - split on pipe and extract CN from each
+
+#### Name Parsing Edge Cases
+
+✅ (Clarified in spec)
+
+- Decision: Last space-separated word = last name, rest = first name
+- Edge cases: Single name → first_name only, last_name empty
+- Whitespace: Trim before parsing
+
+#### User Deletion Safety Mechanisms
+
+✅ (Clarified in conversation)
+
+- Decision: Explicit `--delete-users` flag required (safe default: no deletion)
+- Dry-run mode logs deletions without executing
+- No automatic safeguards against bulk deletion (user responsibility with dry-run)
+
+#### State Reconciliation Algorithm
+
+- Research: Existing `GroupSyncService.sync_groups` pattern
+- Apply same idempotency logic to users:
+  - Check existence before create
+  - Compare attributes before update
+  - Calculate diff (creates, updates, deletes)
+  - Execute only necessary operations
+- Decision: Mirror GroupSyncService reconciliation pattern for consistency
+
+#### Error Handling and Partial Failures
+
+- Research: Existing `SyncStats` tracking and error collection
+- Apply same pattern:
+  - Continue on individual failures
+  - Collect errors for summary
+  - Return partial success
+- Decision: Reuse existing error handling patterns
 
 ### Research Findings Summary
 
@@ -168,44 +185,49 @@ All research tasks completed. Key decisions documented above. No NEEDS CLARIFICA
 **Primary Entities**:
 
 1. **User** (new model in `models.py`):
-   ```python
-   class User(BaseModel):
-       email: str                    # Primary identifier (unique)
-       username: str                 # Same as email for F5 XC
-       display_name: str             # From CSV "User Display Name"
-       first_name: str               # Parsed from display_name
-       last_name: str                # Parsed from display_name
-       active: bool                  # From CSV "Employee Status"
-       groups: List[str] = []        # Group names (for coordination with group sync)
-   ```
 
-2. **UserSyncStats** (new dataclass in `user_sync_service.py`):
-   ```python
-   @dataclass
-   class UserSyncStats:
-       created: int = 0
-       updated: int = 0
-       deleted: int = 0
-       unchanged: int = 0
-       errors: int = 0
-       error_details: List[dict] = field(default_factory=list)
-   ```
+  ```python
+  class User(BaseModel):
+      email: str                    # Primary identifier (unique)
+      username: str                 # Same as email for F5 XC
+      display_name: str             # From CSV "User Display Name"
+      first_name: str               # Parsed from display_name
+      last_name: str                # Parsed from display_name
+      active: bool                  # From CSV "Employee Status"
+      groups: List[str] = []        # Group names (for coordination with group sync)
+  ```
 
-3. **Enhanced SyncStats** (modify existing in `sync_service.py`):
-   ```python
-   # Add user-specific fields to existing SyncStats
-   users_created: int = 0
-   users_updated: int = 0
-   users_deleted: int = 0
-   users_unchanged: int = 0
-   ```
+1. **UserSyncStats** (new dataclass in `user_sync_service.py`):
+
+  ```python
+  @dataclass
+  class UserSyncStats:
+      created: int = 0
+      updated: int = 0
+      deleted: int = 0
+      unchanged: int = 0
+      errors: int = 0
+      error_details: List[dict] = field(default_factory=list)
+  ```
+
+1. **Enhanced SyncStats** (modify existing in `sync_service.py`):
+
+  ```python
+  # Add user-specific fields to existing SyncStats
+  users_created: int = 0
+  users_updated: int = 0
+  users_deleted: int = 0
+  users_unchanged: int = 0
+  ```
 
 **Entity Relationships**:
+
 - User.groups references Group.name (coordination only, not enforced FK)
 - CSV Record → User (one-to-one mapping via parsing)
 - User → F5 XC user_role (one-to-one via API)
 
 **Validation Rules** (from functional requirements):
+
 - Email: Required, non-empty (F5 XC validates format)
 - Display name: Required for name parsing
 - Employee Status: Defaults to inactive if missing
@@ -240,8 +262,7 @@ class UserRepository(Protocol):
     def get_user(self, email: str, namespace: str = "system") -> Dict[str, Any]:
         """Get single user by email."""
         ...
-```
-
+```text
 **XCClient Extensions** (modify `client.py`):
 
 ```python
@@ -264,8 +285,7 @@ class XCClient:
     def get_user(self, email: str, namespace: str = "system") -> Dict[str, Any]:
         """Get user via GET to user_roles/{email}."""
         ...
-```
-
+```text
 **UserSyncService Contract** (new in `user_sync_service.py`):
 
 ```python
@@ -291,13 +311,13 @@ class UserSyncService:
     ) -> UserSyncStats:
         """Reconcile users with F5 XC."""
         ...
-```
-
+```text
 **Artifact**: [contracts/user_sync_api.md](./contracts/user_sync_api.md) - Full API contract generated below
 
 ### Quickstart Guide
 
 **For Developers**:
+
 1. Set up development environment (existing process preserved)
 2. Run existing tests to ensure baseline: `pytest`
 3. Implement User model in `models.py`
@@ -310,6 +330,7 @@ class UserSyncService:
 10. Update documentation
 
 **For Users** (after implementation):
+
 ```bash
 # Sync users from CSV (create/update only)
 xc-group-sync sync --csv users.csv --dry-run
@@ -317,25 +338,26 @@ xc-group-sync sync --csv users.csv --dry-run
 # Sync users with deletion enabled
 xc-group-sync sync --csv users.csv --delete-users --dry-run
 xc-group-sync sync --csv users.csv --delete-users  # Apply after dry-run verification
-```
-
+```text
 **Artifact**: [quickstart.md](./quickstart.md) - Complete guide generated below
 
 ### Agent Context Update
 
 **Command Executed**:
+
 ```bash
 .specify/scripts/bash/update-agent-context.sh claude
-```
-
+```text
 **Result**: ✅ Successfully updated `CLAUDE.md` with feature context
 
 **Changes Applied**:
+
 - Added language context: Python 3.9+ (target: Python 3.12)
 - Added database context: N/A (stateless - CSV file is source of truth, F5 XC API is storage layer)
 - Updated project type: Single CLI application (existing structure preserved)
 
 **Agent Context Now Available**:
+
 - Language/framework details for code generation
 - Database/storage layer understanding
 - Project structure and patterns
@@ -357,15 +379,18 @@ Phase 1 (Design & Contracts) is now complete. Next steps:
 **Generated Artifacts Summary**:
 
 ✅ **Phase 0: Research**
+
 - [research.md](./research.md) - Technical decisions and alternatives analysis
 
 ✅ **Phase 1: Design & Contracts**
+
 - [data-model.md](./data-model.md) - User and UserSyncStats model definitions
 - [contracts/user_sync_api.md](./contracts/user_sync_api.md) - API contracts and protocols
 - [quickstart.md](./quickstart.md) - Developer and user implementation guide
 - [CLAUDE.md](../../CLAUDE.md) - Updated agent context
 
 🔜 **Phase 2: Task Breakdown** (next command: `/speckit.tasks`)
+
 - tasks.md - Dependency-ordered implementation tasks
 
 ---
@@ -375,24 +400,28 @@ Phase 1 (Design & Contracts) is now complete. Next steps:
 ### What Was Decided
 
 **Architecture**: Protocol-based dependency injection following existing `GroupSyncService` pattern
+
 - UserRepository protocol for F5 XC API operations
 - UserSyncService for business logic and reconciliation
 - XCClient extensions for user CRUD operations
 - Pydantic User model for validation
 
 **Data Flow**: CSV → Parse → Reconcile → F5 XC API
+
 - Name parsing: Last word = last name, rest = first name
 - Status mapping: "A" → True (active), else → False (inactive)
 - Group extraction: Pipe-separated LDAP DNs → CNs via existing `ldap_utils`
 - Idempotent sync: CSV as source of truth, F5 XC matches exactly
 
 **Safety Mechanisms**:
+
 - `--delete-users` flag required for deletions (safe default: no deletion)
 - `--dry-run` mode for preview without execution
 - Individual operation failures don't abort sync
 - Comprehensive error logging and summary reporting
 
 **Quality Standards**:
+
 - 80%+ test coverage for new code
 - TDD approach: tests first, then implementation
 - Google-style docstrings with type hints
@@ -401,6 +430,7 @@ Phase 1 (Design & Contracts) is now complete. Next steps:
 ### What Was Generated
 
 **Planning Artifacts** (Phase 0 & 1):
+
 1. `spec.md` - Feature specification (6 user stories, 20 requirements, 10 success criteria)
 2. `research.md` - Technical decisions and research findings
 3. `data-model.md` - Complete data model documentation
@@ -410,6 +440,7 @@ Phase 1 (Design & Contracts) is now complete. Next steps:
 7. `checklists/requirements.md` - Spec quality validation (all checks passed)
 
 **Files to Create** (Phase 2 - Implementation):
+
 - `src/xc_rbac_sync/user_sync_service.py` (new)
 - `src/xc_rbac_sync/user_utils.py` (new)
 - `tests/unit/test_user_sync_service.py` (new)
@@ -417,6 +448,7 @@ Phase 1 (Design & Contracts) is now complete. Next steps:
 - `tests/integration/test_user_sync_integration.py` (new)
 
 **Files to Modify** (Phase 2 - Implementation):
+
 - `src/xc_rbac_sync/models.py` (add User model)
 - `src/xc_rbac_sync/protocols.py` (add UserRepository protocol)
 - `src/xc_rbac_sync/client.py` (add user CRUD operations)
@@ -429,6 +461,7 @@ Phase 1 (Design & Contracts) is now complete. Next steps:
 ### Implementation Readiness
 
 **✅ Ready to Implement**:
+
 - All research completed and documented
 - Data models fully specified with validation rules
 - API contracts defined with clear protocols

@@ -167,8 +167,7 @@ As a repository administrator, I can configure security features (vulnerability 
   ],
   "labels_purge_unlisted": false
 }
-```
-
+```text
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
@@ -185,11 +184,13 @@ As a repository administrator, I can configure security features (vulnerability 
 ## Implementation Details
 
 ### Script Location
+
 - **Path**: `scripts/repository-settings.sh`
 - **Language**: Bash (requires bash 4.0+ for associative arrays)
 - **Dependencies**: `gh` (GitHub CLI), `jq` (JSON processor)
 
 ### Usage
+
 ```bash
 # Apply settings from default config
 ./scripts/repository-settings.sh
@@ -202,14 +203,15 @@ As a repository administrator, I can configure security features (vulnerability 
 
 # Export to custom config
 ./scripts/repository-settings.sh --export-labels path/to/config.json
-```
-
+```text
 ### Authentication
+
 - Uses GitHub CLI (`gh`) existing authentication
 - Requires `gh auth login` to be completed before running script
 - Permissions required: repo (full control), admin:org (for security settings)
 
 ### Exit Codes
+
 - `0`: Success - all operations completed successfully
 - `1`: Failure - missing tools, invalid config, or API errors
 

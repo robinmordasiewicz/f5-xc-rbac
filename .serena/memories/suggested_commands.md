@@ -1,6 +1,7 @@
 # Suggested Commands
 
 ## Development Setup
+
 ```bash
 # Create virtual environment
 python3 -m venv .venv
@@ -8,9 +9,9 @@ source .venv/bin/activate  # macOS/Linux
 
 # Install in editable mode with dev dependencies
 pip install -e ".[dev]"
-```
-
+```text
 ## Testing
+
 ```bash
 # Run all tests
 pytest
@@ -25,9 +26,9 @@ pytest tests/test_sync_service.py
 pytest -v
 
 # Coverage target: 80% minimum (enforced by pytest config)
-```
-
+```text
 ## Code Quality
+
 ```bash
 # Lint code with ruff
 ruff check .
@@ -40,9 +41,9 @@ ruff check --fix .
 
 # Run both formatting and linting
 ruff format . && ruff check .
-```
-
+```text
 ## Running the Application
+
 ```bash
 # Dry-run sync (safe, no API changes)
 xc-group-sync sync --csv ./User-Database.csv --dry-run --log-level info
@@ -55,9 +56,9 @@ xc-group-sync sync --csv ./User-Database.csv --cleanup --log-level info
 
 # Debug mode
 xc-group-sync sync --csv ./User-Database.csv --dry-run --log-level debug
-```
-
+```text
 ## Credential Setup
+
 ```bash
 # Automated setup with .p12 file
 ./scripts/setup_xc_credentials.sh --p12 ~/Downloads/your-tenant.p12
@@ -65,18 +66,18 @@ xc-group-sync sync --csv ./User-Database.csv --dry-run --log-level debug
 # Manual extraction (if needed)
 openssl pkcs12 -in tenant.p12 -clcerts -nokeys -out secrets/cert.pem
 openssl pkcs12 -in tenant.p12 -nocerts -nodes -out secrets/key.pem
-```
-
+```text
 ## Git Operations (macOS/Darwin)
+
 ```bash
 # Standard git commands work as expected on macOS
 git status
 git add .
 git commit -m "message"
 git push
-```
-
+```text
 ## File Operations (macOS/Darwin)
+
 ```bash
 # List files
 ls -la
@@ -89,4 +90,4 @@ grep -r "pattern" .
 
 # Change directory
 cd src/xc_rbac_sync/
-```
+```text
