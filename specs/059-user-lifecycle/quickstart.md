@@ -18,7 +18,7 @@
 
 ```bash
 # 1. Activate project with Serena (if using Serena MCP)
-# Already done: f5-xc-rbac project activated
+# Already done: f5-xc-user-group-sync project activated
 
 # 2. Checkout feature branch
 git checkout 059-user-lifecycle

@@ -31,7 +31,7 @@ Automate synchronization of Active Directory groups to F5 Distributed Cloud (XC)
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-- Issue-First: PASS → https://github.com/robinmordasiewicz/f5-xc-rbac/issues/12
+- Issue-First: PASS → https://github.com/robinmordasiewicz/f5-xc-user-group-sync/issues/12
 - Quality Gates: PRE-COMMIT in place (Markdown, Shell, EditorConfig). Python linters (ruff/black) NOT configured → NEEDS FOLLOW-UP (proposal in next steps).
 - Review Required: Will open PR from feature branch.
 - Clean History: Will squash-and-merge, delete branch.

@@ -39,8 +39,8 @@ Before you start, you need:
 
 ```bash
 # Clone the repository
-git clone https://github.com/robinmordasiewicz/f5-xc-rbac.git
-cd f5-xc-rbac
+git clone https://github.com/robinmordasiewicz/f5-xc-user-group-sync.git
+cd f5-xc-user-group-sync
 
 # Create and activate virtual environment
 python3 -m venv .venv
@@ -426,7 +426,7 @@ Includes:
 
 ## Support
 
-- **GitHub Issues**: https://github.com/robinmordasiewicz/f5-xc-rbac/issues
+- **GitHub Issues**: https://github.com/robinmordasiewicz/f5-xc-user-group-sync/issues
 - **F5 XC Documentation**: https://docs.cloud.f5.com/docs/api
 - **F5 Support**: Contact F5 support for platform-specific issues
 

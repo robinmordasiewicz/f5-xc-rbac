@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "f5-xc-rbac"
+name = "f5-xc-user-group-sync"
 version = "0.1.0"
-description = "XC RBAC group sync tool"
+description = "F5 XC User and Group Synchronization Tool"
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [{ name = "Robin Mordasiewicz" }]

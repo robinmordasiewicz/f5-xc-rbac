@@ -3,7 +3,7 @@
 ## Directory Layout
 
 ```text
-f5-xc-rbac/
+f5-xc-user-group-sync/
 ├── src/xc_rbac_sync/       # Main package
 │   ├── __init__.py         # Package initialization
 │   ├── cli.py              # CLI entry point (Click commands)

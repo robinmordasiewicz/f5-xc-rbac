@@ -76,7 +76,7 @@ initial_prompt: ""
 languages:
 - python
 
-project_name: "f5-xc-rbac"
+project_name: "f5-xc-user-group-sync"
 included_optional_tools: []
 
 # whether the project is in read-only mode
