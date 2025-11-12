@@ -7,16 +7,19 @@ Automated synchronization tool for managing F5 Distributed Cloud (XC) users and 
 This tool keeps your F5 XC security **users and groups** synchronized with your authoritative user database (exported as CSV):
 
 **User Synchronization:**
+
 - ✅ **Creates** users that exist in CSV but not in F5 XC
 - ✅ **Updates** user attributes (name, active status) to match CSV
 - ✅ **Deletes** users not in CSV (optional, with explicit flag)
 
 **Group Synchronization:**
+
 - ✅ **Creates** groups that exist in CSV but not in F5 XC
 - ✅ **Updates** group memberships to match CSV (adds/removes users)
 - ✅ **Deletes** groups not in CSV (optional, with explicit flag)
 
 **Safety & Automation:**
+
 - ✅ **Validates** all data before making changes
 - ✅ **Dry-run mode** to preview changes safely before applying
 - ✅ **CI/CD ready** for automated synchronization workflows
@@ -27,8 +30,11 @@ Before you start, you need:
 
 1. **Python 3.9 or higher** installed on your system
 2. **F5 XC API credentials** (.p12 certificate file with password)
+
    - Download from: F5 XC Console → Administration → Credentials → API Credentials
+
 3. **CSV export** from your user database (Active Directory, LDAP, etc.)
+
    - Must include user emails and group memberships
 
 ## Quick Start
@@ -59,6 +65,7 @@ The easiest way to set up your credentials:
 ```
 
 This script will:
+
 - Extract your tenant ID from the filename
 - Auto-detect environment (production/staging)
 - Convert .p12 to PEM certificate and key files
@@ -66,6 +73,7 @@ This script will:
 - Set GitHub repository secrets (if using CI/CD)
 
 **The script will prompt you for:**
+
 - P12 passphrase (if not already set via environment variable)
 
 #### Manual Setup
@@ -73,11 +81,13 @@ This script will:
 If you prefer manual setup:
 
 1. Create the secrets directory:
+
 ```bash
 mkdir -p secrets
 ```
 
-2. Extract certificate and key from .p12:
+1. Extract certificate and key from .p12:
+
 ```bash
 # Extract certificate
 openssl pkcs12 -in your-tenant.p12 -clcerts -nokeys -out secrets/cert.pem
@@ -86,7 +96,8 @@ openssl pkcs12 -in your-tenant.p12 -clcerts -nokeys -out secrets/cert.pem
 openssl pkcs12 -in your-tenant.p12 -nocerts -nodes -out secrets/key.pem
 ```
 
-3. Create `secrets/.env` file:
+1. Create `secrets/.env` file:
+
 ```bash
 TENANT_ID=your-tenant-id
 XC_API_URL=https://your-tenant-id.console.ves.volterra.io
@@ -122,6 +133,7 @@ xc-group-sync sync --csv ./User-Database.csv --dry-run
 ```
 
 This shows you:
+
 - ✅ Groups to be created
 - ✅ Groups to be updated (with membership changes)
 - ✅ Groups to be deleted (if using `--cleanup-groups`)
@@ -199,6 +211,7 @@ xc-group-sync sync --csv file.csv --cleanup-groups --cleanup-users
 **Create**: Groups in CSV but not in XC → Created with member lists
 
 **Update**: Groups in both CSV and XC → Memberships synchronized:
+
 - Adds users missing from XC group
 - Removes users not in CSV (if they exist in XC group)
 
@@ -213,6 +226,7 @@ xc-group-sync sync --csv file.csv --cleanup-groups --cleanup-users
 #### "TENANT_ID environment variable not set"
 
 **Solution:**
+
 ```bash
 # Verify secrets/.env exists
 cat secrets/.env
@@ -227,11 +241,13 @@ source secrets/.env
 #### "User email@example.com not found in XC"
 
 **Possible causes:**
+
 - User doesn't exist in F5 XC yet
 - Email in CSV doesn't match F5 XC user profile
 - Email address has typo or formatting issue
 
 **Solution:**
+
 ```bash
 # Run with debug logging to see all XC emails
 xc-group-sync sync --csv file.csv --log-level debug --dry-run
@@ -248,6 +264,7 @@ xc-group-sync sync --csv file.csv --log-level debug --dry-run
 **Cause:** Too many API requests in a short time.
 
 **Solution:** The tool automatically retries with exponential backoff. If the problem persists:
+
 ```bash
 # Increase max retries
 xc-group-sync sync --csv file.csv --max-retries 5
@@ -256,6 +273,7 @@ xc-group-sync sync --csv file.csv --max-retries 5
 #### Certificate/Authentication Errors
 
 **Solution:**
+
 ```bash
 # Verify certificate is valid
 openssl x509 -in secrets/cert.pem -noout -text
@@ -272,6 +290,7 @@ openssl rsa -in secrets/key.pem -check
 **Problem:** Python fails with SSL verification errors when connecting to staging F5 XC environments.
 
 **Why it happens:**
+
 - Staging environments use self-signed CAs not in Python's trust store
 - curl works because it uses system certificate stores
 - Python uses its own bundled `certifi` package
@@ -279,6 +298,7 @@ openssl rsa -in secrets/key.pem -check
 **Solutions:**
 
 **Option 1 (Testing Only):** Disable SSL verification
+
 ```bash
 # ⚠️ DANGER: Only for non-production testing
 export REQUESTS_CA_BUNDLE=""
@@ -286,6 +306,7 @@ xc-group-sync sync --csv file.csv
 ```
 
 **Option 2 (Recommended):** Add staging CA to Python trust store
+
 ```bash
 # Export staging CA
 openssl s_client -showcerts -connect tenant.staging.ves.volterra.io:443 </dev/null 2>/dev/null | \
@@ -299,6 +320,7 @@ cat staging-ca.pem >> $(python3 -c "import certifi; print(certifi.where())")
 ```
 
 **Option 3 (Best):** Use production credentials
+
 ```bash
 # Production environments use standard certificates and work without issues
 TENANT_ID=your-prod-tenant xc-group-sync sync --csv file.csv
@@ -313,6 +335,7 @@ xc-group-sync sync --csv file.csv --dry-run --log-level debug
 ```
 
 This shows:
+
 - All API requests and responses
 - CSV parsing details
 - Validation logic decisions
@@ -328,45 +351,51 @@ This repository provides **sample CI/CD configurations** that serve as starting 
 **📁 Location**: `samples/ci-cd/`
 
 **GitHub Actions:**
+
 - `xc-group-sync.yml.sample` - Main synchronization workflow
 - `pre-commit.yml.sample` - Code quality and linting
 
 **Jenkins:**
+
 - `Jenkinsfile.declarative.sample` - Declarative Pipeline syntax
 - `Jenkinsfile.scripted.sample` - Scripted Pipeline syntax
 
-### Quick Start
+### CI/CD Quick Start
 
 **For GitHub Actions:**
 
 1. Copy the sample workflow:
-   ```bash
-   cp samples/ci-cd/github-actions/xc-group-sync.yml.sample \
+
+    ```bash
+    cp samples/ci-cd/github-actions/xc-group-sync.yml.sample \
       .github/workflows/xc-group-sync.yml
-   ```
+    ```
 
-2. Configure secrets in **Settings → Secrets and variables → Actions**:
-   ```text
-   TENANT_ID          Your F5 XC tenant ID
-   XC_CERT            PEM certificate (raw text, not base64)
-   XC_CERT_KEY        PEM private key (raw text, not base64)
-   ```
+1. Configure secrets in **Settings → Secrets and variables → Actions**:
 
-3. Review and customize the workflow, then commit to enable it
+  ```text
+  TENANT_ID          Your F5 XC tenant ID
+  XC_CERT            PEM certificate (raw text, not base64)
+  XC_CERT_KEY        PEM private key (raw text, not base64)
+  ```
+
+1. Review and customize the workflow, then commit to enable it
 
 **For Jenkins:**
 
 1. Copy the sample Jenkinsfile:
-   ```bash
-   cp samples/ci-cd/jenkins/Jenkinsfile.declarative.sample Jenkinsfile
-   ```
 
-2. Configure Jenkins credentials with IDs:
+  ```bash
+  cp samples/ci-cd/jenkins/Jenkinsfile.declarative.sample Jenkinsfile
+  ```
+
+1. Configure Jenkins credentials with IDs:
+
    - `TENANT_ID` (Secret text)
    - `XC_CERT` (Secret text - PEM certificate content)
    - `XC_CERT_KEY` (Secret text - PEM private key content)
 
-3. Create a Pipeline job pointing to your repository
+2. Create a Pipeline job pointing to your repository
 
 ### Detailed Documentation
 
@@ -375,6 +404,7 @@ For complete setup instructions, customization guide, and troubleshooting:
 **📖 See**: [`samples/ci-cd/README.md`](samples/ci-cd/README.md)
 
 Includes:
+
 - Authentication options (PEM vs P12)
 - Customization examples (cleanup flags, scheduling, notifications)
 - Security best practices
@@ -385,12 +415,14 @@ Includes:
 ### Credential Management
 
 ✅ **DO:**
+
 - Store credentials in `secrets/` directory (gitignored)
 - Use repository secrets for CI/CD
 - Set restrictive permissions (`chmod 600`) on PEM files
 - Rotate API credentials regularly
 
 ❌ **DON'T:**
+
 - Commit `.p12`, `.pem`, or `.env` files to git
 - Share credentials in logs or screenshots
 - Use production credentials in development/testing

@@ -1,13 +1,12 @@
 ---
-description: Perform a non-destructive cross-artifact consistency and quality analysis across spec.md, plan.md, and tasks.md after task generation.
+description: Perform a non-destructive cross-artifact consistency and quality analysis across spec.md, plan.md, and tasks.md after task generation
 ---
 
 ## User Input
 
 ```text
 $ARGUMENTS
-```
-
+```text
 You **MUST** consider the user input before proceeding (if not empty).
 
 ## Goal

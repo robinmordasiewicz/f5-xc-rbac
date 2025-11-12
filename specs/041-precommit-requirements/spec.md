@@ -25,10 +25,12 @@
 
   Assign priorities (P1, P2, P3, etc.) to each story, where P1 is the most critical.
   Think of each story as a standalone slice of functionality that can be:
+
   - Developed independently
   - Tested independently
   - Deployed independently
   - Demonstrated to users independently
+
 -->
 
 ### User Story 1 - [Brief Title] (Priority: P1)
@@ -111,6 +113,7 @@
 - **FR-007**: System MUST retain user data for [NEEDS CLARIFICATION: retention period not specified]
 
 <!-- Pre-commit and CI parity requirements (clarified 2025-11-05) -->
+
 - **FR-008**: Pre-commit MUST enforce formatting across the codebase: Black (Python, --check), shfmt (shell, -i 2 -ci), EditorConfig compliance, end-of-file newline, trailing whitespace cleanup, and consistent LF line endings.
 - **FR-009**: Pre-commit MUST enforce linting: Ruff (Python, no autofix in CI), ShellCheck (-S error), Markdown lint (PyMarkdown with repo-config), YAML validation (check-yaml + sort-simple-yaml), JSON validation/pretty-format (no key sort), and basic VCS hygiene checks (merge conflicts, case conflicts, large files, VCS permalinks).
 - **FR-010**: Security scanning MUST run in pre-commit: detect-secrets (with maintained baseline excluding known benign paths like secrets/), Python security SAST (Bandit, severity=MEDIUM+ fail), and dependency vulnerability scan (pip-audit; fail on high/critical).
@@ -154,6 +157,7 @@
 - **SC-004**: [Business metric, e.g., "Reduce support tickets related to [X] by 50%"]
 
 <!-- Pre-commit acceptance criteria (clarified 2025-11-05) -->
+
 - **SC-005**: CI enforces PR-blocking "lint" workflow mirroring pre-commit; any failure blocks merge (0 policy violations allowed).
 - **SC-006**: Formatting passes with 0 changes when running "black --check" and shfmt on the entire repository; EditorConfig checker reports 0 errors.
 - **SC-007**: Linting passes with 0 errors: Ruff (exit code 0), ShellCheck (exit code 0), PyMarkdown (exit code 0), YAML/JSON checks (exit code 0).

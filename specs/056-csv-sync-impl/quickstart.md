@@ -9,28 +9,24 @@ This quickstart shows how to prepare credentials, create a sample CSV, and run t
 ```bash
 # Extract cert/key and write secrets/.env using the p12 file
 bash scripts/setup_xc_credentials.sh --p12 /path/to/tenant.api-creds.p12 --no-secrets
-```
-
+```text
 1. Create a sample CSV (`User-Database.csv`):
 
 ```csv
 Email,Entitlement Display Name
 alice@example.com,"CN=admins,OU=Groups,DC=example,DC=com"
 bob@example.com,"CN=developers,OU=Groups,DC=example,DC=com"
-```
-
+```text
 1. Run a safe dry-run to see planned actions (no API changes):
 
 ```bash
 python -m xc_rbac_sync.cli sync --csv User-Database.csv --dry-run --log-level info
-```
-
+```text
 1. When ready to apply changes, run without `--dry-run` (careful; this will modify your tenant):
 
 ```bash
 python -m xc_rbac_sync.cli sync --csv User-Database.csv
-```
-
+```text
 Notes:
 
 - The CLI uses `secrets/.env` if present. To avoid loading repo-local secrets in CI or tests, set `DOTENV_PATH=/dev/null`.

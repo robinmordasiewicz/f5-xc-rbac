@@ -83,6 +83,9 @@ markers = [
   "edge_case: Tests for edge cases and error handling",
   "security: Tests for security-related functionality",
 ]
+filterwarnings = [
+  "ignore::DeprecationWarning:pyasn1.codec.ber.encoder",
+]
 
 [tool.coverage.run]
 source = ["src"]

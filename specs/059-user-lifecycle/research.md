@@ -15,11 +15,13 @@ This document captures research findings for implementing user lifecycle managem
 **Question**: What fields does the F5 XC `/api/web/custom/namespaces/system/user_roles` API support for user objects?
 
 **Research Method**:
+
 - Examined existing `XCClient` implementation in `src/xc_rbac_sync/client.py`
 - Reviewed test fixtures in `tests/unit/test_sync_service.py` and `tests/unit/test_cli_and_client.py`
 - Analyzed current `create_user` implementation
 
 **Findings**:
+
 - **Endpoint**: `/api/web/custom/namespaces/system/user_roles`
 - **Operations**: GET (list), POST (create), PUT (update), DELETE (delete)
 - **Supported Fields** (based on existing code):
@@ -33,6 +35,7 @@ This document captures research findings for implementing user lifecycle managem
 **Rationale**: Reuse proven API patterns. Existing retry logic with `tenacity` handles transient failures. Consistent with current architecture.
 
 **Alternatives Considered**:
+
 - Creating separate UserClient class - Rejected: adds unnecessary complexity, violates single responsibility at the wrong level
 - Using SCIM 2.0 API - Rejected: not available/accessible, custom API is the supported interface
 
@@ -43,11 +46,13 @@ This document captures research findings for implementing user lifecycle managem
 **Question**: How should we handle users with multiple group memberships in a single CSV row?
 
 **Research Method**:
+
 - Reviewed existing `GroupSyncService.parse_csv_to_groups` implementation
 - Examined sample CSV structure from PRD
 - Clarified format with user (conversation history)
 
 **Findings**:
+
 - **Format**: One row per user with pipe-separated LDAP DNs in "Entitlement Display Name" column
 - **Example**: `CN=GROUP1,OU=Groups,DC=...|CN=GROUP2,OU=Groups,DC=...|CN=GROUP3,OU=Groups,DC=...`
 - **Existing Handling**: Current code likely splits on delimiter and extracts CN from each
@@ -57,6 +62,7 @@ This document captures research findings for implementing user lifecycle managem
 **Rationale**: Consistent with Active Directory export format. Reuses existing LDAP parsing logic. Single row per user simplifies CSV structure.
 
 **Alternatives Considered**:
+
 - Multiple rows per user (one per group) - Rejected: complicates CSV generation, harder to parse user attributes
 - JSON array in column - Rejected: non-standard CSV format, breaks compatibility with AD exports
 
@@ -67,11 +73,13 @@ This document captures research findings for implementing user lifecycle managem
 **Question**: How should we handle various display name formats when parsing first/last names?
 
 **Research Method**:
+
 - Reviewed spec requirements (FR-002)
 - Clarified parsing rules with user
 - Identified edge cases
 
 **Findings**:
+
 - **Standard Rule**: Last space-separated word = last name, remaining words = first name
 - **Edge Cases Identified**:
   - Single name (e.g., "Madonna") → first_name="Madonna", last_name=""
@@ -80,6 +88,7 @@ This document captures research findings for implementing user lifecycle managem
   - Empty display name → Handle gracefully with error or defaults
 
 **Decision**: Implement `parse_display_name(display_name: str) -> tuple[str, str]` in `user_utils.py`:
+
 1. Trim whitespace
 2. Split on spaces
 3. If zero parts: ("", "")
@@ -89,6 +98,7 @@ This document captures research findings for implementing user lifecycle managem
 **Rationale**: Handles Western naming conventions. Simple algorithm with clear edge case handling. Matches user requirements.
 
 **Alternatives Considered**:
+
 - Third-party name parsing library (python-nameparser) - Rejected: overkill for simple use case, adds dependency
 - Regex-based parsing - Rejected: less readable, no benefit over simple split
 
@@ -99,25 +109,28 @@ This document captures research findings for implementing user lifecycle managem
 **Question**: How should we map Active Directory Employee Status codes to boolean active status?
 
 **Research Method**:
+
 - Reviewed spec requirements (FR-003)
 - Clarified with user: "A" = active, all others = inactive
 - Common AD status codes researched
 
 **Findings**:
+
 - **Mapping Rule**: "A" (Active) → true, everything else → false
 - **Common AD Status Codes**: A=Active, I=Inactive, T=Terminated, L=Leave, etc.
 - **Missing Values**: Treat as inactive (safe default)
 
 **Decision**: Implement `parse_active_status(employee_status: str) -> bool` in `user_utils.py`:
+
 ```python
 def parse_active_status(employee_status: str) -> bool:
     """Map employee status code to active boolean."""
     return employee_status.strip().upper() == "A"
-```
-
+```text
 **Rationale**: Simple, explicit, safe default (inactive). Case-insensitive for robustness. Matches user requirements.
 
 **Alternatives Considered**:
+
 - Allowlist of active codes (A, ACTIVE, etc.) - Rejected: over-complicates, spec is clear
 - Mapping table for all codes - Rejected: only two states needed (active/inactive)
 
@@ -128,11 +141,13 @@ def parse_active_status(employee_status: str) -> bool:
 **Question**: What algorithm should be used for state-based reconciliation to ensure idempotency?
 
 **Research Method**:
+
 - Analyzed existing `GroupSyncService.sync_groups()` implementation
 - Reviewed idempotency patterns
 - Examined retry and error handling logic
 
 **Findings**:
+
 - **Existing Pattern** (GroupSyncService):
   1. Fetch current state from F5 XC
   2. Parse desired state from CSV
@@ -147,6 +162,7 @@ def parse_active_status(employee_status: str) -> bool:
   - Re-running with same input produces same end state
 
 **Decision**: Mirror `GroupSyncService` pattern for `UserSyncService`:
+
 ```python
 def sync_users(self, planned_users, existing_users, dry_run, delete_users):
     stats = UserSyncStats()
@@ -172,11 +188,11 @@ def sync_users(self, planned_users, existing_users, dry_run, delete_users):
                 delete_user(email, dry_run, stats)
 
     return stats
-```
-
+```text
 **Rationale**: Proven pattern in existing code. Consistent architecture. Well-tested. Handles partial failures gracefully.
 
 **Alternatives Considered**:
+
 - Transactional approach (all-or-nothing) - Rejected: F5 XC API doesn't support transactions, would complicate error recovery
 - Event sourcing - Rejected: overkill for stateless sync tool, adds complexity
 
@@ -187,11 +203,13 @@ def sync_users(self, planned_users, existing_users, dry_run, delete_users):
 **Question**: How should the sync tool handle individual operation failures without aborting the entire sync?
 
 **Research Method**:
+
 - Examined existing error handling in `GroupSyncService._create_group` and `_update_group`
 - Reviewed `SyncStats` error tracking
 - Analyzed retry logic in `XCClient`
 
 **Findings**:
+
 - **Existing Pattern**:
   - Wrap operations in try/except
   - Log errors with user identifier
@@ -206,6 +224,7 @@ def sync_users(self, planned_users, existing_users, dry_run, delete_users):
   - Non-retryable errors (4xx except 429) fail immediately
 
 **Decision**: Reuse existing error handling pattern:
+
 1. Each user operation wrapped in try/except
 2. Errors logged with user email and error message
 3. Stats track error count and details
@@ -215,6 +234,7 @@ def sync_users(self, planned_users, existing_users, dry_run, delete_users):
 **Rationale**: Consistent with existing code. Aligns with user requirement FR-019 (continue on failures). Enables batch processing.
 
 **Alternatives Considered**:
+
 - Fail-fast on first error - Rejected: prevents bulk sync, user wants resilience
 - Collect errors and retry failed batch at end - Rejected: adds complexity, retry already handled at HTTP layer
 

@@ -6,8 +6,7 @@ description: Create or update the project constitution from interactive or provi
 
 ```text
 $ARGUMENTS
-```
-
+```text
 You **MUST** consider the user input before proceeding (if not empty).
 
 ## Outline
@@ -18,6 +17,7 @@ Follow this execution flow:
 
 1. Load the existing constitution template at `.specify/memory/constitution.md`.
    - Identify every placeholder token of the form `[ALL_CAPS_IDENTIFIER]`.
+
    **IMPORTANT**: The user might require less or more principles than the ones used in the template. If a number is specified, respect that - follow the general template. You will update the doc accordingly.
 
 2. Collect/derive values for placeholders:

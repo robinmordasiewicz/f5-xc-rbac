@@ -63,13 +63,13 @@ class UserRepository(Protocol):
 
         Args:
             user: User data dictionary with keys:
-                - email (required): User email address
-                - username (optional): Defaults to email if not provided
-                - display_name (required): Full name
-                - first_name (required): Given name
-                - last_name (required): Family name
-                - active (optional): Boolean, defaults to True
-                - groups (optional): List of group names
+              - email (required): User email address
+              - username (optional): Defaults to email if not provided
+              - display_name (required): Full name
+              - first_name (required): Given name
+              - last_name (required): Family name
+              - active (optional): Boolean, defaults to True
+              - groups (optional): List of group names
             namespace: F5 XC namespace (default: "system")
 
         Returns:
@@ -81,8 +81,8 @@ class UserRepository(Protocol):
             ValueError: On invalid user data format
 
         Notes:
-            - Automatically retries 429 and 5xx errors with exponential backoff
-            - Maximum 3 retry attempts via tenacity decorator
+          - Automatically retries 429 and 5xx errors with exponential backoff
+          - Maximum 3 retry attempts via tenacity decorator
         """
         ...
 
@@ -108,9 +108,9 @@ class UserRepository(Protocol):
             ValueError: On invalid user data format
 
         Notes:
-            - Email is used as unique identifier for user lookup
-            - Partial updates not supported - full user object required
-            - Automatically retries 429 and 5xx errors
+          - Email is used as unique identifier for user lookup
+          - Partial updates not supported - full user object required
+          - Automatically retries 429 and 5xx errors
         """
         ...
 
@@ -133,9 +133,9 @@ class UserRepository(Protocol):
             requests.exceptions.RequestException: On network failures
 
         Notes:
-            - Deletion is permanent and cannot be undone
-            - Automatically retries 429 and 5xx errors
-            - 404 errors are NOT retried (user already deleted)
+          - Deletion is permanent and cannot be undone
+          - Automatically retries 429 and 5xx errors
+          - 404 errors are NOT retried (user already deleted)
         """
         ...
 
@@ -158,12 +158,11 @@ class UserRepository(Protocol):
             requests.exceptions.RequestException: On network failures
 
         Notes:
-            - Primarily used for individual user lookups
-            - For bulk operations, prefer list_users() for efficiency
+          - Primarily used for individual user lookups
+          - For bulk operations, prefer list_users() for efficiency
         """
         ...
-```
-
+```text
 ---
 
 ## Service Layer Contract
@@ -210,7 +209,6 @@ class UserSyncStats:
     def has_errors(self) -> bool:
         """Check if any errors occurred."""
         return self.errors > 0
-
 
 class UserSyncService:
     """Service for synchronizing users between CSV and F5 XC.
@@ -263,22 +261,22 @@ class UserSyncService:
             csv.Error: On CSV parsing failures
 
         Behavior:
-            1. Validate required columns exist: "Email", "User Display Name",
-               "Employee Status", "Entitlement Display Name"
-            2. For each row:
-               - Extract email (required)
-               - Parse display_name to first_name and last_name
-               - Map employee status to active boolean ("A" → True, else → False)
-               - Extract group CNs from pipe-separated LDAP DNs
-               - Create User object with Pydantic validation
-            3. Skip rows with validation errors (log warnings)
-            4. Return list of valid User objects
+          1. Validate required columns exist: "Email", "User Display Name",
+            "Employee Status", "Entitlement Display Name"
+          2. For each row:
+            - Extract email (required)
+            - Parse display_name to first_name and last_name
+            - Map employee status to active boolean ("A" → True, else → False)
+            - Extract group CNs from pipe-separated LDAP DNs
+            - Create User object with Pydantic validation
+          3. Skip rows with validation errors (log warnings)
+          4. Return list of valid User objects
 
         CSV Column Mapping:
-            - "Email" → User.email
-            - "User Display Name" → User.display_name, first_name, last_name (parsed)
-            - "Employee Status" → User.active (mapped: "A" → True, else → False)
-            - "Entitlement Display Name" → User.groups (pipe-separated LDAP DNs → CNs)
+          - "Email" → User.email
+          - "User Display Name" → User.display_name, first_name, last_name (parsed)
+          - "Employee Status" → User.active (mapped: "A" → True, else → False)
+          - "Entitlement Display Name" → User.groups (pipe-separated LDAP DNs → CNs)
 
         Example:
             >>> service.parse_csv_to_users("users.csv")
@@ -288,10 +286,10 @@ class UserSyncService:
             ]
 
         Notes:
-            - Email comparison is case-insensitive (lowercased for consistency)
-            - Duplicate emails: first occurrence kept, duplicates logged as warnings
-            - Missing required columns: raises ValueError immediately
-            - Malformed rows: logged and skipped, sync continues
+          - Email comparison is case-insensitive (lowercased for consistency)
+          - Duplicate emails: first occurrence kept, duplicates logged as warnings
+          - Missing required columns: raises ValueError immediately
+          - Malformed rows: logged and skipped, sync continues
         """
         ...
 
@@ -317,9 +315,11 @@ class UserSyncService:
             requests.exceptions.RequestException: On API failures
 
         Notes:
+
             - Calls repository.list_users() to fetch from F5 XC
             - Lowercases email keys for case-insensitive comparison
             - Returns empty dict if no users exist (not an error)
+
         """
         ...
 
@@ -342,26 +342,29 @@ class UserSyncService:
             UserSyncStats with operation counts and error details
 
         Algorithm:
-            1. Build email -> user maps (lowercase emails for comparison)
-            2. For each desired user:
-               a. If not in F5 XC → CREATE
-               b. If in F5 XC but attributes differ → UPDATE
-               c. If in F5 XC and attributes match → SKIP (unchanged)
-            3. If delete_users=True:
-               For each F5 XC user not in desired state → DELETE
-            4. Collect stats and errors for summary report
+          1. Build email -> user maps (lowercase emails for comparison)
+          2. For each desired user:
+            a. If not in F5 XC → CREATE
+            b. If in F5 XC but attributes differ → UPDATE
+            c. If in F5 XC and attributes match → SKIP (unchanged)
+          3. If delete_users=True:
+            For each F5 XC user not in desired state → DELETE
+          4. Collect stats and errors for summary report
 
         Idempotency Guarantee:
+
             - Running multiple times with same CSV produces same end state
             - No unnecessary API calls (skip unchanged users)
             - Safe to re-run after partial failures
 
         Error Handling:
+
             - Individual operation failures logged and collected
             - Sync continues with remaining users (no fail-fast)
             - All errors reported in UserSyncStats.error_details
 
         Dry-Run Behavior:
+
             - All operations logged with "Would create/update/delete" prefix
             - No API calls executed to F5 XC
             - Stats reflect planned operations, not actual
@@ -377,13 +380,15 @@ class UserSyncService:
             Users: created=5, updated=3, deleted=0, unchanged=1065, errors=0
 
         Notes:
+
             - Attribute comparison is deep (all fields checked)
             - Group list order matters for comparison
             - Email is primary identifier (case-insensitive)
             - delete_users=False is safe default (no accidental deletions)
+
         """
         ...
-```
+```text
 
 ---
 
@@ -404,6 +409,7 @@ def parse_display_name(display_name: str) -> tuple[str, str]:
         Tuple of (first_name, last_name)
 
     Rules:
+
         - Last space-separated word → last_name
         - Remaining words → first_name
         - Whitespace trimmed before parsing
@@ -419,12 +425,13 @@ def parse_display_name(display_name: str) -> tuple[str, str]:
         ('Alice', 'Anderson')
 
     Edge Cases:
+
         - Empty string → ('', '')
         - Single name → (name, '')
         - Multiple spaces → normalized to single space
+
     """
     ...
-
 
 def parse_active_status(employee_status: str) -> bool:
     """Map employee status code to active boolean.
@@ -436,6 +443,7 @@ def parse_active_status(employee_status: str) -> bool:
         True if status is "A" (Active), False otherwise
 
     Rules:
+
         - "A" (case-insensitive) → True
         - All other values → False
         - Whitespace trimmed before comparison
@@ -453,11 +461,13 @@ def parse_active_status(employee_status: str) -> bool:
         True
 
     Notes:
+
         - Safe default: unknown codes treated as inactive
         - Common AD codes: A=Active, I=Inactive, T=Terminated, L=Leave
+
     """
     ...
-```
+```text
 
 ---
 
@@ -474,6 +484,7 @@ class XCClient:
     """F5 XC API client with user and group operations.
 
     Existing methods preserved:
+
         - list_user_roles(): List users (existing, now aliased by list_users)
         - create_user(): Create user (existing)
         - list_groups(): List groups
@@ -482,13 +493,16 @@ class XCClient:
         - delete_group(): Delete group
 
     New methods for user lifecycle:
+
         - list_users(): Alias for list_user_roles (consistent naming)
         - update_user(): Update existing user
         - delete_user(): Delete user
         - get_user(): Get single user by email
+
     """
 
     # EXISTING METHODS (preserved)
+
     def list_user_roles(self, namespace: str = "system") -> Dict[str, Any]:
         """List users via user_roles API (existing implementation)."""
         ...
@@ -498,6 +512,7 @@ class XCClient:
         ...
 
     # NEW METHODS (to be added)
+
     def list_users(self, namespace: str = "system") -> Dict[str, Any]:
         """List users (alias for list_user_roles for naming consistency).
 
@@ -505,8 +520,10 @@ class XCClient:
             Same as list_user_roles()
 
         Notes:
+
             - Simple alias to maintain consistent naming with other repositories
             - Existing code using list_user_roles() continues to work
+
         """
         return self.list_user_roles(namespace)
 
@@ -519,6 +536,7 @@ class XCClient:
         """Update user via PUT to user_roles/{email}.
 
         Implementation:
+
             - Endpoint: PUT /api/web/custom/namespaces/{namespace}/user_roles/{email}
             - Headers: Same as create_user (cert auth)
             - Body: Full user object (same structure as create_user)
@@ -531,9 +549,11 @@ class XCClient:
             requests.exceptions.HTTPError: On 4xx/5xx responses
 
         Notes:
+
             - Email in URL must be URL-encoded
             - Requires full user object (partial updates not supported)
             - Automatically retries 429 and 5xx with exponential backoff
+
         """
         ...
 
@@ -545,6 +565,7 @@ class XCClient:
         """Delete user via DELETE to user_roles/{email}.
 
         Implementation:
+
             - Endpoint: DELETE /api/web/custom/namespaces/{namespace}/user_roles/{email}
             - Headers: Same as create_user (cert auth)
             - Body: None
@@ -557,9 +578,11 @@ class XCClient:
             requests.exceptions.HTTPError: On 4xx/5xx responses
 
         Notes:
+
             - 404 errors should NOT be retried (user already deleted)
             - Deletion is permanent and irreversible
             - Automatically retries 429 and 5xx (except 404)
+
         """
         ...
 
@@ -571,6 +594,7 @@ class XCClient:
         """Get user via GET to user_roles/{email}.
 
         Implementation:
+
             - Endpoint: GET /api/web/custom/namespaces/{namespace}/user_roles/{email}
             - Headers: Same as create_user (cert auth)
             - Retry: Same tenacity decorator as create_user
@@ -582,12 +606,14 @@ class XCClient:
             requests.exceptions.HTTPError: On 4xx/5xx responses (404 if not found)
 
         Notes:
+
             - Used for individual user lookups
             - For bulk operations, prefer list_users() for efficiency
             - Automatically retries 429 and 5xx
+
         """
         ...
-```
+```text
 
 ---
 
@@ -604,34 +630,42 @@ class XCClient:
 @click.option("--csv", required=True, help="Path to CSV file")
 @click.option("--dry-run", is_flag=True, help="Preview changes without executing")
 @click.option("--delete-users", is_flag=True, help="Delete F5 XC users not in CSV (default: False)")
+
 # ... existing options ...
+
 def sync(csv: str, dry_run: bool, delete_users: bool, ...):
     """Synchronize users and groups from CSV to F5 XC.
 
     New Behavior:
+
         - Parses CSV for both users and groups (existing + new)
         - Syncs users if CSV contains user columns
         - Syncs groups (existing behavior preserved)
         - Displays combined summary with user and group stats
 
     Flags:
+
         --delete-users: Enable deletion of F5 XC users not in CSV
-                       (default: False for safety)
-                       Recommended: Always test with --dry-run first
+
+                        (default: False for safety)
+                        Recommended: Always test with --dry-run first
 
     Example:
+
         # Preview user sync with deletions
+
         xc-group-sync sync --csv users.csv --delete-users --dry-run
 
         # Execute user sync with deletions
+
         xc-group-sync sync --csv users.csv --delete-users
 
         # Sync users without deletions (safe default)
+
         xc-group-sync sync --csv users.csv
     """
     ...
-```
-
+```text
 ---
 
 ## Testing Contracts
@@ -689,7 +723,7 @@ class TestUserSyncService:
     def test_sync_users_continues_on_errors(self):
         """Test sync continues with remaining users after individual failures."""
         ...
-```
+```text
 
 **Location**: `tests/unit/test_client.py`
 
@@ -716,7 +750,7 @@ class TestXCClientUserOperations:
     def test_get_user_success(self):
         """Test successful user retrieval."""
         ...
-```
+```text
 
 ### Integration Test Requirements
 
@@ -737,8 +771,7 @@ class TestUserSyncIntegration:
     def test_partial_failure_handling(self):
         """Test sync completes with partial failures, reports errors."""
         ...
-```
-
+```text
 ---
 
 ## Error Handling Standards
@@ -760,19 +793,22 @@ class TestUserSyncIntegration:
 ### Error Logging Format
 
 ```python
+
 # Individual operation error
+
 logger.error(
     f"Failed to {operation} user {email}: {error_message}",
     extra={"email": email, "operation": operation, "error": str(error)}
 )
 
 # Summary error collection
+
 stats.error_details.append({
     "email": email,
     "operation": operation,
     "error": str(error)
 })
-```
+```text
 
 ---
 

@@ -128,12 +128,14 @@ Checkpoint: One-command setup and CI pipeline are in place
 ## Dependencies & Execution Order
 
 Phase Dependencies
+
 - Setup (Phase 1): No dependencies — can start immediately
 - Foundational (Phase 2): Depends on Setup completion — BLOCKS all stories
 - User Stories (Phase 3+): Depend on Phase 2 completion; then proceed by priority (P1 → P2 → P3)
 - Polish (Final): After desired user stories are complete
 
 User Story Dependencies
+
 - US1 (P1): Starts after Foundational — no other story deps
 - US4 (P1): Starts after US1 core diff/update flow exists
 - US2 (P2): Independent; can start after Foundational
@@ -141,11 +143,13 @@ User Story Dependencies
 - US5 (P2): Independent; can start after Foundational
 
 Within Each User Story
+
 - Models/Utilities → Client/Services → CLI behavior → Reporting
 - Dry-run before apply paths
 - Summary/reporting before exit codes
 
 Parallel Opportunities
+
 - [P] tasks in Setup and Foundational can run concurrently
 - Different user stories can proceed in parallel post-Foundational
 - For US5, workflow and docs tasks marked [P] can run in parallel
@@ -155,18 +159,21 @@ Parallel Opportunities
 ## Implementation Strategy
 
 MVP First (US1 Only)
+
 1. Complete Phase 1: Setup
 2. Complete Phase 2: Foundational
 3. Complete Phase 3: US1 (MVP)
 4. Stop and validate: Dry-run and apply produce expected summaries
 
 Incremental Delivery
+
 1. Add US4 (full membership sync)
 2. Add US2 (cleanup)
 3. Add US3 (auth fail-fast)
 4. Add US5 (setup + CI)
 
 Notes
+
 - [P] tasks = different files, no dependencies
 - [Story] label ensures traceability to spec.md
 - Each story should be independently deliverable and testable

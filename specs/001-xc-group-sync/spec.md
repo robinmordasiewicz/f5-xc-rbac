@@ -65,6 +65,7 @@ The tool MUST support authentication to F5 Distributed Cloud XC API using either
 The script MUST auto-detect which credential set is present and use it. If both are present, prefer p12. If neither is present, fail fast with a clear error. Secrets should be stored as base64, decoded to files at runtime, and environment variables must point to the resulting file paths.
 
 References:
+
 - https://community.f5.com/kb/technicalarticles/f5-hybrid-security-architectures-part-3-f5-xc-api-protection-and-nginx-ingress/310613
 - https://github.com/f5devcentral/f5-xc-terraform-examples
 
@@ -83,6 +84,7 @@ As an operator, I can run a setup script that discovers my F5 XC API certificate
 **Why this priority**: Reduces onboarding friction and enforces consistent, secure secret handling across local and CI environments.
 
 **Independent Test**:
+
 - Place a single `.p12` in `~/Downloads` named `mytenant-api.p12`. Run the setup script and verify:
   - `.env` exists with `TENANT_ID=mytenant` and correct variables for either p12 or cert/key.
   - PEM `cert` and `key` files are created without passphrases.
@@ -90,6 +92,7 @@ As an operator, I can run a setup script that discovers my F5 XC API certificate
   - A workflow file exists that runs on push to `main` and via manual dispatch (`workflow_dispatch`) and decodes secrets to files before invoking the sync script.
 
 **Acceptance Scenarios**:
+
 1. Given exactly one `.p12` in Downloads named `acme-prod-api.p12`, When I run setup, Then `TENANT_ID` is set to `acme` and `.env` and secrets are created.
 2. Given multiple `.p12` files in Downloads, When I run setup, Then the script prompts me to select a file and enter `TENANT_ID` before proceeding.
 3. Given no `.p12` in Downloads, When I run setup, Then the script prompts me for the `.p12` path and passphrase.
@@ -159,6 +162,7 @@ As an operator, I can run a setup script that discovers my F5 XC API certificate
 Based on the provided `User-Database.csv`, the input file contains:
 
 **Available Columns**:
+
 - `User Name`: AD username (e.g., "USER001")
 - `Login ID`: Full LDAP DN (e.g., "CN=USER001,OU=Developers,OU=All Users,DC=example,DC=com")
 - `User Display Name`: Full name (e.g., "Alice Anderson")
@@ -168,6 +172,7 @@ Based on the provided `User-Database.csv`, the input file contains:
 - Additional fields: Application Name, Job Title, Manager details, etc.
 
 **Relevant Mapping for F5 XC**:
+
 - **Group Name**: Extract CN from `Entitlement Display Name` (e.g., "EADMIN_STD" from "CN=EADMIN_STD,OU=Groups,DC=example,DC=com")
 - **User Email**: Use `Email` column directly (F5 XC identifies users by email)
 - **Group Display Name**: Set to extracted CN value (same as name)
@@ -176,6 +181,7 @@ Based on the provided `User-Database.csv`, the input file contains:
 #### F5 XC API Data Model
 
 **User Group Object** (`ves.io.schema.user_group`):
+
 - `name` (string, required): Internal name/identifier (extracted group CN from LDAP DN)
 - `display_name` (string, optional): Human-readable name
 - `description` (string, optional): Descriptive text
@@ -184,6 +190,7 @@ Based on the provided `User-Database.csv`, the input file contains:
 - `namespace`: Always "system" for user groups
 
 **API Endpoints**:
+
 - Create: `POST /api/web/custom/namespaces/system/user_groups`
 - Update: `PUT /api/web/custom/namespaces/system/user_groups/{name}`
 - List: `GET /api/web/custom/namespaces/system/user_groups`
@@ -192,6 +199,7 @@ Based on the provided `User-Database.csv`, the input file contains:
 - Remove users from group: `PUT /api/web/custom/namespaces/system/users/group_remove`
 
 **User Management** (`ves.io.schema.user`):
+
 - Users identified by `email` (username field, e.g., "user1@company.com")
 - User operations via `/api/web/custom/namespaces/system/user_roles`
 - Users must exist in F5 XC before adding to groups
@@ -269,6 +277,7 @@ This clarification session was initiated after examining the actual AD export CS
 **Question**: How should the tool handle users that don't exist in F5 XC?
 
 **Options**:
+
 1. **Pre-validate**: Query user existence via `GET /api/web/custom/namespaces/system/user_roles` for each unique email before group operations. Skip groups with non-existent users and log warnings.
 2. **Optimistic add**: Attempt to add users to groups and handle 404 errors gracefully (log warning, continue with other groups).
 3. **Auto-create users**: Create missing users via `POST /api/web/custom/namespaces/system/user_roles` with basic info from CSV (email, first_name, last_name, etc.).
@@ -286,6 +295,7 @@ This clarification session was initiated after examining the actual AD export CS
 **Question**: What should populate the `display_name` field for user groups?
 
 **Options**:
+
 1. **Use CN value**: Set `display_name` = `name` (e.g., "EADMIN_STD")
 2. **Derive from Application Name**: Use the `Application Name` column from CSV (e.g., "Active Directory")
 3. **Construct from full DN**: Use full `Entitlement Display Name` (e.g., "CN=EADMIN_STD,OU=Groups,DC=example,DC=com")
@@ -305,6 +315,7 @@ This clarification session was initiated after examining the actual AD export CS
 **Question**: Should membership updates remove users not present in the CSV for a given group?
 
 **Options**:
+
 1. **Full replacement (sync to CSV)**: Replace the entire `usernames` array with users from CSV. Users not in CSV are removed.
 2. **Append-only**: Only add users from CSV that are missing; never remove existing users.
 3. **Configurable via flag**: Default to append-only (`--membership-mode=append`), opt-in to full sync (`--membership-mode=sync`).
@@ -322,6 +333,7 @@ This clarification session was initiated after examining the actual AD export CS
 **Question**: Should the tool support only standard CSV format, or also handle variations (semicolon delimiters, no quoting)?
 
 **Options**:
+
 1. **RFC 4180 only**: Comma delimiter, double-quote escaping, CRLF line endings.
 2. **Auto-detect**: Try to detect delimiter and quoting style.
 3. **Configurable delimiter**: Accept `--csv-delimiter` flag (default: comma).
@@ -339,6 +351,7 @@ This clarification session was initiated after examining the actual AD export CS
 **Question**: Is multi-namespace support needed for user groups?
 
 **Options**:
+
 1. **Single namespace (system)**: Hardcode `namespace: "system"` for all group operations.
 2. **Defer to future**: Document as out-of-scope for v1; revisit if API behavior changes.
 
@@ -355,6 +368,7 @@ This clarification session was initiated after examining the actual AD export CS
 **Question**: How should the tool handle malformed or complex LDAP DNs?
 
 **Options**:
+
 1. **Strict parsing**: Use LDAP DN parser library (e.g., `ldap3` in Python, `go-ldap` in Go). Fail on malformed DNs with clear error.
 2. **Simple regex**: Extract CN with regex `CN=([^,]+)`. Log warning if format unexpected.
 3. **Validate against F5 XC naming rules**: After extraction, validate group name against XC constraints (length, allowed characters).
@@ -429,9 +443,9 @@ jobs:
         run: |
           # Replace with the actual entrypoint/flags of the sync tool
           ./scripts/run-sync.sh --dry-run
-```
-
+```text
 Notes:
+
 - Secrets must be base64-encoded before storing in GitHub. The workflow decodes them into files and sets:
   - `VOLT_API_P12_FILE` and `VES_P12_PASSWORD` for P12
   - `VOLT_API_CERT_FILE` and `VOLT_API_CERT_KEY_FILE` for cert/key
@@ -441,7 +455,9 @@ Notes:
 ### Session 2025-11-04
 
 - Q: What are the recommended .env and GitHub secret names for authenticating to the F5 Distributed Cloud XC API using either a p12 certificate/passphrase or a certificate/key pair?
+
   → A: Use the following conventions (per F5 docs/cloud best practices):
+
   - For p12 certificate/passphrase:
     - GitHub Secrets: `XC_P12` (base64 p12), `XC_P12_PASSWORD` or `VES_P12_PASSWORD` (passphrase)
     - .env Variables: `VOLT_API_P12_FILE` (path to decoded p12), `VES_P12_PASSWORD` (passphrase)
@@ -451,4 +467,5 @@ Notes:
   - Store secrets as base64 in GitHub, decode to files in workflow/setup, and set env vars to file paths. Script should auto-detect which credential set is present and use it. If both are present, prefer p12. If neither is present, fail fast with a clear error.
 
 - Q: How should the setup script discover the certificate and prepare local/CI configuration?
+
   → A: The setup script should: (1) scan `~/Downloads` for a single `.p12` and derive `TENANT_ID` from the filename prefix; (2) prompt for passphrase; (3) use `openssl` to split into passwordless PEM cert/key; (4) create `.env` with either p12 or cert/key variables plus `TENANT_ID`; (5) create GitHub secrets (`XC_P12`, `XC_P12_PASSWORD` or `VES_P12_PASSWORD`, `XC_CERT`, `XC_CERT_KEY`); and (6) scaffold a workflow that runs on push to `main` and via manual dispatch (`workflow_dispatch`), decoding secrets to files and invoking the sync script.
