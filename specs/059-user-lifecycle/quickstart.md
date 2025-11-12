@@ -30,8 +30,7 @@ pip install -e .
 pytest
 
 # Expected: All tests pass (baseline established)
-```
-
+```text
 ### Implementation Sequence (TDD Approach)
 
 #### Phase 1: Data Models and Utilities
@@ -57,8 +56,7 @@ class User(BaseModel):
         """Set username to email if not provided."""
         if not self.username:
             self.username = self.email
-```
-
+```text
 **Test First**: Create `tests/unit/test_models.py` (or extend existing)
 
 ```python
@@ -87,8 +85,7 @@ def test_user_username_defaults_to_email():
         last_name="Smith"
     )
     assert user.username == "bob@example.com"
-```
-
+```text
 **Step 1.2: Utility Functions** (`src/xc_rbac_sync/user_utils.py`)
 
 ```python
@@ -108,12 +105,10 @@ def parse_display_name(display_name: str) -> tuple[str, str]:
     last_name = parts[-1]
     return (first_name, last_name)
 
-
 def parse_active_status(employee_status: str) -> bool:
     """Map employee status code to active boolean."""
     return employee_status.strip().upper() == "A"
-```
-
+```text
 **Test First**: Create `tests/unit/test_user_utils.py`
 
 ```python
@@ -151,8 +146,7 @@ class TestParseActiveStatus:
 
     def test_whitespace_handling(self):
         assert parse_active_status("  A  ") is True
-```
-
+```text
 #### Phase 2: API Client Extensions
 
 **Step 2.1: XCClient Extensions** (`src/xc_rbac_sync/client.py`)
@@ -185,8 +179,7 @@ def update_user(
 
 # Similar implementation for delete_user and get_user
 # (Follow same pattern as existing create_user)
-```
-
+```text
 **Test First**: Extend `tests/unit/test_client.py`
 
 ```python
@@ -207,8 +200,7 @@ class TestXCClientUserOperations:
         mock_put.assert_called_once()
 
     # Add tests for delete_user, get_user, retry logic, etc.
-```
-
+```text
 #### Phase 3: UserSyncService Implementation
 
 **Step 3.1: UserRepository Protocol** (`src/xc_rbac_sync/protocols.py`)
@@ -226,8 +218,7 @@ class UserRepository(Protocol):
     def update_user(self, email: str, user: Dict[str, Any], namespace: str = "system") -> Dict[str, Any]: ...
     def delete_user(self, email: str, namespace: str = "system") -> None: ...
     def get_user(self, email: str, namespace: str = "system") -> Dict[str, Any]: ...
-```
-
+```text
 **Step 3.2: UserSyncService** (`src/xc_rbac_sync/user_sync_service.py`)
 
 Create new file following `sync_service.py` pattern:
@@ -363,8 +354,7 @@ class UserSyncService:
             stats.error_details.append({"email": user.email, "operation": "create", "error": str(e)})
 
     # Implement _update_user, _delete_user, _user_needs_update similarly
-```
-
+```text
 **Test First**: Create `tests/unit/test_user_sync_service.py`
 
 ```python
@@ -409,8 +399,7 @@ bob@example.com,Bob Smith,I,CN=DEVELOPERS,OU=Groups,DC=example,DC=com"""
         mock_repo.create_user.assert_called_once()
 
     # Add tests for update, delete, idempotency, dry-run, etc.
-```
-
+```text
 #### Phase 4: CLI Integration
 
 **Step 4.1: Extend CLI** (`src/xc_rbac_sync/cli.py`)
@@ -451,8 +440,7 @@ def sync(csv: str, dry_run: bool, delete_users: bool, ...):
         click.echo(f"\nErrors encountered:")
         for error in user_stats.error_details:
             click.echo(f"  - {error['email']}: {error['error']}")
-```
-
+```text
 **Test**: Extend `tests/unit/test_cli.py`
 
 ```python
@@ -466,8 +454,7 @@ def test_sync_with_delete_users_flag():
 
     assert result.exit_code == 0
     assert "Would delete" in result.output  # dry-run should log deletions
-```
-
+```text
 #### Phase 5: Integration Testing
 
 **Step 5.1: End-to-End Test** (`tests/integration/test_user_sync_integration.py`)
@@ -508,8 +495,7 @@ alice@example.com,Alice Anderson,A,CN=GROUP1,OU=Groups,DC=example,DC=com"""
         # Second run: no changes (unchanged=1, created=0)
         # Implementation left as exercise
         ...
-```
-
+```text
 ### Running Tests
 
 ```bash
@@ -523,8 +509,7 @@ pytest tests/unit/test_user_utils.py
 pytest --cov=src/xc_rbac_sync --cov-report=html
 
 # Expected coverage: 80%+ for user-specific code
-```
-
+```text
 ### Pre-Commit Checklist
 
 Before committing:
@@ -570,8 +555,7 @@ Email,User Display Name,Employee Status,Entitlement Display Name
 alice@example.com,Alice Anderson,A,CN=EADMIN_STD,OU=Groups,DC=example,DC=com|CN=DEVELOPERS,OU=Groups,DC=example,DC=com
 bob@example.com,Bob Smith,I,CN=READONLY,OU=Groups,DC=example,DC=com
 charlie@example.com,Charlie Jones,T,
-```
-
+```text
 ### Basic Usage
 
 #### 1. Preview Changes (Recommended First Step)
@@ -592,8 +576,7 @@ xc-group-sync sync-users --csv users.csv --dry-run
 # Execution time: 2.34 seconds
 #
 # User sync complete.
-```
-
+```text
 #### 2. Sync Users (Create and Update Only)
 
 ```bash
@@ -612,8 +595,7 @@ xc-group-sync sync-users --csv users.csv
 # Execution time: 4.56 seconds
 #
 # User sync complete.
-```
-
+```text
 #### 3. Sync Users with Deletions (Use with Caution)
 
 ```bash
@@ -646,8 +628,7 @@ xc-group-sync sync-users --csv users.csv --delete-users
 # Execution time: 3.78 seconds
 #
 # User sync complete.
-```
-
+```text
 ### Common Workflows
 
 #### Initial Bulk User Import
@@ -661,8 +642,7 @@ xc-group-sync sync-users --csv initial_users.csv --dry-run
 xc-group-sync sync-users --csv initial_users.csv
 
 # Expected: All users created, no errors
-```
-
+```text
 #### Regular Synchronization (Daily/Weekly)
 
 ```bash
@@ -674,8 +654,7 @@ xc-group-sync sync-users --csv daily_sync.csv --dry-run
 xc-group-sync sync-users --csv daily_sync.csv
 
 # Expected: New users created, changed users updated, no deletions
-```
-
+```text
 #### User Cleanup (Terminations)
 
 ```bash
@@ -688,8 +667,7 @@ xc-group-sync sync-users --csv active_users.csv --delete-users --dry-run
 xc-group-sync sync-users --csv active_users.csv --delete-users
 
 # Expected: Terminated users deleted, active users unchanged
-```
-
+```text
 ### Troubleshooting
 
 #### Error: "Missing required columns"
@@ -697,6 +675,7 @@ xc-group-sync sync-users --csv active_users.csv --delete-users
 **Problem**: CSV is missing required columns.
 
 **Solution**: Ensure CSV has exact column names (case-sensitive):
+
 - Email
 - User Display Name
 - Employee Status

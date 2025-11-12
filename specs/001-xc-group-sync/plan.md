@@ -49,8 +49,7 @@ specs/[###-feature]/
 ├── quickstart.md        # Phase 1 output (/speckit.plan command)
 ├── contracts/           # Phase 1 output (/speckit.plan command)
 └── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
-```
-
+```text
 ### Source Code (repository root)
 
 <!--
@@ -71,8 +70,7 @@ src/
 tests/
 ├── unit/
 └── integration/
-```
-
+```text
 #### Structure Decision
 
 Single-project layout for a CLI tool. Code under `src/xc_rbac_sync`, tests under `tests/`.

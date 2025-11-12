@@ -46,8 +46,7 @@ specs/[###-feature]/
 ├── quickstart.md        # Phase 1 output (/speckit.plan command)
 ├── contracts/           # Phase 1 output (/speckit.plan command)
 └── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
-```
-
+```text
 ### Source Code (repository root)
 
 <!--
@@ -91,8 +90,7 @@ api/
 
 ios/ or android/
 └── [platform-specific structure: feature modules, UI flows, platform tests]
-```
-
+```text
 **Structure Decision**: Single Python project with pre-commit and CI policy. Documentation under `specs/041-precommit-requirements/` aligned with Issue #41.
 
 ## Complexity Tracking

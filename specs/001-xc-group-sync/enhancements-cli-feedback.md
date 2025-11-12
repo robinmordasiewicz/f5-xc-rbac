@@ -32,18 +32,17 @@ stats = service.sync_users(validation_result.users, existing_users, dry_run, del
 execution_time = time.time() - start_time
 click.echo("\n" + stats.summary())
 click.echo(f"Execution time: {execution_time:.2f} seconds")
-```
-
+```text
 **Rationale**: Provides users with performance visibility, helps identify slow operations, useful for optimizing large sync jobs
 
 **Display Format**: `Execution time: 12.34 seconds` (2 decimal precision)
 
 **Testing**:
+
 ```bash
 xc-group-sync sync --csv test.csv --dry-run
 # Expected output includes: "Execution time: 0.15 seconds"
-```
-
+```text
 ---
 
 ### Pre-Operation Summary Display
@@ -56,20 +55,19 @@ xc-group-sync sync --csv test.csv --dry-run
 click.echo(f"Groups planned from CSV: {len(planned_groups)}")
 for grp in planned_groups:
     click.echo(f" - {grp.name}: {len(grp.users)} users")
-```
-
+```text
 **Rationale**: Gives users visibility into what will be changed before execution, critical for validation in production environments
 
 **Display Format**:
-```
-Groups planned from CSV: 5
- - admins: 12 users
- - developers: 45 users
- - qa-team: 8 users
- - managers: 6 users
- - contractors: 3 users
-```
 
+```text
+Groups planned from CSV: 5
+  - admins: 12 users
+  - developers: 45 users
+  - qa-team: 8 users
+  - managers: 6 users
+  - contractors: 3 users
+```text
 ---
 
 **FR-UX-003**: System MUST display existing resource counts from F5 XC before sync operations
@@ -78,8 +76,7 @@ Groups planned from CSV: 5
 
 ```python
 click.echo(f"Existing users in F5 XC: {len(existing_users)}")
-```
-
+```text
 **Rationale**: Provides baseline context for understanding sync impact (e.g., syncing 100 users when 500 already exist vs 0 existing)
 
 ---
@@ -96,16 +93,15 @@ if stats.has_errors():
     for err in stats.error_details:
         click.echo(f" - {err['email']}: {err['operation']} failed - {err['error']}")
     raise click.ClickException("One or more operations failed; see details above")
-```
-
+```text
 **Error Display Format**:
-```
-Errors encountered:
- - john@example.com: create failed - User already exists
- - jane@example.com: update failed - Invalid group reference
- - bob@example.com: delete failed - User has active sessions
-```
 
+```text
+Errors encountered:
+  - john@example.com: create failed - User already exists
+  - jane@example.com: update failed - Invalid group reference
+  - bob@example.com: delete failed - User has active sessions
+```text
 **Rationale**: Consolidates error information at end of operation for easy review, provides actionable details for remediation
 
 ---
@@ -128,9 +124,9 @@ except requests.RequestException as e:
 # Sync failures
 if stats.has_errors():
     raise click.ClickException("One or more operations failed; see logs for details")
-```
-
+```text
 **Error Categories**:
+
 - **Usage errors** (`click.UsageError`): User input problems (missing files, invalid formats)
 - **API errors** (`click.ClickException` with API context): Authentication failures, network issues
 - **Sync errors** (`click.ClickException` with operation details): Individual operation failures
@@ -161,14 +157,13 @@ def summary(self) -> str:
         f"deleted={self.deleted}, unchanged={self.unchanged}, "
         f"errors={self.errors}"
     )
-```
-
+```text
 **Display Format**:
-```
+
+```text
 Groups: created=3, updated=5, deleted=0, unchanged=12, errors=0
 Execution time: 8.45 seconds
-```
-
+```text
 **Rationale**: Standardized summary format across commands improves consistency and readability
 
 ---
@@ -194,13 +189,12 @@ if cleanup_users:
         f"\nUser cleanup: {user_stats.deleted} deleted, "
         f"{user_stats.errors} errors"
     )
-```
-
+```text
 **Display Format**:
-```
-User cleanup: 5 deleted, 0 errors
-```
 
+```text
+User cleanup: 5 deleted, 0 errors
+```text
 **Rationale**: Separate cleanup feedback distinguishes cleanup operations from main sync operations, important for auditing
 
 ---
@@ -216,15 +210,14 @@ if dry_run:
     click.echo("\n" + "=" * 60)
     click.echo("🔍 DRY RUN MODE - No changes will be made to F5 XC")
     click.echo("=" * 60)
-```
-
+```text
 **Display Format**:
-```
+
+```text
 ============================================================
 🔍 DRY RUN MODE - No changes will be made to F5 XC
 ============================================================
-```
-
+```text
 **Rationale**: Prominent dry-run indication prevents users from misinterpreting test runs as actual operations, critical for production safety
 
 ---
@@ -241,8 +234,7 @@ click.echo("Sync complete.")
 
 # User sync
 click.echo("\nUser sync complete.")
-```
-
+```text
 **Rationale**: Explicit completion messages confirm successful operation, distinguish from error exits
 
 ---
@@ -260,8 +252,7 @@ if p12_file and not (cert_file and key_file):
         "directly. Please run setup_xc_credentials.sh to extract "
         "cert/key files."
     )
-```
-
+```text
 **Rationale**: Non-blocking warnings inform users of configuration issues while allowing operations to continue with fallback authentication methods
 
 ---
@@ -278,9 +269,9 @@ if p12_file and not (cert_file and key_file):
 @click.option("--log-level", type=click.Choice([...]), default="info")
 @click.option("--max-retries", type=int, default=3)
 @click.option("--timeout", type=int, default=30)
-```
-
+```text
 **Undocumented Options**:
+
 - `--cleanup-users`: Enables user cleanup in group sync command (undocumented interaction)
 
 ---
@@ -294,8 +285,7 @@ if p12_file and not (cert_file and key_file):
 @click.option("--log-level", type=click.Choice([...]), default="info")
 @click.option("--max-retries", type=int, default=3)
 @click.option("--timeout", type=int, default=30)
-```
-
+```text
 **Note**: `--delete-users` in `sync_users` is equivalent to `--cleanup-users` in `sync`, naming inconsistency exists
 
 ---
@@ -303,6 +293,7 @@ if p12_file and not (cert_file and key_file):
 ## CLI Output Flow
 
 ### Group Sync Output Sequence
+
 1. Load configuration
 2. Display planned groups summary
 3. Fetch and validate authentication
@@ -313,6 +304,7 @@ if p12_file and not (cert_file and key_file):
 8. Display completion message
 
 ### User Sync Output Sequence
+
 1. Load configuration
 2. Display dry-run banner (if applicable)
 3. Display CSV validation results
@@ -352,6 +344,7 @@ if p12_file and not (cert_file and key_file):
 ## Testing Recommendations
 
 ### Manual Testing
+
 ```bash
 # Test execution time display
 xc-group-sync sync --csv test.csv --dry-run
@@ -372,9 +365,9 @@ xc-group-sync sync_users --csv invalid.csv
 # Test cleanup feedback
 xc-group-sync sync --csv test.csv --cleanup-groups --dry-run
 # Verify: Separate cleanup summary displayed
-```
-
+```text
 ### Integration Tests
+
 ```python
 def test_execution_time_display(capsys):
     # Run sync command
@@ -398,8 +391,7 @@ def test_completion_message(capsys):
     result = runner.invoke(cli, ['sync', '--csv', 'test.csv', '--dry-run'])
     captured = capsys.readouterr()
     assert "Sync complete." in captured.out
-```
-
+```text
 ---
 
 ## Usability Improvements Summary

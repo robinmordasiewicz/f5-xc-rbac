@@ -1,7 +1,8 @@
 # Codebase Structure
 
 ## Directory Layout
-```
+
+```text
 f5-xc-rbac/
 ├── src/xc_rbac_sync/       # Main package
 │   ├── __init__.py         # Package initialization
@@ -31,22 +32,24 @@ f5-xc-rbac/
 ├── pyproject.toml          # Python package configuration
 ├── README.md               # User documentation
 └── .gitignore              # Git ignore rules
-```
-
+```text
 ## Key Components
 
 ### CLI Layer (`cli.py`)
+
 - Entry point: `xc-group-sync` command
 - Commands: `sync` (with --dry-run, --cleanup, --log-level options)
 - Handles environment loading, authentication, error reporting
 
 ### API Client (`client.py`)
+
 - `XCClient`: REST API client for F5 XC
 - Retry logic with exponential backoff using tenacity
 - Supports both token and certificate authentication
 - Methods: list_groups, create_group, update_group, delete_group, list_user_roles, create_user
 
 ### Sync Service (`sync_service.py`)
+
 - `GroupSyncService`: Core business logic
 - CSV parsing with LDAP DN extraction
 - User pre-validation
@@ -55,14 +58,17 @@ f5-xc-rbac/
 - Statistics tracking with `SyncStats`
 
 ### Data Models (`models.py`)
+
 - `Group`: Pydantic model with name validation (alphanumeric, -, _, 1-128 chars)
 - `Config`: Authentication configuration model
 
 ### Protocols (`protocols.py`)
+
 - `GroupRepository`: Protocol interface for dependency injection
 - Enables testing with mock implementations
 
 ### Utilities (`ldap_utils.py`)
+
 - `extract_cn()`: Parse LDAP DNs to extract CN values
 - Validation against F5 XC group name constraints
 - Uses ldap3 library for robust DN parsing

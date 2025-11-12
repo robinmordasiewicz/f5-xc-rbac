@@ -1,5 +1,4 @@
 ---
-
 description: "Task list template for feature implementation"
 ---
 
@@ -30,12 +29,14 @@ description: "Task list template for feature implementation"
   IMPORTANT: The tasks below are SAMPLE TASKS for illustration purposes only.
 
   The /speckit.tasks command MUST replace these with actual tasks based on:
+
   - User stories from spec.md (with their priorities P1, P2, P3...)
   - Feature requirements from plan.md
   - Entities from data-model.md
   - Endpoints from contracts/
 
   Tasks MUST be organized by user story so each story can be:
+
   - Implemented independently
   - Tested independently
   - Delivered as an MVP increment
@@ -205,8 +206,7 @@ Task: "Integration test for [user journey] in tests/integration/test_[name].py"
 # Launch all models for User Story 1 together:
 Task: "Create [Entity1] model in src/models/[entity1].py"
 Task: "Create [Entity2] model in src/models/[entity2].py"
-```
-
+```text
 ---
 
 ## Implementation Strategy

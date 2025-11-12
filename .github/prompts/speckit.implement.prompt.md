@@ -6,8 +6,7 @@ description: Execute the implementation plan by processing and executing all tas
 
 ```text
 $ARGUMENTS
-```
-
+```text
 You **MUST** consider the user input before proceeding (if not empty).
 
 ## Outline
@@ -57,6 +56,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - **REQUIRED**: Create/verify ignore files based on actual project setup:
 
    **Detection & Creation Logic**:
+
    - Check if the following command succeeds to determine if the repository is a git repo (create/verify .gitignore if so):
 
      ```sh
@@ -74,6 +74,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    **If ignore file missing**: Create with full pattern set for detected technology
 
    **Common Patterns by Technology** (from plan.md tech stack):
+
    - **Node.js/JavaScript/TypeScript**: `node_modules/`, `dist/`, `build/`, `*.log`, `.env*`
    - **Python**: `__pycache__/`, `*.pyc`, `.venv/`, `venv/`, `dist/`, `*.egg-info/`
    - **Java**: `target/`, `*.class`, `*.jar`, `.gradle/`, `build/`
@@ -90,6 +91,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - **Universal**: `.DS_Store`, `Thumbs.db`, `*.tmp`, `*.swp`, `.vscode/`, `.idea/`
 
    **Tool-Specific Patterns**:
+
    - **Docker**: `node_modules/`, `.git/`, `Dockerfile*`, `.dockerignore`, `*.log*`, `.env*`, `coverage/`
    - **ESLint**: `node_modules/`, `dist/`, `build/`, `coverage/`, `*.min.js`
    - **Prettier**: `node_modules/`, `dist/`, `build/`, `coverage/`, `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`

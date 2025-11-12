@@ -1,13 +1,12 @@
 ---
-description: Generate an actionable, dependency-ordered tasks.md for the feature based on available design artifacts.
+description: Generate an actionable, dependency-ordered tasks.md for the feature based on available design artifacts
 ---
 
 ## User Input
 
 ```text
 $ARGUMENTS
-```
-
+```text
 You **MUST** consider the user input before proceeding (if not empty).
 
 ## Outline
@@ -67,8 +66,7 @@ Every task MUST strictly follow this format:
 
 ```text
 - [ ] [TaskID] [P?] [Story?] Description with file path
-```
-
+```text
 **Format Components**:
 
 1. **Checkbox**: ALWAYS start with `- [ ]` (markdown checkbox)

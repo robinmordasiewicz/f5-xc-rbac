@@ -16,6 +16,7 @@ Represents a person with access to F5 Distributed Cloud.
 **Location**: `src/xc_rbac_sync/models.py`
 
 **Schema**:
+
 ```python
 from pydantic import BaseModel, Field, EmailStr
 from typing import List
@@ -44,8 +45,7 @@ class User(BaseModel):
         """Set username to email if not provided."""
         if not self.username:
             self.username = self.email
-```
-
+```text
 **Field Descriptions**:
 
 | Field | Type | Required | Source | Description |
@@ -59,6 +59,7 @@ class User(BaseModel):
 | groups | List[str] | No (default: []) | CSV "Entitlement Display Name" | Group names (CNs extracted from LDAP DNs) |
 
 **Validation Rules**:
+
 - `email`: Must be valid email format (enforced by Pydantic EmailStr)
 - `display_name`: Non-empty string required (for name parsing)
 - `first_name`, `last_name`: Can be empty (handles single-name case)
@@ -66,6 +67,7 @@ class User(BaseModel):
 - `groups`: List of strings (can be empty, order preserved)
 
 **Example**:
+
 ```python
 user = User(
     email="alice.anderson@example.com",
@@ -76,8 +78,7 @@ user = User(
     active=True,
     groups=["EADMIN_STD", "DEVELOPERS"]
 )
-```
-
+```text
 ---
 
 ### UserSyncStats
@@ -87,6 +88,7 @@ Tracks synchronization statistics for user operations.
 **Location**: `src/xc_rbac_sync/user_sync_service.py`
 
 **Schema**:
+
 ```python
 from dataclasses import dataclass, field
 from typing import List, Dict
@@ -121,8 +123,7 @@ class UserSyncStats:
     def has_errors(self) -> bool:
         """Check if any errors occurred."""
         return self.errors > 0
-```
-
+```text
 **Field Descriptions**:
 
 | Field | Type | Description |
@@ -135,6 +136,7 @@ class UserSyncStats:
 | error_details | List[Dict] | List of {email, operation, error} for troubleshooting |
 
 **Example**:
+
 ```python
 stats = UserSyncStats(
     created=45,
@@ -148,8 +150,7 @@ stats = UserSyncStats(
         {"email": "charlie@example.com", "operation": "delete", "error": "500 Internal Server Error"}
     ]
 )
-```
-
+```text
 ---
 
 ### CSV Record (Conceptual Model)
@@ -159,11 +160,11 @@ Represents a row in the Active Directory CSV export.
 **Source**: External CSV file (not a Python class)
 
 **Structure**:
+
 ```csv
 "User Name","Login ID","User Display Name","Cof Account Type","Application Name","Entitlement Attribute","Entitlement Display Name","Related Application","Sox","Job Level","Job Title","Created Date","Account Locker","Employee Status","Email","Cost Center","Finc Level 4","Manager EID","Manager Name","Manager Email"
 "USER001","CN=USER001,OU=Users,DC=example,DC=com","Alice Anderson","User","Active Directory","memberOf","CN=EADMIN_STD,OU=Groups,DC=example,DC=com|CN=DEVELOPERS,OU=Groups,DC=example,DC=com","Example App","true","50","Lead Software Engineer","2025-09-23 00:00:00","0","A","alice.anderson@example.com","IT Infrastructure","Network Engineering","MGR001","David Wilson","David.Wilson@example.com"
-```
-
+```text
 **Used Columns** (for user sync):
 
 | Column Name | Usage | Parsing Logic |
@@ -174,6 +175,7 @@ Represents a row in the Active Directory CSV export.
 | Entitlement Display Name | User.groups | Split on `|`, extract CN from each LDAP DN |
 
 **Unused Columns** (informational only, not synced):
+
 - User Name, Login ID, Cof Account Type, Application Name, etc. (metadata not needed for F5 XC user sync)
 
 ---
@@ -187,6 +189,7 @@ Parses full name into first and last name components.
 **Location**: `src/xc_rbac_sync/user_utils.py`
 
 **Signature**:
+
 ```python
 def parse_display_name(display_name: str) -> tuple[str, str]:
     """Parse display name into (first_name, last_name).
@@ -198,6 +201,7 @@ def parse_display_name(display_name: str) -> tuple[str, str]:
         Tuple of (first_name, last_name)
 
     Rules:
+
         - Last space-separated word → last_name
         - Remaining words → first_name
         - Whitespace trimmed before parsing
@@ -212,8 +216,7 @@ def parse_display_name(display_name: str) -> tuple[str, str]:
         >>> parse_display_name("  Alice  Anderson  ")
         ('Alice', 'Anderson')
     """
-```
-
+```text
 ### parse_active_status
 
 Maps employee status code to active boolean.
@@ -221,6 +224,7 @@ Maps employee status code to active boolean.
 **Location**: `src/xc_rbac_sync/user_utils.py`
 
 **Signature**:
+
 ```python
 def parse_active_status(employee_status: str) -> bool:
     """Map employee status code to active boolean.
@@ -232,6 +236,7 @@ def parse_active_status(employee_status: str) -> bool:
         True if status is "A" (Active), False otherwise
 
     Rules:
+
         - "A" (case-insensitive) → True
         - All other values → False
         - Whitespace trimmed before comparison
@@ -248,13 +253,12 @@ def parse_active_status(employee_status: str) -> bool:
         >>> parse_active_status("  A  ")  # with whitespace
         True
     """
-```
-
+```text
 ---
 
 ## Entity Relationships
 
-```
+```text
 CSV Record (source of truth)
     ↓ (parsed by)
 User (Python object)
@@ -262,9 +266,9 @@ User (Python object)
 F5 XC user_role (API resource)
     ↓ (belongs to)
 Group (existing entity, preserved)
-```
-
+```text
 **Relationships**:
+
 - **CSV → User**: One-to-one mapping (one CSV row creates one User object)
 - **User → user_role**: One-to-one (User object synced to F5 XC API resource)
 - **User → Group**: Many-to-many (User.groups references Group.name, coordination only)
@@ -275,14 +279,13 @@ Group (existing entity, preserved)
 
 ## State Transitions
 
-```
+```text
 New User in CSV → Create in F5 XC
 Existing User, attributes changed → Update in F5 XC
 Existing User, attributes match → Skip (no operation)
 User removed from CSV (with --delete-users flag) → Delete from F5 XC
 User removed from CSV (without flag) → Orphaned in F5 XC (no operation)
-```
-
+```text
 **Idempotency Guarantee**: Running sync multiple times with same CSV produces same end state.
 
 ---
@@ -307,20 +310,30 @@ User removed from CSV (without flag) → Orphaned in F5 XC (no operation)
 
 ## Data Flow
 
-```
-1. CSV File
-   ↓ (read)
-2. Raw CSV Rows (dict per row)
-   ↓ (parse with parse_display_name, parse_active_status)
-3. User Objects (Pydantic validated)
-   ↓ (convert to dict for API)
-4. F5 XC API Payload
-   ↓ (POST/PUT/DELETE)
-5. F5 XC user_role Resources
-   ↓ (track operations)
-6. UserSyncStats (summary)
-```
+```text
 
+1. CSV File
+
+    ↓ (read)
+
+2. Raw CSV Rows (dict per row)
+
+    ↓ (parse with parse_display_name, parse_active_status)
+
+3. User Objects (Pydantic validated)
+
+    ↓ (convert to dict for API)
+
+4. F5 XC API Payload
+
+    ↓ (POST/PUT/DELETE)
+
+5. F5 XC user_role Resources
+
+    ↓ (track operations)
+
+6. UserSyncStats (summary)
+```text
 **Error Handling**: Validation errors at step 3 logged and skipped. API errors at step 5 collected in UserSyncStats.error_details.
 
 ---
@@ -342,18 +355,21 @@ User removed from CSV (without flag) → Orphaned in F5 XC (no operation)
 ## Testing Considerations
 
 **Unit Tests** (test data models):
+
 - Pydantic validation (valid/invalid emails, etc.)
 - Name parsing edge cases (single name, multiple names, whitespace)
 - Status mapping edge cases (various codes, case sensitivity)
 - Stats summary generation and error tracking
 
 **Integration Tests** (test with mock F5 XC API):
+
 - CSV parsing to User objects
 - User reconciliation logic (create, update, delete, skip)
 - Error handling and partial failures
 - Idempotency (running sync twice)
 
 **Test Fixtures**:
+
 ```python
 @pytest.fixture
 def sample_user():
@@ -366,4 +382,4 @@ def sample_user():
         active=True,
         groups=["GROUP1", "GROUP2"]
     )
-```
+```text
