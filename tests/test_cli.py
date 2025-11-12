@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 import pytest
 from click.testing import CliRunner
 
-from xc_rbac_sync.cli import cli
+from xc_user_group_sync.cli import cli
 
 
 @pytest.fixture
@@ -62,9 +62,9 @@ class TestCLISyncCommand:
         result = runner.invoke(cli, ["--csv", "/nonexistent/file.csv"])
         assert result.exit_code != 0
 
-    @patch("xc_rbac_sync.cli.UserSyncService")
-    @patch("xc_rbac_sync.cli.GroupSyncService")
-    @patch("xc_rbac_sync.cli.XCClient")
+    @patch("xc_user_group_sync.cli.UserSyncService")
+    @patch("xc_user_group_sync.cli.GroupSyncService")
+    @patch("xc_user_group_sync.cli.XCClient")
     def test_sync_dry_run_success(
         self,
         mock_client_class,
@@ -124,9 +124,9 @@ class TestCLISyncCommand:
         mock_group_service.sync_groups.assert_called_once()
         mock_user_service.sync_users.assert_called_once()
 
-    @patch("xc_rbac_sync.cli.UserSyncService")
-    @patch("xc_rbac_sync.cli.GroupSyncService")
-    @patch("xc_rbac_sync.cli.XCClient")
+    @patch("xc_user_group_sync.cli.UserSyncService")
+    @patch("xc_user_group_sync.cli.GroupSyncService")
+    @patch("xc_user_group_sync.cli.XCClient")
     def test_sync_with_prune(
         self,
         mock_client_class,
@@ -188,9 +188,9 @@ class TestCLISyncCommand:
         # Note: cleanup_orphaned_users is not called separately;
         # user deletion is handled inside sync_users() when prune_users=True
 
-    @patch("xc_rbac_sync.cli.UserSyncService")
-    @patch("xc_rbac_sync.cli.GroupSyncService")
-    @patch("xc_rbac_sync.cli.XCClient")
+    @patch("xc_user_group_sync.cli.UserSyncService")
+    @patch("xc_user_group_sync.cli.GroupSyncService")
+    @patch("xc_user_group_sync.cli.XCClient")
     def test_sync_with_errors(
         self,
         mock_client_class,
@@ -239,9 +239,9 @@ class TestCLISyncCommand:
         assert result.exit_code != 0
         assert "operations failed" in result.output
 
-    @patch("xc_rbac_sync.cli.UserSyncService")
-    @patch("xc_rbac_sync.cli.GroupSyncService")
-    @patch("xc_rbac_sync.cli.XCClient")
+    @patch("xc_user_group_sync.cli.UserSyncService")
+    @patch("xc_user_group_sync.cli.GroupSyncService")
+    @patch("xc_user_group_sync.cli.XCClient")
     def test_sync_csv_parse_error(
         self,
         mock_client_class,
@@ -252,7 +252,7 @@ class TestCLISyncCommand:
         mock_env,
     ):
         """Test sync with CSV parse error."""
-        from xc_rbac_sync.sync_service import CSVParseError
+        from xc_user_group_sync.sync_service import CSVParseError
 
         mock_group_service = Mock()
         mock_group_service_class.return_value = mock_group_service
@@ -269,9 +269,9 @@ class TestCLISyncCommand:
         assert result.exit_code != 0
         assert "Missing required columns" in result.output
 
-    @patch("xc_rbac_sync.cli.UserSyncService")
-    @patch("xc_rbac_sync.cli.GroupSyncService")
-    @patch("xc_rbac_sync.cli.XCClient")
+    @patch("xc_user_group_sync.cli.UserSyncService")
+    @patch("xc_user_group_sync.cli.GroupSyncService")
+    @patch("xc_user_group_sync.cli.XCClient")
     def test_sync_api_error(
         self,
         mock_client_class,
@@ -302,8 +302,8 @@ class TestCLISyncCommand:
 
     def test_sync_custom_log_level(self, runner, temp_csv_file, mock_env):
         """Test sync with custom log level."""
-        with patch("xc_rbac_sync.cli.GroupSyncService"):
-            with patch("xc_rbac_sync.cli.XCClient"):
+        with patch("xc_user_group_sync.cli.GroupSyncService"):
+            with patch("xc_user_group_sync.cli.XCClient"):
                 # Just test that the option is accepted
                 result = runner.invoke(
                     cli, ["--csv", temp_csv_file, "--log-level", "debug"]
@@ -313,8 +313,8 @@ class TestCLISyncCommand:
 
     def test_sync_custom_timeout(self, runner, temp_csv_file, mock_env):
         """Test sync with custom timeout."""
-        with patch("xc_rbac_sync.cli.XCClient") as mock_client:
-            with patch("xc_rbac_sync.cli.GroupSyncService"):
+        with patch("xc_user_group_sync.cli.XCClient") as mock_client:
+            with patch("xc_user_group_sync.cli.GroupSyncService"):
                 runner.invoke(
                     cli,
                     ["--csv", temp_csv_file, "--timeout", "60", "--dry-run"],
@@ -325,8 +325,8 @@ class TestCLISyncCommand:
 
     def test_sync_custom_retries(self, runner, temp_csv_file, mock_env):
         """Test sync with custom max retries."""
-        with patch("xc_rbac_sync.cli.XCClient") as mock_client:
-            with patch("xc_rbac_sync.cli.GroupSyncService"):
+        with patch("xc_user_group_sync.cli.XCClient") as mock_client:
+            with patch("xc_user_group_sync.cli.GroupSyncService"):
                 runner.invoke(
                     cli,
                     ["--csv", temp_csv_file, "--max-retries", "5", "--dry-run"],
@@ -345,8 +345,8 @@ class TestCLIAuthentication:
         monkeypatch.setenv("VOLT_API_CERT_FILE", "/path/to/cert.pem")
         monkeypatch.setenv("VOLT_API_CERT_KEY_FILE", "/path/to/key.pem")
 
-        with patch("xc_rbac_sync.cli.XCClient") as mock_client:
-            with patch("xc_rbac_sync.cli.GroupSyncService"):
+        with patch("xc_user_group_sync.cli.XCClient") as mock_client:
+            with patch("xc_user_group_sync.cli.GroupSyncService"):
                 runner.invoke(cli, ["--csv", temp_csv_file, "--dry-run"])
 
                 call_kwargs = mock_client.call_args[1]
@@ -359,8 +359,8 @@ class TestCLIAuthentication:
         monkeypatch.setenv("TENANT_ID", "test-tenant")
         monkeypatch.setenv("XC_API_TOKEN", "test-token")
 
-        with patch("xc_rbac_sync.cli.XCClient") as mock_client:
-            with patch("xc_rbac_sync.cli.GroupSyncService"):
+        with patch("xc_user_group_sync.cli.XCClient") as mock_client:
+            with patch("xc_user_group_sync.cli.GroupSyncService"):
                 runner.invoke(cli, ["--csv", temp_csv_file, "--dry-run"])
 
                 call_kwargs = mock_client.call_args[1]
@@ -372,8 +372,8 @@ class TestCLIAuthentication:
         """Test that P12 file triggers informational message."""
         monkeypatch.setenv("VOLT_API_P12_FILE", "/path/to/cert.p12")
 
-        with patch("xc_rbac_sync.cli.XCClient"):
-            with patch("xc_rbac_sync.cli.GroupSyncService"):
+        with patch("xc_user_group_sync.cli.XCClient"):
+            with patch("xc_user_group_sync.cli.GroupSyncService"):
                 # P12 should be recognized but not used
                 # The test just ensures no errors occur when P12 is set
                 runner.invoke(cli, ["--csv", temp_csv_file, "--dry-run"])

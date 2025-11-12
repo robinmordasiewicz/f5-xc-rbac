@@ -20,12 +20,12 @@ bob@example.com,"CN=developers,OU=Groups,DC=example,DC=com"
 1. Run a safe dry-run to see planned actions (no API changes):
 
 ```bash
-python -m xc_rbac_sync.cli sync --csv User-Database.csv --dry-run --log-level info
+python -m xc_user_group_sync.cli sync --csv User-Database.csv --dry-run --log-level info
 ```text
 1. When ready to apply changes, run without `--dry-run` (careful; this will modify your tenant):
 
 ```bash
-python -m xc_rbac_sync.cli sync --csv User-Database.csv
+python -m xc_user_group_sync.cli sync --csv User-Database.csv
 ```text
 Notes:
 

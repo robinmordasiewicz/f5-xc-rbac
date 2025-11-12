@@ -5,7 +5,7 @@
 
 ## Overview
 
-This document defines the data structures for user lifecycle management in the F5 XC RBAC sync tool. All models follow Pydantic validation patterns consistent with the existing codebase.
+This document defines the data structures for user lifecycle management in the F5 XC user and group synchronization tool. All models follow Pydantic validation patterns consistent with the existing codebase.
 
 ## Core Entities
 
@@ -13,7 +13,7 @@ This document defines the data structures for user lifecycle management in the F
 
 Represents a person with access to F5 Distributed Cloud.
 
-**Location**: `src/xc_rbac_sync/models.py`
+**Location**: `src/xc_user_group_sync/models.py`
 
 **Schema**:
 
@@ -85,7 +85,7 @@ user = User(
 
 Tracks synchronization statistics for user operations.
 
-**Location**: `src/xc_rbac_sync/user_sync_service.py`
+**Location**: `src/xc_user_group_sync/user_sync_service.py`
 
 **Schema**:
 
@@ -186,7 +186,7 @@ Represents a row in the Active Directory CSV export.
 
 Parses full name into first and last name components.
 
-**Location**: `src/xc_rbac_sync/user_utils.py`
+**Location**: `src/xc_user_group_sync/user_utils.py`
 
 **Signature**:
 
@@ -221,7 +221,7 @@ def parse_display_name(display_name: str) -> tuple[str, str]:
 
 Maps employee status code to active boolean.
 
-**Location**: `src/xc_rbac_sync/user_utils.py`
+**Location**: `src/xc_user_group_sync/user_utils.py`
 
 **Signature**:
 

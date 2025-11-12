@@ -35,7 +35,7 @@ pytest
 
 #### Phase 1: Data Models and Utilities
 
-**Step 1.1: User Model** (`src/xc_rbac_sync/models.py`)
+**Step 1.1: User Model** (`src/xc_user_group_sync/models.py`)
 
 ```python
 # Add to models.py alongside existing Group model
@@ -61,7 +61,7 @@ class User(BaseModel):
 
 ```python
 import pytest
-from xc_rbac_sync.models import User
+from xc_user_group_sync.models import User
 
 def test_user_email_validation():
     """Test email validation with Pydantic EmailStr."""
@@ -86,7 +86,7 @@ def test_user_username_defaults_to_email():
     )
     assert user.username == "bob@example.com"
 ```text
-**Step 1.2: Utility Functions** (`src/xc_rbac_sync/user_utils.py`)
+**Step 1.2: Utility Functions** (`src/xc_user_group_sync/user_utils.py`)
 
 ```python
 # Create new file: user_utils.py
@@ -113,7 +113,7 @@ def parse_active_status(employee_status: str) -> bool:
 
 ```python
 import pytest
-from xc_rbac_sync.user_utils import parse_display_name, parse_active_status
+from xc_user_group_sync.user_utils import parse_display_name, parse_active_status
 
 class TestParseDisplayName:
     def test_two_word_name(self):
@@ -149,7 +149,7 @@ class TestParseActiveStatus:
 ```text
 #### Phase 2: API Client Extensions
 
-**Step 2.1: XCClient Extensions** (`src/xc_rbac_sync/client.py`)
+**Step 2.1: XCClient Extensions** (`src/xc_user_group_sync/client.py`)
 
 Add methods to existing `XCClient` class:
 
@@ -185,7 +185,7 @@ def update_user(
 ```python
 import pytest
 from unittest.mock import Mock, patch
-from xc_rbac_sync.client import XCClient
+from xc_user_group_sync.client import XCClient
 
 class TestXCClientUserOperations:
     @patch("requests.Session.put")
@@ -203,7 +203,7 @@ class TestXCClientUserOperations:
 ```text
 #### Phase 3: UserSyncService Implementation
 
-**Step 3.1: UserRepository Protocol** (`src/xc_rbac_sync/protocols.py`)
+**Step 3.1: UserRepository Protocol** (`src/xc_user_group_sync/protocols.py`)
 
 ```python
 # Add to existing protocols.py
@@ -219,7 +219,7 @@ class UserRepository(Protocol):
     def delete_user(self, email: str, namespace: str = "system") -> None: ...
     def get_user(self, email: str, namespace: str = "system") -> Dict[str, Any]: ...
 ```text
-**Step 3.2: UserSyncService** (`src/xc_rbac_sync/user_sync_service.py`)
+**Step 3.2: UserSyncService** (`src/xc_user_group_sync/user_sync_service.py`)
 
 Create new file following `sync_service.py` pattern:
 
@@ -230,10 +230,10 @@ import csv
 import logging
 from typing import List, Dict
 from dataclasses import dataclass, field
-from xc_rbac_sync.models import User
-from xc_rbac_sync.protocols import UserRepository
-from xc_rbac_sync.user_utils import parse_display_name, parse_active_status
-from xc_rbac_sync.ldap_utils import extract_cn
+from xc_user_group_sync.models import User
+from xc_user_group_sync.protocols import UserRepository
+from xc_user_group_sync.user_utils import parse_display_name, parse_active_status
+from xc_user_group_sync.ldap_utils import extract_cn
 
 logger = logging.getLogger(__name__)
 
@@ -360,8 +360,8 @@ class UserSyncService:
 ```python
 import pytest
 from unittest.mock import Mock
-from xc_rbac_sync.user_sync_service import UserSyncService, UserSyncStats
-from xc_rbac_sync.models import User
+from xc_user_group_sync.user_sync_service import UserSyncService, UserSyncStats
+from xc_user_group_sync.models import User
 
 class TestUserSyncService:
     def test_parse_csv_to_users_valid(self, tmp_path):
@@ -402,7 +402,7 @@ bob@example.com,Bob Smith,I,CN=DEVELOPERS,OU=Groups,DC=example,DC=com"""
 ```text
 #### Phase 4: CLI Integration
 
-**Step 4.1: Extend CLI** (`src/xc_rbac_sync/cli.py`)
+**Step 4.1: Extend CLI** (`src/xc_user_group_sync/cli.py`)
 
 ```python
 # Add --delete-users flag to existing sync command
@@ -445,7 +445,7 @@ def sync(csv: str, dry_run: bool, delete_users: bool, ...):
 
 ```python
 from click.testing import CliRunner
-from xc_rbac_sync.cli import cli
+from xc_user_group_sync.cli import cli
 
 def test_sync_with_delete_users_flag():
     """Test sync command with --delete-users flag."""
@@ -462,7 +462,7 @@ def test_sync_with_delete_users_flag():
 ```python
 import pytest
 from unittest.mock import Mock
-from xc_rbac_sync.user_sync_service import UserSyncService
+from xc_user_group_sync.user_sync_service import UserSyncService
 
 class TestUserSyncIntegration:
     def test_full_sync_workflow(self, tmp_path):
@@ -506,7 +506,7 @@ pytest
 pytest tests/unit/test_user_utils.py
 
 # Run with coverage
-pytest --cov=src/xc_rbac_sync --cov-report=html
+pytest --cov=src/xc_user_group_sync --cov-report=html
 
 # Expected coverage: 80%+ for user-specific code
 ```text

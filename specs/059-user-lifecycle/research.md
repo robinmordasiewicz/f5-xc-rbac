@@ -6,7 +6,7 @@
 
 ## Overview
 
-This document captures research findings for implementing user lifecycle management in the F5 XC RBAC sync tool. All unknowns from the Technical Context have been investigated and resolved.
+This document captures research findings for implementing user lifecycle management in the F5 XC user and group synchronization tool. All unknowns from the Technical Context have been investigated and resolved.
 
 ## Research Tasks & Findings
 
@@ -16,7 +16,7 @@ This document captures research findings for implementing user lifecycle managem
 
 **Research Method**:
 
-- Examined existing `XCClient` implementation in `src/xc_rbac_sync/client.py`
+- Examined existing `XCClient` implementation in `src/xc_user_group_sync/client.py`
 - Reviewed test fixtures in `tests/unit/test_sync_service.py` and `tests/unit/test_cli_and_client.py`
 - Analyzed current `create_user` implementation
 

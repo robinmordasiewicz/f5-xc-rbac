@@ -25,11 +25,11 @@ Purpose: Project initialization and basic structure
 
 Purpose: Core infrastructure that MUST be complete before ANY user story can be implemented.
 
-- T004 Create LDAP DN parsing utility `src/xc_rbac_sync/ldap_utils.py` using `ldap3.utils.dn.parse_dn` and validate CN against naming rules
-- T005 [P] Implement XC API client with retries in `src/xc_rbac_sync/client.py` for endpoints from `specs/001-xc-group-sync/contracts/xc-iam.yaml`
-- T006 [P] Add CLI options and environment loading for auth, tenant, dry-run, cleanup in `src/xc_rbac_sync/cli.py`
-- T007 Implement CSV schema validation for required columns in `src/xc_rbac_sync/cli.py`
-- T008 Configure logging levels and ensure secrets are never logged in `src/xc_rbac_sync/cli.py`
+- T004 Create LDAP DN parsing utility `src/xc_user_group_sync/ldap_utils.py` using `ldap3.utils.dn.parse_dn` and validate CN against naming rules
+- T005 [P] Implement XC API client with retries in `src/xc_user_group_sync/client.py` for endpoints from `specs/001-xc-group-sync/contracts/xc-iam.yaml`
+- T006 [P] Add CLI options and environment loading for auth, tenant, dry-run, cleanup in `src/xc_user_group_sync/cli.py`
+- T007 Implement CSV schema validation for required columns in `src/xc_user_group_sync/cli.py`
+- T008 Configure logging levels and ensure secrets are never logged in `src/xc_user_group_sync/cli.py`
 
 ---
 
@@ -41,12 +41,12 @@ Independent Test: Provide CSV with groups A,B; dry-run shows planned actions, ap
 
 ### Implementation for User Story 1
 
-- T009 [US1] Aggregate CSV rows into group membership map in `src/xc_rbac_sync/cli.py`
-- T010 [US1] Compute diff vs `GET /api/web/custom/namespaces/system/user_groups` in `src/xc_rbac_sync/cli.py`
-- T011 [US1] Implement dry-run reporting of planned create/update with counts in `src/xc_rbac_sync/cli.py`
-- T012 [US1] Create groups via `POST /api/web/custom/namespaces/system/user_groups` in `src/xc_rbac_sync/client.py`
-- T013 [US1] Update groups with full `usernames` replacement via `PUT /api/web/custom/namespaces/system/user_groups/{name}` in `src/xc_rbac_sync/client.py`
-- T014 [US1] Produce summary (created/updated/deleted/skipped/errors) and exit code in `src/xc_rbac_sync/cli.py`
+- T009 [US1] Aggregate CSV rows into group membership map in `src/xc_user_group_sync/cli.py`
+- T010 [US1] Compute diff vs `GET /api/web/custom/namespaces/system/user_groups` in `src/xc_user_group_sync/cli.py`
+- T011 [US1] Implement dry-run reporting of planned create/update with counts in `src/xc_user_group_sync/cli.py`
+- T012 [US1] Create groups via `POST /api/web/custom/namespaces/system/user_groups` in `src/xc_user_group_sync/client.py`
+- T013 [US1] Update groups with full `usernames` replacement via `PUT /api/web/custom/namespaces/system/user_groups/{name}` in `src/xc_user_group_sync/client.py`
+- T014 [US1] Produce summary (created/updated/deleted/skipped/errors) and exit code in `src/xc_user_group_sync/cli.py`
 
 ---
 
@@ -58,8 +58,8 @@ Independent Test: For group A, XC has u1,u2; CSV lists u1 → after sync u2 is r
 
 ### Implementation for User Story 4
 
-- T015 [US4] Enforce full replacement of `usernames` during updates in `src/xc_rbac_sync/cli.py`
-- T016 [US4] Validate extracted CN and skip invalid groups with clear error logging in `src/xc_rbac_sync/cli.py`
+- T015 [US4] Enforce full replacement of `usernames` during updates in `src/xc_user_group_sync/cli.py`
+- T016 [US4] Validate extracted CN and skip invalid groups with clear error logging in `src/xc_user_group_sync/cli.py`
 
 ---
 
@@ -71,8 +71,8 @@ Independent Test: With XC groups A,B,C and CSV A,B; dry-run with prune lists C f
 
 ### Implementation for User Story 2
 
-- T017 [US2] Add `--prune` flag and compute delete candidates in `src/xc_rbac_sync/cli.py`
-- T018 [US2] Delete groups via `DELETE /api/web/custom/namespaces/system/user_groups/{name}` in `src/xc_rbac_sync/client.py`
+- T017 [US2] Add `--prune` flag and compute delete candidates in `src/xc_user_group_sync/cli.py`
+- T018 [US2] Delete groups via `DELETE /api/web/custom/namespaces/system/user_groups/{name}` in `src/xc_user_group_sync/client.py`
 
 ---
 
@@ -84,8 +84,8 @@ Independent Test: Run with invalid token; tool exits before any changes with aut
 
 ### Implementation for User Story 3
 
-- T019 [US3] Preflight `GET /api/web/custom/namespaces/system/user_groups` to validate auth in `src/xc_rbac_sync/cli.py`
-- T020 [US3] Ensure secrets masked; no tokens printed in logs in `src/xc_rbac_sync/cli.py`
+- T019 [US3] Preflight `GET /api/web/custom/namespaces/system/user_groups` to validate auth in `src/xc_user_group_sync/cli.py`
+- T020 [US3] Ensure secrets masked; no tokens printed in logs in `src/xc_user_group_sync/cli.py`
 
 ---
 
@@ -107,7 +107,7 @@ Independent Test: Single `.p12` in `~/Downloads` named `mytenant-api.p12` → `.
 
 - T024 [P] Update README.md with usage and dry-run examples in `README.md`
 - T025 Add performance knobs (max retries, backoff) and document in `specs/001-xc-group-sync/quickstart.md`
-- T026 Security review: verify no secrets are logged and HTTPS validation is enforced across `src/xc_rbac_sync/*`
+- T026 Security review: verify no secrets are logged and HTTPS validation is enforced across `src/xc_user_group_sync/*`
 
 ---
 

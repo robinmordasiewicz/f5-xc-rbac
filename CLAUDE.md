@@ -1,4 +1,4 @@
-# f5-xc-user-group-sync Development Guidelines
+# F5 Distributed Cloud User and Group Sync - Development Guidelines
 
 ## Active Technologies
 
@@ -8,7 +8,7 @@
 
 ```text
 src/
-  xc_rbac_sync/
+  xc_user_group_sync/
     cli.py          # CLI entry point
     client.py       # F5 XC API client
     sync_service.py # Group synchronization

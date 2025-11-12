@@ -1,6 +1,6 @@
-# F5 Distributed Cloud RBAC Sync
+# F5 Distributed Cloud User and Group Sync
 
-Automated synchronization tool for managing F5 Distributed Cloud (XC) users and RBAC groups from CSV user databases.
+Automated synchronization tool for managing F5 Distributed Cloud (XC) users and groups from CSV user databases.
 
 ## What Does This Tool Do?
 
@@ -341,7 +341,7 @@ This repository provides **sample CI/CD configurations** that serve as starting 
 
 **GitHub Actions:**
 
-- `xc-group-sync.yml.sample` - Main synchronization workflow
+- `xc-user-group-sync.yml.sample` - Main synchronization workflow
 - `pre-commit.yml.sample` - Code quality and linting
 
 **Jenkins:**
@@ -356,8 +356,8 @@ This repository provides **sample CI/CD configurations** that serve as starting 
 1. Copy the sample workflow:
 
     ```bash
-    cp samples/ci-cd/github-actions/xc-group-sync.yml.sample \
-      .github/workflows/xc-group-sync.yml
+    cp samples/ci-cd/github-actions/xc-user-group-sync.yml.sample \
+      .github/workflows/xc-user-group-sync.yml
     ```
 
 1. Configure secrets in **Settings → Secrets and variables → Actions**:

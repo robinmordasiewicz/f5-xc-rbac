@@ -143,5 +143,5 @@ def clean_env(monkeypatch):
         monkeypatch.delenv(var, raising=False)
 
     # Mock load_dotenv to prevent loading from any .env files
-    with patch("xc_rbac_sync.cli.load_dotenv"):
+    with patch("xc_user_group_sync.cli.load_dotenv"):
         yield

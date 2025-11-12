@@ -6,13 +6,13 @@
 
 ## Overview
 
-This document defines the API contracts for user lifecycle management in the F5 XC RBAC sync tool. All contracts follow Protocol-based dependency injection patterns consistent with the existing `GroupRepository` and `GroupSyncService` architecture.
+This document defines the API contracts for user lifecycle management in the F5 XC user and group synchronization tool. All contracts follow Protocol-based dependency injection patterns consistent with the existing `GroupRepository` and `GroupSyncService` architecture.
 
 ## Protocol Definitions
 
 ### UserRepository Protocol
 
-**Location**: `src/xc_rbac_sync/protocols.py`
+**Location**: `src/xc_user_group_sync/protocols.py`
 
 **Purpose**: Abstraction for user management operations, enabling dependency injection and testability.
 
@@ -169,15 +169,15 @@ class UserRepository(Protocol):
 
 ### UserSyncService Class
 
-**Location**: `src/xc_rbac_sync/user_sync_service.py`
+**Location**: `src/xc_user_group_sync/user_sync_service.py`
 
 **Purpose**: Business logic for user lifecycle management with state-based reconciliation.
 
 ```python
 from typing import List, Dict, Protocol
 from dataclasses import dataclass, field
-from xc_rbac_sync.models import User
-from xc_rbac_sync.protocols import UserRepository
+from xc_user_group_sync.models import User
+from xc_user_group_sync.protocols import UserRepository
 
 @dataclass
 class UserSyncStats:
@@ -396,7 +396,7 @@ class UserSyncService:
 
 ### User Parsing Utilities
 
-**Location**: `src/xc_rbac_sync/user_utils.py`
+**Location**: `src/xc_user_group_sync/user_utils.py`
 
 ```python
 def parse_display_name(display_name: str) -> tuple[str, str]:
@@ -475,7 +475,7 @@ def parse_active_status(employee_status: str) -> bool:
 
 ### Extended API Client
 
-**Location**: `src/xc_rbac_sync/client.py`
+**Location**: `src/xc_user_group_sync/client.py`
 
 **Modifications**: Add user-specific methods to existing `XCClient` class.
 
@@ -621,7 +621,7 @@ class XCClient:
 
 ### Command-Line Interface
 
-**Location**: `src/xc_rbac_sync/cli.py`
+**Location**: `src/xc_user_group_sync/cli.py`
 
 **Modifications**: Add `--delete-users` flag to existing `sync` command.
 

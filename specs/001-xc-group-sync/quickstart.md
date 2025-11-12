@@ -22,7 +22,7 @@ pip install -e .
 ## Run (dry-run)
 
 ```bash
-python -m xc_rbac_sync.cli sync --csv User-Database.csv --dry-run
+python -m xc_user_group_sync.cli sync --csv User-Database.csv --dry-run
 ```text
 Set `TENANT_ID` and credential envs via `.env` or shell; the CLI auto-detects which auth is present and prefers P12.
 

@@ -1,6 +1,6 @@
 # CI/CD Integration Samples
 
-This directory contains sample configurations for integrating F5 XC RBAC Sync into your CI/CD pipelines. These are **reference implementations** - you should review and customize them for your specific environment before use.
+This directory contains sample configurations for integrating F5 XC User and Group Sync into your CI/CD pipelines. These are **reference implementations** - you should review and customize them for your specific environment before use.
 
 ## Available Samples
 
@@ -8,7 +8,7 @@ This directory contains sample configurations for integrating F5 XC RBAC Sync in
 
 Located in `github-actions/`:
 
-- **`xc-group-sync.yml.sample`** - Main sync workflow
+- **`xc-user-group-sync.yml.sample`** - Main sync workflow
   - Runs dry-run on push to main (preview changes)
   - Runs apply mode on manual workflow dispatch
   - Supports both P12 and PEM certificate authentication
@@ -38,7 +38,7 @@ Located in `jenkins/`:
 1. Copy the sample workflow you want to use:
 
     ```bash
-    cp samples/ci-cd/github-actions/xc-group-sync.yml.sample .github/workflows/xc-group-sync.yml
+    cp samples/ci-cd/github-actions/xc-user-group-sync.yml.sample .github/workflows/xc-user-group-sync.yml
     ```
 
 2. Configure GitHub repository secrets:

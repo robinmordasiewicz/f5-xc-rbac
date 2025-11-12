@@ -1,4 +1,4 @@
-// Declarative Pipeline for F5 XC RBAC Sync
+// Declarative Pipeline for F5 XC User and Group Sync
 // This is a sample Jenkinsfile demonstrating how to run the XC sync tool in Jenkins
 //
 // Prerequisites:
@@ -167,11 +167,11 @@ EOF
         }
 
         success {
-            echo 'XC RBAC Sync completed successfully'
+            echo 'XC User and Group Sync completed successfully'
         }
 
         failure {
-            echo 'XC RBAC Sync failed - check logs for details'
+            echo 'XC User and Group Sync failed - check logs for details'
         }
 
         cleanup {

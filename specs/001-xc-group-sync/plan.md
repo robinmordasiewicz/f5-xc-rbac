@@ -61,7 +61,7 @@ specs/[###-feature]/
 
 ```text
 src/
-├── xc_rbac_sync/
+├── xc_user_group_sync/
 │   ├── __init__.py
 │   ├── cli.py
 │   ├── client.py
@@ -73,7 +73,7 @@ tests/
 ```text
 #### Structure Decision
 
-Single-project layout for a CLI tool. Code under `src/xc_rbac_sync`, tests under `tests/`.
+Single-project layout for a CLI tool. Code under `src/xc_user_group_sync`, tests under `tests/`.
 
 ## Complexity Tracking
 
