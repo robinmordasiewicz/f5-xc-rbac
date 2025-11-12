@@ -17,7 +17,7 @@ pip install -e ".[dev]"
 pytest
 
 # Run with coverage report
-pytest --cov=xc_rbac_sync --cov-report=term-missing
+pytest --cov=xc_user_group_sync --cov-report=term-missing
 
 # Run specific test file
 pytest tests/test_sync_service.py
@@ -89,5 +89,5 @@ find . -name "*.py"
 grep -r "pattern" .
 
 # Change directory
-cd src/xc_rbac_sync/
+cd src/xc_user_group_sync/
 ```text

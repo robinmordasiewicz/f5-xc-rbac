@@ -5,7 +5,7 @@
 
 ## Summary
 
-Enhance the existing F5 XC RBAC sync tool with full user lifecycle management, adding user create/update/delete operations synchronized from CSV exports. The enhancement parses extended CSV columns (User Display Name, Employee Status), implements state-based reconciliation treating CSV as source of truth, provides configurable deletion flags with dry-run support, and generates detailed summary reports - replicating SCIM-like idempotent synchronization behavior using the F5 XC custom user_roles API.
+Enhance the existing F5 XC user and group synchronization tool with full user lifecycle management, adding user create/update/delete operations synchronized from CSV exports. The enhancement parses extended CSV columns (User Display Name, Employee Status), implements state-based reconciliation treating CSV as source of truth, provides configurable deletion flags with dry-run support, and generates detailed summary reports - replicating SCIM-like idempotent synchronization behavior using the F5 XC custom user_roles API.
 
 **Technical Approach**: Extend existing architecture (XCClient, CSV parsing, sync service pattern) with new UserSyncService following the same patterns as GroupSyncService. Add user-specific operations to XCClient, create utility functions for name parsing and status mapping, enhance CLI with user management flags, and implement comprehensive state reconciliation logic.
 
@@ -78,7 +78,7 @@ specs/059-user-lifecycle/
 ### Source Code (repository root)
 
 ```text
-src/xc_rbac_sync/
+src/xc_user_group_sync/
 ├── __init__.py          # Package initialization (existing)
 ├── cli.py               # CLI entry point (MODIFY: add user sync commands)
 ├── client.py            # XCClient API client (MODIFY: add user operations)
@@ -109,7 +109,7 @@ scripts/
 .github/workflows/
 └── xc-group-sync.yml     # CI/CD pipeline (MODIFY: add user sync testing)
 ```text
-**Structure Decision**: Single project structure maintained (existing). All enhancements add to `src/xc_rbac_sync/` package following established patterns. Tests mirror source structure in `tests/` directory. No new top-level directories created - pure enhancement of existing codebase.
+**Structure Decision**: Single project structure maintained (existing). All enhancements add to `src/xc_user_group_sync/` package following established patterns. Tests mirror source structure in `tests/` directory. No new top-level directories created - pure enhancement of existing codebase.
 
 ## Complexity Tracking
 
@@ -441,18 +441,18 @@ Phase 1 (Design & Contracts) is now complete. Next steps:
 
 **Files to Create** (Phase 2 - Implementation):
 
-- `src/xc_rbac_sync/user_sync_service.py` (new)
-- `src/xc_rbac_sync/user_utils.py` (new)
+- `src/xc_user_group_sync/user_sync_service.py` (new)
+- `src/xc_user_group_sync/user_utils.py` (new)
 - `tests/unit/test_user_sync_service.py` (new)
 - `tests/unit/test_user_utils.py` (new)
 - `tests/integration/test_user_sync_integration.py` (new)
 
 **Files to Modify** (Phase 2 - Implementation):
 
-- `src/xc_rbac_sync/models.py` (add User model)
-- `src/xc_rbac_sync/protocols.py` (add UserRepository protocol)
-- `src/xc_rbac_sync/client.py` (add user CRUD operations)
-- `src/xc_rbac_sync/cli.py` (add --delete-users flag)
+- `src/xc_user_group_sync/models.py` (add User model)
+- `src/xc_user_group_sync/protocols.py` (add UserRepository protocol)
+- `src/xc_user_group_sync/client.py` (add user CRUD operations)
+- `src/xc_user_group_sync/cli.py` (add --delete-users flag)
 - `tests/unit/test_models.py` (add User tests)
 - `tests/unit/test_cli.py` (add user sync tests)
 - `tests/unit/test_client.py` (add user operation tests)
@@ -496,5 +496,5 @@ Phase 1 (Design & Contracts) is now complete. Next steps:
 - **Data Models**: [data-model.md](./data-model.md)
 - **API Contracts**: [contracts/user_sync_api.md](./contracts/user_sync_api.md)
 - **Implementation Guide**: [quickstart.md](./quickstart.md)
-- **Existing Group Sync**: `src/xc_rbac_sync/sync_service.py`
-- **F5 XC API Client**: `src/xc_rbac_sync/client.py`
+- **Existing Group Sync**: `src/xc_user_group_sync/sync_service.py`
+- **F5 XC API Client**: `src/xc_user_group_sync/client.py`

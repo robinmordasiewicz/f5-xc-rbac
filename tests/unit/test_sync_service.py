@@ -1,4 +1,4 @@
-from xc_rbac_sync.sync_service import Group, GroupSyncService
+from xc_user_group_sync.sync_service import Group, GroupSyncService
 
 
 class FakeRepo:

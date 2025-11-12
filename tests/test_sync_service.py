@@ -6,8 +6,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from xc_rbac_sync.models import Group
-from xc_rbac_sync.sync_service import (
+from xc_user_group_sync.models import Group
+from xc_user_group_sync.sync_service import (
     CSVParseError,
     GroupSyncService,
     SyncStats,

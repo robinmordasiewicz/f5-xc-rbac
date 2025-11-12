@@ -38,10 +38,10 @@ fi
 ```text
 **Filename Patterns**:
 
-- **Production**: `f5-amer-ent.console.ves.volterra.io.api-creds.p12`
-  - Extracts: `TENANT=f5-amer-ent`, `XC_API_URL=https://f5-amer-ent.console.ves.volterra.io`
-- **Staging**: `nferreira.staging.api-creds.p12`
-  - Extracts: `TENANT=nferreira`, `XC_API_URL=https://nferreira.staging.volterra.us`
+- **Production**: `acme-corp.console.ves.volterra.io.api-creds.p12`
+  - Extracts: `TENANT=acme-corp`, `XC_API_URL=https://acme-corp.console.ves.volterra.io`
+- **Staging**: `acme-staging.staging.api-creds.p12`
+  - Extracts: `TENANT=acme-staging`, `XC_API_URL=https://acme-staging.staging.volterra.us`
 - **Fallback**: `mytenant.api-creds.p12`
   - Extracts: `TENANT=mytenant`, `XC_API_URL=https://mytenant.console.ves.volterra.io` (assumed production)
 
@@ -51,12 +51,12 @@ fi
 
 ```bash
 # Test production detection
-./scripts/setup_xc_credentials.sh --p12 ~/Downloads/f5-amer-ent.console.ves.volterra.io.api-creds.p12
-# Expected: ENV_TYPE="production", XC_API_URL="https://f5-amer-ent.console.ves.volterra.io"
+./scripts/setup_xc_credentials.sh --p12 ~/Downloads/acme-corp.console.ves.volterra.io.api-creds.p12
+# Expected: ENV_TYPE="production", XC_API_URL="https://acme-corp.console.ves.volterra.io"
 
 # Test staging detection
-./scripts/setup_xc_credentials.sh --p12 ~/Downloads/nferreira.staging.api-creds.p12
-# Expected: ENV_TYPE="staging", XC_API_URL="https://nferreira.staging.volterra.us"
+./scripts/setup_xc_credentials.sh --p12 ~/Downloads/acme-staging.staging.api-creds.p12
+# Expected: ENV_TYPE="staging", XC_API_URL="https://acme-staging.staging.volterra.us"
 ```text
 ---
 
@@ -95,8 +95,8 @@ fi
 **Warning Output**:
 
 ```text
-Using TENANT_ID=nferreira
-Using XC_API_URL=https://nferreira.staging.volterra.us (staging)
+Using TENANT_ID=acme-staging
+Using XC_API_URL=https://acme-staging.staging.volterra.us (staging)
 
 ⚠️  WARNING: Staging environments use self-signed CAs
 Python requests library may fail SSL verification.
@@ -413,10 +413,10 @@ fi
 
 ```text
 Multiple p12 files found in ~/Downloads:
-1) f5-amer-ent.console.ves.volterra.io.api-creds.p12
-2) nferreira.staging.api-creds.p12
+1) acme-corp.console.ves.volterra.io.api-creds.p12
+2) acme-staging.staging.api-creds.p12
 Select p12 file (enter number): 2
-Selected: /Users/user/Downloads/nferreira.staging.api-creds.p12
+Selected: /Users/user/Downloads/acme-staging.staging.api-creds.p12
 ```text
 **Rationale**: Reduces friction for common workflow (download credentials → run setup script) while maintaining safety with interactive selection for ambiguous cases
 

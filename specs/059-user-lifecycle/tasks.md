@@ -18,7 +18,7 @@
 
 Single project structure (from plan.md):
 
-- Source: `src/xc_rbac_sync/`
+- Source: `src/xc_user_group_sync/`
 - Tests: `tests/unit/`, `tests/integration/`
 - Scripts: `scripts/`
 
@@ -43,13 +43,13 @@ Single project structure (from plan.md):
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 [P] Create `parse_display_name()` function in src/xc_rbac_sync/user_utils.py
-- [ ] T006 [P] Create `parse_active_status()` function in src/xc_rbac_sync/user_utils.py
+- [ ] T005 [P] Create `parse_display_name()` function in src/xc_user_group_sync/user_utils.py
+- [ ] T006 [P] Create `parse_active_status()` function in src/xc_user_group_sync/user_utils.py
 - [ ] T007 [P] Create unit tests for `parse_display_name()` in tests/unit/test_user_utils.py
 - [ ] T008 [P] Create unit tests for `parse_active_status()` in tests/unit/test_user_utils.py
-- [ ] T009 Add User model to src/xc_rbac_sync/models.py with EmailStr validation
-- [ ] T010 Add UserSyncStats dataclass to src/xc_rbac_sync/user_sync_service.py
-- [ ] T011 Add UserRepository protocol to src/xc_rbac_sync/protocols.py
+- [ ] T009 Add User model to src/xc_user_group_sync/models.py with EmailStr validation
+- [ ] T010 Add UserSyncStats dataclass to src/xc_user_group_sync/user_sync_service.py
+- [ ] T011 Add UserRepository protocol to src/xc_user_group_sync/protocols.py
 - [ ] T012 Create unit tests for User model in tests/unit/test_models.py
 - [ ] T013 Run foundational tests to verify utility functions and models (`pytest tests/unit/test_user_utils.py tests/unit/test_models.py`)
 
@@ -90,27 +90,27 @@ Single project structure (from plan.md):
 
 **XCClient Extensions** (API operations for user CRUD):
 
-- [ ] T024 [P] [US1] Add `list_users()` alias method to XCClient in src/xc_rbac_sync/client.py
-- [ ] T025 [P] [US2] Add `update_user()` method to XCClient in src/xc_rbac_sync/client.py with tenacity retry
-- [ ] T026 [P] [US1] [US2] Add `get_user()` method to XCClient in src/xc_rbac_sync/client.py with tenacity retry
+- [ ] T024 [P] [US1] Add `list_users()` alias method to XCClient in src/xc_user_group_sync/client.py
+- [ ] T025 [P] [US2] Add `update_user()` method to XCClient in src/xc_user_group_sync/client.py with tenacity retry
+- [ ] T026 [P] [US1] [US2] Add `get_user()` method to XCClient in src/xc_user_group_sync/client.py with tenacity retry
 - [ ] T027 [P] [US1] Unit test: XCClient.create_user success in tests/unit/test_client.py
 - [ ] T028 [P] [US2] Unit test: XCClient.update_user success and retry on 429 in tests/unit/test_client.py
 - [ ] T029 [P] [US1] [US2] Unit test: XCClient.get_user success in tests/unit/test_client.py
 
 **UserSyncService** (Business logic for sync):
 
-- [ ] T030 [US4] Implement `parse_csv_to_users()` in UserSyncService in src/xc_rbac_sync/user_sync_service.py
-- [ ] T031 [US1] [US2] Implement `fetch_existing_users()` in UserSyncService in src/xc_rbac_sync/user_sync_service.py
-- [ ] T032 [US1] [US2] Implement `sync_users()` reconciliation logic in UserSyncService in src/xc_rbac_sync/user_sync_service.py
-- [ ] T033 [US1] Implement `_create_user()` helper method in UserSyncService in src/xc_rbac_sync/user_sync_service.py
-- [ ] T034 [US2] Implement `_update_user()` helper method in UserSyncService in src/xc_rbac_sync/user_sync_service.py
-- [ ] T035 [US2] Implement `_user_needs_update()` comparison logic in UserSyncService in src/xc_rbac_sync/user_sync_service.py
-- [ ] T036 [US1] [US2] Add error handling and stats collection to all user operations in src/xc_rbac_sync/user_sync_service.py
+- [ ] T030 [US4] Implement `parse_csv_to_users()` in UserSyncService in src/xc_user_group_sync/user_sync_service.py
+- [ ] T031 [US1] [US2] Implement `fetch_existing_users()` in UserSyncService in src/xc_user_group_sync/user_sync_service.py
+- [ ] T032 [US1] [US2] Implement `sync_users()` reconciliation logic in UserSyncService in src/xc_user_group_sync/user_sync_service.py
+- [ ] T033 [US1] Implement `_create_user()` helper method in UserSyncService in src/xc_user_group_sync/user_sync_service.py
+- [ ] T034 [US2] Implement `_update_user()` helper method in UserSyncService in src/xc_user_group_sync/user_sync_service.py
+- [ ] T035 [US2] Implement `_user_needs_update()` comparison logic in UserSyncService in src/xc_user_group_sync/user_sync_service.py
+- [ ] T036 [US1] [US2] Add error handling and stats collection to all user operations in src/xc_user_group_sync/user_sync_service.py
 
 **CLI Integration**:
 
-- [ ] T037 [US1] [US2] [US4] Integrate UserSyncService into CLI sync command in src/xc_rbac_sync/cli.py
-- [ ] T038 [US1] [US2] [US4] Add user sync summary output to CLI in src/xc_rbac_sync/cli.py
+- [ ] T037 [US1] [US2] [US4] Integrate UserSyncService into CLI sync command in src/xc_user_group_sync/cli.py
+- [ ] T038 [US1] [US2] [US4] Add user sync summary output to CLI in src/xc_user_group_sync/cli.py
 - [ ] T039 [US1] [US2] [US4] Unit test: CLI sync command with user CSV in tests/unit/test_cli.py
 
 **Validation**:
@@ -151,11 +151,11 @@ Single project structure (from plan.md):
 
 ### Implementation for US3
 
-- [ ] T050 [P] [US3] Add `delete_user()` method to XCClient in src/xc_rbac_sync/client.py with tenacity retry (not for 404)
-- [ ] T051 [US3] Implement `_delete_user()` helper method in UserSyncService in src/xc_rbac_sync/user_sync_service.py
-- [ ] T052 [US3] Add deletion logic to `sync_users()` based on delete_users flag in src/xc_rbac_sync/user_sync_service.py
-- [ ] T053 [US3] Add `--delete-users` flag to CLI sync command in src/xc_rbac_sync/cli.py
-- [ ] T054 [US3] Update CLI to pass delete_users flag to UserSyncService in src/xc_rbac_sync/cli.py
+- [ ] T050 [P] [US3] Add `delete_user()` method to XCClient in src/xc_user_group_sync/client.py with tenacity retry (not for 404)
+- [ ] T051 [US3] Implement `_delete_user()` helper method in UserSyncService in src/xc_user_group_sync/user_sync_service.py
+- [ ] T052 [US3] Add deletion logic to `sync_users()` based on delete_users flag in src/xc_user_group_sync/user_sync_service.py
+- [ ] T053 [US3] Add `--delete-users` flag to CLI sync command in src/xc_user_group_sync/cli.py
+- [ ] T054 [US3] Update CLI to pass delete_users flag to UserSyncService in src/xc_user_group_sync/cli.py
 - [ ] T055 [US3] Unit test: CLI sync command with --delete-users flag in tests/unit/test_cli.py
 
 **Validation**:
@@ -191,11 +191,11 @@ Single project structure (from plan.md):
 
 ### Implementation for US5
 
-- [ ] T063 [P] [US5] Add dry_run logic to `_create_user()` helper in src/xc_rbac_sync/user_sync_service.py
-- [ ] T064 [P] [US5] Add dry_run logic to `_update_user()` helper in src/xc_rbac_sync/user_sync_service.py
-- [ ] T065 [P] [US5] Add dry_run logic to `_delete_user()` helper in src/xc_rbac_sync/user_sync_service.py
-- [ ] T066 [US5] Ensure dry_run flag is passed through from CLI to UserSyncService in src/xc_rbac_sync/cli.py
-- [ ] T067 [US5] Add dry_run indicators to CLI output in src/xc_rbac_sync/cli.py
+- [ ] T063 [P] [US5] Add dry_run logic to `_create_user()` helper in src/xc_user_group_sync/user_sync_service.py
+- [ ] T064 [P] [US5] Add dry_run logic to `_update_user()` helper in src/xc_user_group_sync/user_sync_service.py
+- [ ] T065 [P] [US5] Add dry_run logic to `_delete_user()` helper in src/xc_user_group_sync/user_sync_service.py
+- [ ] T066 [US5] Ensure dry_run flag is passed through from CLI to UserSyncService in src/xc_user_group_sync/cli.py
+- [ ] T067 [US5] Add dry_run indicators to CLI output in src/xc_user_group_sync/cli.py
 
 **Validation**:
 
@@ -229,11 +229,11 @@ Single project structure (from plan.md):
 
 ### Implementation for US6
 
-- [ ] T075 [US6] Ensure UserSyncStats.summary() returns formatted string in src/xc_rbac_sync/user_sync_service.py
-- [ ] T076 [US6] Ensure error_details collection in all operation helpers in src/xc_rbac_sync/user_sync_service.py
-- [ ] T077 [US6] Add execution time tracking to sync workflow in src/xc_rbac_sync/cli.py
-- [ ] T078 [US6] Display detailed error list in CLI output if errors exist in src/xc_rbac_sync/cli.py
-- [ ] T079 [US6] Add execution time to CLI summary output in src/xc_rbac_sync/cli.py
+- [ ] T075 [US6] Ensure UserSyncStats.summary() returns formatted string in src/xc_user_group_sync/user_sync_service.py
+- [ ] T076 [US6] Ensure error_details collection in all operation helpers in src/xc_user_group_sync/user_sync_service.py
+- [ ] T077 [US6] Add execution time tracking to sync workflow in src/xc_user_group_sync/cli.py
+- [ ] T078 [US6] Display detailed error list in CLI output if errors exist in src/xc_user_group_sync/cli.py
+- [ ] T079 [US6] Add execution time to CLI summary output in src/xc_user_group_sync/cli.py
 
 **Validation**:
 
@@ -249,7 +249,7 @@ Single project structure (from plan.md):
 
 **Purpose**: Quality improvements and documentation
 
-- [ ] T083 [P] Run full test suite with coverage (`pytest --cov=src/xc_rbac_sync --cov-report=html`)
+- [ ] T083 [P] Run full test suite with coverage (`pytest --cov=src/xc_user_group_sync --cov-report=html`)
 - [ ] T084 [P] Verify 80%+ test coverage for all new code (user_sync_service.py, user_utils.py)
 - [ ] T085 [P] Run type checking with mypy (`mypy src/`)
 - [ ] T086 [P] Run linting with ruff (`ruff check src/`)

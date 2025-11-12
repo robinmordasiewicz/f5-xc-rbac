@@ -1,4 +1,4 @@
-// Scripted Pipeline for F5 XC RBAC Sync
+// Scripted Pipeline for F5 XC User and Group Sync
 // This is a sample Jenkinsfile demonstrating how to run the XC sync tool in Jenkins
 // using Scripted Pipeline syntax (alternative to Declarative Pipeline)
 //
@@ -128,12 +128,12 @@ EOF
                 // Run sync
                 sh syncCmd
 
-                echo 'XC RBAC Sync completed successfully'
+                echo 'XC User and Group Sync completed successfully'
             }
         }
     } catch (Exception e) {
         currentBuild.result = 'FAILURE'
-        echo "XC RBAC Sync failed: ${e.message}"
+        echo "XC User and Group Sync failed: ${e.message}"
         throw e
     } finally {
         stage('Cleanup') {

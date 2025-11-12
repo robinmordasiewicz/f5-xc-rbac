@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from xc_rbac_sync.ldap_utils import GROUP_NAME_RE, LdapParseError, extract_cn
+from xc_user_group_sync.ldap_utils import GROUP_NAME_RE, LdapParseError, extract_cn
 
 
 class TestGroupNameRegex:

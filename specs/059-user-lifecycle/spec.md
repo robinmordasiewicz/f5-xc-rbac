@@ -196,7 +196,7 @@ After synchronization completes, the system administrator needs a comprehensive 
 
 ### Existing Functionality (Preserved)
 
-This feature **enhances** the existing F5 XC RBAC sync tool with user lifecycle management. The following existing capabilities are preserved and not modified by this feature:
+This feature **enhances** the existing F5 XC user and group synchronization tool with user lifecycle management. The following existing capabilities are preserved and not modified by this feature:
 
 - **F5 XC API credential management** - Certificate-based and token-based authentication (already implemented via `./scripts/setup_xc_credentials.sh` and CLI)
 - **Group synchronization** - Creating, updating, and deleting groups based on CSV (existing `GroupSyncService`)
