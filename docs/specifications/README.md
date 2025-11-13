@@ -34,9 +34,16 @@ All specifications in this directory conform to:
 - Data requirements and transformations (Section 6)
 - **Development requirements** - see [`development/quality-standards.md`](development/quality-standards.md)
 - Quality attributes - testability, traceability, maintainability (Section 8)
-- Implementation guidance with phased roadmap (Section 9)
-- Testing strategy and troubleshooting guide (Section 9)
-- API contracts and examples (Section 10)
+- Appendices - API contracts, CSV examples, glossary (Section 9)
+
+**Implementation Guidance** (extracted to focused documents):
+- [`implementation/roadmap.md`](implementation/roadmap.md) - Feature priorities and 3-phase implementation
+- [`implementation/workflows.md`](implementation/workflows.md) - Operational procedures (setup, sync, prune)
+- [`implementation/testing-strategy.md`](implementation/testing-strategy.md) - Unit, integration, and E2E testing
+- [`guides/deployment-guide.md`](guides/deployment-guide.md) - Deployment scenarios overview
+- [`guides/github-actions-guide.md`](guides/github-actions-guide.md) - GitHub Actions configuration
+- [`guides/jenkins-guide.md`](guides/jenkins-guide.md) - Jenkins pipeline configuration
+- [`guides/troubleshooting-guide.md`](guides/troubleshooting-guide.md) - Diagnostic commands and resolutions
 
 ### User Lifecycle Management Specification
 
@@ -107,14 +114,22 @@ user-group-sync-srs.md (System Specification)
 
 ## Implementation Guidance
 
-Both specifications include comprehensive implementation guidance:
+Comprehensive implementation guidance has been extracted to focused, role-based documents:
 
-- **6-8 week phased roadmap** (MVP → Production → Advanced)
-- **Feature dependency matrices** with critical paths
-- **Operational workflows** (setup, sync, prune operations)
-- **Deployment scenarios** (GitHub Actions, Jenkins, cron, manual)
-- **Testing strategies** (unit, integration, E2E)
-- **Troubleshooting guides** with diagnostic commands
+### Implementation Planning
+
+- [`implementation/roadmap.md`](implementation/roadmap.md) - 6-8 week phased roadmap (MVP → Production → Advanced) with feature priorities and dependency matrix
+- [`implementation/workflows.md`](implementation/workflows.md) - Operational procedures: setup, regular sync, and prune workflows
+- [`implementation/testing-strategy.md`](implementation/testing-strategy.md) - Unit (≥90% coverage), integration, and E2E testing strategies
+
+### Deployment and Operations
+
+- [`guides/deployment-guide.md`](guides/deployment-guide.md) - Overview of all deployment scenarios with platform comparison
+- [`guides/github-actions-guide.md`](guides/github-actions-guide.md) - Complete GitHub Actions workflow with secrets configuration
+- [`guides/jenkins-guide.md`](guides/jenkins-guide.md) - Jenkins pipeline (declarative + scripted) with credential setup
+- [`guides/troubleshooting-guide.md`](guides/troubleshooting-guide.md) - Common issues, diagnostic commands, and resolutions
+
+These focused guides provide role-specific documentation for project managers, developers, DevOps/SRE teams, QA engineers, and operations personnel.
 
 ## Usage for Implementation Teams
 
@@ -188,29 +203,35 @@ Specifications are organized for different audiences:
 
 ```text
 docs/specifications/
-├── user-group-sync-srs.md           # System Requirements (IEEE 29148)
+├── user-group-sync-srs.md           # System Requirements (IEEE 29148) - 2,786 lines
 ├── user-lifecycle-management-srs.md # Feature Specifications
 ├── development/
 │   └── quality-standards.md         # Development Requirements (FR-DEV, SC-DEV)
+├── implementation/
+│   ├── roadmap.md                   # Feature priorities & 3-phase plan
+│   ├── workflows.md                 # Operational procedures
+│   └── testing-strategy.md          # Unit, integration, E2E testing
+├── guides/
+│   ├── deployment-guide.md          # Deployment scenarios
+│   ├── github-actions-guide.md      # GitHub Actions configuration
+│   ├── jenkins-guide.md             # Jenkins pipeline configuration
+│   └── troubleshooting-guide.md     # Diagnostics and resolutions
 ├── api/contracts/
 │   └── xc-iam.yaml                  # OpenAPI 3.0 API Contracts
 └── README.md                        # This file
 ```
 
-### Future Modularization (Phase 2+)
+### Modularization History
 
-Additional focused documents planned:
-
-- `implementation/` - Roadmaps, workflows, deployment patterns, testing strategies
-- `guides/` - Operational procedures (GitHub Actions, Jenkins, credential setup)
-- `examples/` - Reference samples (CSV formats, API payloads, workflow files)
-
-**See**: [Issue #121](https://github.com/robinmordasiewicz/f5-xc-user-group-sync/issues/121) for Phase 1 completion and future phases
+- **Phase 1 (Issue #121)**: Extracted development standards to `development/quality-standards.md` (reduced SRS by 267 lines)
+- **Phase 2 (Issue #123)**: Extracted implementation guidance to `implementation/` and `guides/` directories (reduced SRS by 1,240 lines)
+- **Total Reduction**: SRS reduced from 4,026 → 2,786 lines (31% reduction)
 
 ## Version History
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 1.2.0 | 2025-11-13 | Phase 2 modularization: Extracted implementation guidance to `implementation/` and `guides/` directories, reduced SRS by 1,240 lines (31% total reduction) |
 | 1.1.0 | 2025-11-13 | Phase 1 modularization: Extracted development standards to `development/quality-standards.md`, reduced SRS by 267 lines |
 | 1.0.1 | 2025-11-13 | Added Development Requirements (Section 7), consolidated all specs/ content, removed redundant development artifacts |
 | 1.0.0 | 2025-11-13 | Initial production release with complete system and feature specifications |
