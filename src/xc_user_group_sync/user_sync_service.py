@@ -352,12 +352,33 @@ class UserSyncService:
             if dry_run:
                 logger.info(f"[DRY-RUN] Would create user: {user.email}")
             else:
-                user_data = user.model_dump()
+                # Only send fields that the F5 XC API expects for user creation
+                # Specify VOLTERRA_MANAGED to create local users (not SSO)
+                user_data = {
+                    "email": user.email,
+                    "name": user.username or user.email,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                    "type": "USER",
+                    "idm_type": "VOLTERRA_MANAGED",
+                }
                 self.repository.create_user(user_data)
                 logger.info(f"Created user: {user.email}")
             stats.created += 1
         except Exception as e:
-            logger.error(f"Failed to create user {user.email}: {e}")
+            # Log detailed error information for debugging
+            error_msg = str(e)
+            if hasattr(e, "response") and e.response is not None:
+                try:
+                    error_detail = e.response.text
+                    logger.error(
+                        f"Failed to create user {user.email}: "
+                        f"{error_msg}, Response: {error_detail}"
+                    )
+                except Exception:
+                    logger.error(f"Failed to create user {user.email}: {error_msg}")
+            else:
+                logger.error(f"Failed to create user {user.email}: {error_msg}")
             stats.errors += 1
             stats.error_details.append(
                 {"email": user.email, "operation": "create", "error": str(e)}
