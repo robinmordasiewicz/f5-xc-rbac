@@ -222,13 +222,13 @@ def cli(
 
     Examples:
         # Reconcile users and groups (create/update only)
-        xc_user_group_sync --csv users.csv
+        xc_user_group_sync --csv User-Database.csv
 
         # Dry run to preview changes
-        xc_user_group_sync --csv users.csv --dry-run
+        xc_user_group_sync --csv User-Database.csv --dry-run
 
         # Full reconciliation including deletions
-        xc_user_group_sync --csv users.csv --prune
+        xc_user_group_sync --csv User-Database.csv --prune
 
     Args:
         csv_path: Path to CSV file with user and group data
