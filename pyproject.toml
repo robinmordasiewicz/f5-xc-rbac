@@ -7,28 +7,28 @@ name = "f5-xc-user-group-sync"
 version = "0.1.0"
 description = "F5 Distributed Cloud User and Group Synchronization Tool"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [{ name = "Robin Mordasiewicz" }]
 license = { text = "MIT" }
 dependencies = [
-  "click>=8.1.7",
+  "click>=8.3.0",
   "ldap3>=2.9.1",
-  "pydantic>=2.9.2",
-  "python-dotenv>=1.0.1",
-  "requests>=2.32.3",
-  "tenacity>=9.0.0",
+  "pydantic>=2.12.4",
+  "python-dotenv>=1.2.1",
+  "requests>=2.32.5",
+  "tenacity>=9.1.2",
   "urllib3>=2.5.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-  "pytest>=8.3.0",
-  "pytest-cov>=6.0.0",
-  "ruff>=0.6.0",
-  "black>=24.10.0",
-  "mypy>=1.0.0",
-  "types-requests>=2.31.0",
-  "types-ldap3>=2.9.0",
+  "pytest>=9.0.0",
+  "pytest-cov>=7.0.0",
+  "ruff>=0.14.4",
+  "black>=25.11.0",
+  "mypy>=1.18.2",
+  "types-requests>=2.32.4.20250913",
+  "types-ldap3>=2.9.13.20250622",
 ]
 
 [project.scripts]
