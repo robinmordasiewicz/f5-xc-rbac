@@ -193,7 +193,7 @@ The following capabilities are explicitly excluded from this specification:
    - IAM and User Management: https://docs.cloud.f5.com/docs-v2/ves-io/iam
 
 3. **Project Documentation**
-   - API Contract:`specs/001-xc-group-sync/contracts/xc-iam.yaml`
+   - API Contract: `api/contracts/xc-iam.yaml`
    - Repository: https://github.com/robinmordasiewicz/f5-xc-user-group-sync
 
 4. **Technology Documentation**
@@ -3782,7 +3782,7 @@ grep -i "failed" sync-debug.log
 
 The F5 Distributed Cloud IAM API contract is defined in OpenAPI 3.0 format. The complete contract is maintained in a separate file for version control and reusability.
 
-**Contract Location**:`specs/001-xc-group-sync/contracts/xc-iam.yaml`
+**Contract Location**: `api/contracts/xc-iam.yaml`
 
 **Key Endpoints Summary**:
 
