@@ -393,7 +393,21 @@ class GroupSyncService:
                 logging.info("Created group %s", group.name)
             except Exception as e:
                 stats.errors += 1
-                logging.error("Failed to create %s: %s", group.name, e)
+                # Log detailed error information for debugging
+                error_msg = str(e)
+                if hasattr(e, "response") and e.response is not None:
+                    try:
+                        error_detail = e.response.text
+                        logging.error(
+                            "Failed to create %s: %s, Response: %s",
+                            group.name,
+                            error_msg,
+                            error_detail,
+                        )
+                    except Exception:
+                        logging.error("Failed to create %s: %s", group.name, error_msg)
+                else:
+                    logging.error("Failed to create %s: %s", group.name, error_msg)
 
         return stats
 

@@ -271,67 +271,8 @@ def cli(
     # Track overall execution time
     start_time = time.time()
 
-    # ===== GROUP SYNCHRONIZATION =====
-    if sync_groups:
-        click.echo("\n" + "=" * 60)
-        click.echo("📦 GROUP SYNCHRONIZATION")
-        click.echo("=" * 60)
-
-        # Parse CSV for groups
-        try:
-            planned_groups = group_service.parse_csv_to_groups(csv_path)
-        except CSVParseError as e:
-            raise click.UsageError(str(e))
-        except Exception as e:
-            raise click.ClickException(f"Failed to parse CSV for groups: {e}")
-
-        # Display planned groups
-        click.echo(f"Groups planned from CSV: {len(planned_groups)}")
-        for grp in planned_groups:
-            click.echo(f" - {grp.name}: {len(grp.users)} users")
-
-        # Fetch existing groups
-        try:
-            existing_groups = group_service.fetch_existing_groups()
-        except requests.RequestException as e:
-            raise click.ClickException(f"API error listing groups: {e}")
-        except Exception as e:
-            raise click.ClickException(f"Unexpected error listing groups: {e}")
-
-        # Pre-validate user existence
-        try:
-            existing_users_for_groups = group_service.fetch_existing_users()
-        except Exception as e:
-            logging.warning("User pre-validation failed: %s", e)
-            existing_users_for_groups = None
-
-        # Synchronize groups
-        try:
-            group_stats = group_service.sync_groups(
-                planned_groups, existing_groups, existing_users_for_groups, dry_run
-            )
-        except Exception as e:
-            raise click.ClickException(f"Group sync failed: {e}")
-
-        # Prune orphaned groups if requested
-        if prune_groups:
-            try:
-                deleted = group_service.cleanup_orphaned_groups(
-                    planned_groups, existing_groups, dry_run
-                )
-                group_stats.deleted = deleted
-            except Exception as e:
-                raise click.ClickException(f"Group prune failed: {e}")
-
-        # Display group summary
-        click.echo("\n" + group_stats.summary())
-
-        if group_stats.has_errors():
-            raise click.ClickException(
-                "One or more group operations failed; see logs for details"
-            )
-
     # ===== USER SYNCHRONIZATION =====
+    # Sync users FIRST to ensure they exist before creating groups that reference them
     if sync_users:
         click.echo("\n" + "=" * 60)
         click.echo("👤 USER SYNCHRONIZATION")
@@ -380,6 +321,81 @@ def cli(
                 )
             raise click.ClickException(
                 "One or more user operations failed; see details above"
+            )
+
+    # ===== GROUP SYNCHRONIZATION =====
+    # Sync groups AFTER users to ensure all referenced users exist
+    if sync_groups:
+        click.echo("\n" + "=" * 60)
+        click.echo("📦 GROUP SYNCHRONIZATION")
+        click.echo("=" * 60)
+
+        # Parse CSV for groups
+        try:
+            planned_groups = group_service.parse_csv_to_groups(csv_path)
+        except CSVParseError as e:
+            raise click.UsageError(str(e))
+        except Exception as e:
+            raise click.ClickException(f"Failed to parse CSV for groups: {e}")
+
+        # Display planned groups
+        click.echo(f"Groups planned from CSV: {len(planned_groups)}")
+        for grp in planned_groups:
+            click.echo(f" - {grp.name}: {len(grp.users)} users")
+
+        # Fetch existing groups
+        try:
+            existing_groups = group_service.fetch_existing_groups()
+        except requests.RequestException as e:
+            raise click.ClickException(f"API error listing groups: {e}")
+        except Exception as e:
+            raise click.ClickException(f"Unexpected error lists groups: {e}")
+
+        # Build user validation set including planned users from user sync
+        # This ensures group validation knows about users that will be/were created
+        try:
+            existing_users_for_groups = group_service.fetch_existing_users()
+
+            # If user sync happened, include planned users in validation set
+            # This handles dry-run mode where users aren't actually created yet
+            if sync_users and "validation_result" in locals():
+                planned_user_emails = {user.email for user in validation_result.users}
+                existing_users_for_groups = (
+                    existing_users_for_groups | planned_user_emails
+                )
+                click.echo(
+                    f"Validating groups against "
+                    f"{len(existing_users_for_groups)} users "
+                    f"(existing + planned)"
+                )
+        except Exception as e:
+            logging.warning("User pre-validation failed: %s", e)
+            existing_users_for_groups = None
+
+        # Synchronize groups
+        try:
+            group_stats = group_service.sync_groups(
+                planned_groups, existing_groups, existing_users_for_groups, dry_run
+            )
+        except Exception as e:
+            raise click.ClickException(f"Group sync failed: {e}")
+
+        # Prune orphaned groups if requested
+        if prune_groups:
+            try:
+                deleted = group_service.cleanup_orphaned_groups(
+                    planned_groups, existing_groups, dry_run
+                )
+                group_stats.deleted = deleted
+            except Exception as e:
+                raise click.ClickException(f"Group prune failed: {e}")
+
+        # Display group summary
+        click.echo("\n" + group_stats.summary())
+
+        if group_stats.has_errors():
+            raise click.ClickException(
+                "One or more group operations failed; see logs for details"
             )
 
     # ===== FINAL SUMMARY =====
