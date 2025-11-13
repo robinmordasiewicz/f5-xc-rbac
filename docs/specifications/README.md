@@ -27,13 +27,16 @@ All specifications in this directory conform to:
 
 **Contents**:
 
-- System overview and context
-- 6 major features with 42 functional requirements
-- 22 non-functional requirements (performance, security, quality)
-- Data requirements and transformations
-- External interface specifications (CLI, API, CSV)
-- Implementation guidance with phased roadmap
-- Testing strategy and troubleshooting guide
+- System overview and context (Sections 1-2)
+- 6 major features with 64 functional requirements (Section 3)
+- External interface specifications - CLI, API, CSV (Section 4)
+- 22 non-functional requirements - performance, security, quality (Section 5)
+- Data requirements and transformations (Section 6)
+- **Development requirements** - pre-commit hooks, CI/CD, quality gates (Section 7)
+- Quality attributes - testability, traceability, maintainability (Section 8)
+- Implementation guidance with phased roadmap (Section 9)
+- Testing strategy and troubleshooting guide (Section 9)
+- API contracts and examples (Section 10)
 
 ### User Lifecycle Management Specification
 
@@ -127,6 +130,18 @@ All requirements are uniquely identified:
 
 Complete traceability matrices are provided in each specification linking requirements to test cases and implementation.
 
+## Development Standards
+
+All development work MUST adhere to mandatory requirements defined in Section 7 of the System Requirements Specification:
+
+- **Pre-commit Hooks**: Black, Ruff, MyPy, ShellCheck, PyMarkdown, detect-secrets, Bandit, pip-audit, actionlint, jscpd
+- **Code Quality**: 95%+ test coverage, zero linting errors, zero duplication violations (≥15 lines)
+- **CI/CD Integration**: 100% parity between local pre-commit and CI checks, all checks block PR merge
+- **Security**: Zero tolerance for secrets, MEDIUM+ Bandit issues, HIGH/CRITICAL pip-audit vulnerabilities
+- **Workflow**: Feature branches only (`###-feature-name`), no direct commits to main, all work tracked via GitHub issues
+
+**See**: [Section 7: Development Requirements](user-group-sync-srs.md#7-development-requirements) for complete details
+
 ## Quality Standards
 
 All specifications in this directory meet:
@@ -136,11 +151,27 @@ All specifications in this directory meet:
 - ✅ Full traceability (requirements → tests → implementation)
 - ✅ Verifiable acceptance criteria
 - ✅ Professional documentation standards
+- ✅ Mandatory development quality gates
+
+## Future Modularization
+
+To improve document organization and maintainability, future updates will modularize the specifications into focused documents:
+
+- `requirements/` - Core IEEE 29148 SRS documents
+- `development/` - Quality standards, CI/CD requirements, tool configurations
+- `implementation/` - Roadmaps, workflows, deployment patterns, testing strategies
+- `guides/` - Operational procedures (GitHub Actions, Jenkins, credential setup)
+- `examples/` - Reference samples (CSV formats, API payloads, workflow files)
+
+This modularization will maintain IEEE 29148 compliance while improving usability for different audiences (developers, DevOps, QA, operations).
+
+**See**: GitHub issue for Phase 1 modularization plan (to be created)
 
 ## Version History
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 1.0.1 | 2025-11-13 | Added Development Requirements (Section 7), consolidated all specs/ content, removed redundant development artifacts |
 | 1.0.0 | 2025-11-13 | Initial production release with complete system and feature specifications |
 
 ## Contact
