@@ -99,7 +99,7 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -e .
 
 # Verify installation
-xc-group-sync --help
+xc_user_group_sync --help
 ```
 
 ### Option 2: Direct Installation from Git
@@ -109,7 +109,7 @@ xc-group-sync --help
 pip install git+https://github.com/robinmordasiewicz/f5-xc-user-group-sync.git
 
 # Verify installation
-xc-group-sync --help
+xc_user_group_sync --help
 ```
 
 ## Quick Start
@@ -216,10 +216,10 @@ See the [CSV Format](#csv-format) section for complete specifications.
 source secrets/.env
 
 # Preview reconciliation (no actual changes)
-xc-group-sync --csv ./User-Database.csv --dry-run
+xc_user_group_sync --csv ./User-Database.csv --dry-run
 
 # Preview with pruning enabled
-xc-group-sync --csv ./User-Database.csv --prune --dry-run
+xc_user_group_sync --csv ./User-Database.csv --prune --dry-run
 ```
 
 The dry-run output shows:
@@ -236,10 +236,10 @@ Once satisfied with dry-run results:
 
 ```bash
 # Reconcile users and groups (create/update only)
-xc-group-sync --csv ./User-Database.csv
+xc_user_group_sync --csv ./User-Database.csv
 
 # Full reconciliation including pruning
-xc-group-sync --csv ./User-Database.csv --prune
+xc_user_group_sync --csv ./User-Database.csv --prune
 ```
 
 > **⚠️ Important**: The `--prune` flag will **permanently delete** F5 XC users and groups that don't exist in your CSV. Always test with `--dry-run` first.
@@ -281,7 +281,7 @@ Load the configuration:
 
 ```bash
 source secrets/.env
-xc-group-sync --csv ./User-Database.csv --dry-run
+xc_user_group_sync --csv ./User-Database.csv --dry-run
 ```
 
 ### API URL Auto-Detection
@@ -344,7 +344,7 @@ F5 XC group names are automatically sanitized:
 ### Command-Line Interface
 
 ```bash
-xc-group-sync [OPTIONS]
+xc_user_group_sync [OPTIONS]
 ```
 
 ### Options
@@ -364,32 +364,32 @@ xc-group-sync [OPTIONS]
 
 ```bash
 # Preview reconciliation (recommended first step)
-xc-group-sync --csv users.csv --dry-run
+xc_user_group_sync --csv users.csv --dry-run
 
 # Apply reconciliation (create/update only)
-xc-group-sync --csv users.csv
+xc_user_group_sync --csv users.csv
 
 # Full reconciliation including pruning
-xc-group-sync --csv users.csv --prune
+xc_user_group_sync --csv users.csv --prune
 
 # Dry-run with pruning preview
-xc-group-sync --csv users.csv --prune --dry-run
+xc_user_group_sync --csv users.csv --prune --dry-run
 ```
 
 #### Advanced Configuration
 
 ```bash
 # Debug logging for troubleshooting
-xc-group-sync --csv users.csv --dry-run --log-level debug
+xc_user_group_sync --csv users.csv --dry-run --log-level debug
 
 # Increased timeout for large datasets
-xc-group-sync --csv users.csv --timeout 60
+xc_user_group_sync --csv users.csv --timeout 60
 
 # More retries for unstable networks
-xc-group-sync --csv users.csv --max-retries 5
+xc_user_group_sync --csv users.csv --max-retries 5
 
 # Combined: debug with increased retry
-xc-group-sync --csv users.csv --log-level debug --max-retries 5 --timeout 60
+xc_user_group_sync --csv users.csv --log-level debug --max-retries 5 --timeout 60
 ```
 
 ### Output Example
@@ -707,7 +707,7 @@ source secrets/.env
 
 ```bash
 # Enable debug logging to see all XC emails
-xc-group-sync --csv file.csv --log-level debug --dry-run
+xc_user_group_sync --csv file.csv --log-level debug --dry-run
 
 # Verify email matches exactly (case-sensitive)
 # User must exist in F5 XC before group assignment
@@ -732,7 +732,7 @@ xc-group-sync --csv file.csv --log-level debug --dry-run
 
 ```bash
 # Tool auto-retries with backoff. If persists, increase retries:
-xc-group-sync --csv file.csv --max-retries 5 --timeout 60
+xc_user_group_sync --csv file.csv --max-retries 5 --timeout 60
 ```
 
 #### Certificate/Authentication Errors
@@ -766,7 +766,7 @@ ls -la secrets/
 ```bash
 # ⚠️ DANGER: Only for non-production testing
 export REQUESTS_CA_BUNDLE=""
-xc-group-sync --csv file.csv
+xc_user_group_sync --csv file.csv
 ```
 
 **Option 2 (Recommended)** - Add staging CA to Python trust store:
@@ -787,7 +787,7 @@ cat staging-ca.pem >> $(python3 -c "import certifi; print(certifi.where())")
 
 ```bash
 # Production environments use standard certificates
-TENANT_ID=your-prod-tenant xc-group-sync --csv file.csv
+TENANT_ID=your-prod-tenant xc_user_group_sync --csv file.csv
 ```
 
 ### Debug Mode
@@ -795,7 +795,7 @@ TENANT_ID=your-prod-tenant xc-group-sync --csv file.csv
 For maximum visibility:
 
 ```bash
-xc-group-sync --csv file.csv --dry-run --log-level debug
+xc_user_group_sync --csv file.csv --dry-run --log-level debug
 ```
 
 Debug mode shows:

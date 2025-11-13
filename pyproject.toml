@@ -32,7 +32,7 @@ dev = [
 ]
 
 [project.scripts]
-xc-group-sync = "xc_user_group_sync.cli:cli"
+xc_user_group_sync = "xc_user_group_sync.cli:cli"
 
 [tool.setuptools]
 include-package-data = false

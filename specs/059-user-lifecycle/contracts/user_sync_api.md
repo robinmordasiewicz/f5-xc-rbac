@@ -654,15 +654,15 @@ def sync(csv: str, dry_run: bool, delete_users: bool, ...):
 
         # Preview user sync with deletions
 
-        xc-group-sync sync --csv users.csv --delete-users --dry-run
+        xc_user_group_sync sync --csv users.csv --delete-users --dry-run
 
         # Execute user sync with deletions
 
-        xc-group-sync sync --csv users.csv --delete-users
+        xc_user_group_sync sync --csv users.csv --delete-users
 
         # Sync users without deletions (safe default)
 
-        xc-group-sync sync --csv users.csv
+        xc_user_group_sync sync --csv users.csv
     """
     ...
 ```text

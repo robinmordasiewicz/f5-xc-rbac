@@ -1,7 +1,7 @@
 # Implementation Plan: XC Group Sync (Spec 001)
 
-**Branch**: `001-xc-group-sync-plan` | **Date**: 2025-11-04 | **Spec**: `specs/001-xc-group-sync/spec.md`
-**Input**: Feature specification from `specs/001-xc-group-sync/spec.md`
+**Branch**: `001-xc_user_group_sync-plan` | **Date**: 2025-11-04 | **Spec**: `specs/001-xc_user_group_sync/spec.md`
+**Input**: Feature specification from `specs/001-xc_user_group_sync/spec.md`
 
 **Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
 

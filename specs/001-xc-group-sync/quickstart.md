@@ -37,7 +37,7 @@ Add `--set-secrets` to push GitHub repo secrets via gh CLI (TENANT_ID, XC_CERT, 
 
 ## GitHub Actions (CI)
 
-This repo includes a workflow at `.github/workflows/xc-group-sync.yml` that:
+This repo includes a workflow at `.github/workflows/xc_user_group_sync.yml` that:
 
 - Installs Python 3.12 and the project
 - Decodes secrets to files (`XC_CERT`/`XC_CERT_KEY` or `XC_P12`/`XC_P12_PASSWORD`)

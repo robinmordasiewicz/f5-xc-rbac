@@ -1,6 +1,6 @@
 # Enhancement Specification: Setup Script Advanced Features
 
-**Parent Spec**: `001-xc-group-sync`
+**Parent Spec**: `001-xc_user_group_sync`
 **Enhancement ID**: `001-ENH-004`
 **Created**: 2025-11-11
 **Status**: Reverse-Engineered from Implementation

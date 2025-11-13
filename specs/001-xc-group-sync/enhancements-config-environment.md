@@ -1,6 +1,6 @@
 # Enhancement Specification: Configuration & Environment Management
 
-**Parent Spec**: `001-xc-group-sync`
+**Parent Spec**: `001-xc_user_group_sync`
 **Enhancement ID**: `001-ENH-001`
 **Created**: 2025-11-11
 **Status**: Reverse-Engineered from Implementation
@@ -66,7 +66,7 @@ export DOTENV_PATH="secrets/.env"
 ```bash
 # Test custom API URL
 export XC_API_URL="https://tenant.staging.volterra.us"
-./xc-group-sync sync --csv test.csv --dry-run
+./xc_user_group_sync sync --csv test.csv --dry-run
 # Verify requests go to staging endpoint
 ```text
 ---

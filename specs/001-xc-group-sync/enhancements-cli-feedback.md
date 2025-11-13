@@ -1,6 +1,6 @@
 # Enhancement Specification: CLI User Experience & Feedback
 
-**Parent Spec**: `001-xc-group-sync`
+**Parent Spec**: `001-xc_user_group_sync`
 **Enhancement ID**: `001-ENH-002`
 **Created**: 2025-11-11
 **Status**: Reverse-Engineered from Implementation
@@ -40,7 +40,7 @@ click.echo(f"Execution time: {execution_time:.2f} seconds")
 **Testing**:
 
 ```bash
-xc-group-sync sync --csv test.csv --dry-run
+xc_user_group_sync sync --csv test.csv --dry-run
 # Expected output includes: "Execution time: 0.15 seconds"
 ```text
 ---
@@ -315,23 +315,23 @@ if p12_file and not (cert_file and key_file):
 
 ```bash
 # Test execution time display
-xc-group-sync sync --csv test.csv --dry-run
+xc_user_group_sync sync --csv test.csv --dry-run
 # Verify: "Execution time: X.XX seconds" appears
 
 # Test pre-operation summary
-xc-group-sync sync --csv test.csv --dry-run
+xc_user_group_sync sync --csv test.csv --dry-run
 # Verify: "Groups planned from CSV: N" with group list
 
 # Test dry-run banner
-xc-group-sync sync_users --csv test.csv --dry-run
+xc_user_group_sync sync_users --csv test.csv --dry-run
 # Verify: Prominent banner with "🔍 DRY RUN MODE"
 
 # Test error reporting
-xc-group-sync --csv invalid.csv
+xc_user_group_sync --csv invalid.csv
 # Verify: Structured error list with operation details
 
 # Test prune feedback
-xc-group-sync --csv test.csv --prune --dry-run
+xc_user_group_sync --csv test.csv --prune --dry-run
 # Verify: Separate prune summary displayed
 ```text
 ### Integration Tests

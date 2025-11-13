@@ -73,7 +73,7 @@ pipeline {
                     pip install -e .
 
                     # Verify installation
-                    xc-group-sync --version || echo "Tool installed successfully"
+                    xc_user_group_sync --version || echo "Tool installed successfully"
                 '''
             }
         }
@@ -130,7 +130,7 @@ EOF
             steps {
                 script {
                     // Build command based on parameters (new simplified syntax)
-                    def syncCmd = ". ${VENV_DIR}/bin/activate && xc-group-sync --csv ${params.CSV_FILE}"
+                    def syncCmd = ". ${VENV_DIR}/bin/activate && xc_user_group_sync --csv ${params.CSV_FILE}"
 
                     // Add dry-run flag if selected
                     if (params.SYNC_MODE == 'dry-run') {

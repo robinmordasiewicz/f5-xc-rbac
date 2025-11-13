@@ -1,7 +1,7 @@
 # Research: XC Group Sync (Spec 001)
 
 Date: 2025-11-04
-Branch: 001-xc-group-sync-plan
+Branch: 001-xc_user_group_sync-plan
 
 ## Decisions
 
