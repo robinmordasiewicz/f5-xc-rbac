@@ -1,0 +1,82 @@
+openapi: 3.0.3
+info:
+  title: F5 XC IAM (subset used by XC Group Sync)
+  version: 0.1.0
+servers:
+  - url: https://{tenant}.console.ves.volterra.io
+    variables:
+      tenant:
+        default: example
+paths:
+  /api/web/namespaces/{namespace}/usergroups:
+    get:
+      summary: List user groups
+      parameters:
+        - in: path
+          name: namespace
+          required: true
+          schema: { type: string, example: system }
+      responses:
+        "200": { description: OK }
+    post:
+      summary: Create user group
+      parameters:
+        - in: path
+          name: namespace
+          required: true
+          schema: { type: string, example: system }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserGroup'
+      responses:
+        "201": { description: Created }
+  /api/web/namespaces/{namespace}/usergroups/{name}:
+    put:
+      summary: Update user group
+      parameters:
+        - in: path
+          name: namespace
+          required: true
+          schema: { type: string, example: system }
+        - in: path
+          name: name
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserGroup'
+      responses:
+        "200": { description: OK }
+    delete:
+      summary: Delete user group
+      parameters:
+        - in: path
+          name: namespace
+          required: true
+          schema: { type: string, example: system }
+        - in: path
+          name: name
+          required: true
+          schema: { type: string }
+      responses:
+        "204": { description: No Content }
+components:
+  schemas:
+    UserGroup:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        users:
+          type: array
+          items: { type: string }
+        roles:
+          type: array
+          items: { type: string }
+      required: [ name ]
