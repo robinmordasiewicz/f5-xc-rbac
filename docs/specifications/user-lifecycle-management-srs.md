@@ -305,13 +305,10 @@ This document is intended for the following stakeholders:
 
 | Document | Location | Description |
 |----------|----------|-------------|
-| Original Specification | `specs/059-user-lifecycle/spec.md` | Initial agile-format feature specification |
-| Implementation Plan | `specs/059-user-lifecycle/plan.md` | Technical architecture and implementation approach |
-| Data Model | `specs/059-user-lifecycle/data-model.md` | Detailed entity and relationship definitions |
-| Research Findings | `specs/059-user-lifecycle/research.md` | Technical decisions and alternatives analysis |
-| Quickstart Guide | `specs/059-user-lifecycle/quickstart.md` | Developer implementation and user adoption guide |
+| System Requirements Specification | `user-group-sync-srs.md` | Complete system specification for F5 XC synchronization tool |
+| API Contract | `api/contracts/xc-iam.yaml` | F5 Distributed Cloud IAM API OpenAPI specification |
 | Project README | `README.md` | Project overview and setup instructions |
-| Existing Group Sync | `src/xc_user_group_sync/sync_service.py` | Current implementation patterns to follow |
+| Implementation Reference | `src/xc_user_group_sync/sync_service.py` | Current implementation patterns to follow |
 
 ### 1.5.3 External Resources
 
