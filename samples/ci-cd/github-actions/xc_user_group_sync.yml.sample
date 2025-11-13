@@ -32,6 +32,7 @@ jobs:
           XC_CERT: ${{ secrets.XC_CERT }}
           XC_CERT_KEY: ${{ secrets.XC_CERT_KEY }}
           XC_TENANT_ID: ${{ secrets.TENANT_ID }}
+          XC_API_URL: ${{ secrets.XC_API_URL }}
         run: |
           set -euo pipefail
           mkdir -p secrets
@@ -66,6 +67,8 @@ jobs:
           fi
           # Write TENANT_ID to .env (will be masked in logs for customer privacy)
           printf "TENANT_ID=%s\n" "$XC_TENANT_ID" > secrets/.env
+          # Write XC_API_URL to .env (defaults to production if not provided)
+          printf "XC_API_URL=%s\n" "${XC_API_URL:-https://${XC_TENANT_ID}.console.ves.volterra.io}" >> secrets/.env
           echo "DOTENV_PATH=${GITHUB_WORKSPACE}/secrets/.env" >> "$GITHUB_ENV"
 
       - name: Dry-run sync
