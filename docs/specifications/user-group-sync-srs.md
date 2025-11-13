@@ -69,16 +69,32 @@
    6.3 [Data Transformations](#63-data-transformations)
    6.4 [Data Validation Rules](#64-data-validation-rules)
 
-7. [Quality Attributes](#7-quality-attributes)
-   7.1 [Testability](#71-testability)
-   7.2 [Traceability](#72-traceability)
-   7.3 [Maintainability](#73-maintainability)
+7. [Development Requirements](#7-development-requirements)
+   7.1 [Overview](#71-overview)
+   7.2 [Pre-commit Hook Requirements](#72-pre-commit-hook-requirements)
+   7.3 [CI/CD Integration Requirements](#73-cicd-integration-requirements)
+   7.4 [Development Workflow Standards](#74-development-workflow-standards)
+   7.5 [Success Criteria for Development Requirements](#75-success-criteria-for-development-requirements)
+   7.6 [Tool Configuration Reference](#76-tool-configuration-reference)
 
-8. [Appendices](#8-appendices)
-   8.1 [Appendix A: API Contract Specification](#81-appendix-a-api-contract-specification)
-   8.2 [Appendix B: CSV Format Examples](#82-appendix-b-csv-format-examples)
-   8.3 [Appendix C: Glossary](#83-appendix-c-glossary)
-   8.4 [Appendix D: Change History](#84-appendix-d-change-history)
+8. [Quality Attributes](#8-quality-attributes)
+   8.1 [Testability](#81-testability)
+   8.2 [Traceability](#82-traceability)
+   8.3 [Maintainability](#83-maintainability)
+
+9. [Implementation Guidance for Production Teams](#9-implementation-guidance-for-production-teams)
+   9.1 [Phased Implementation Roadmap](#91-phased-implementation-roadmap)
+   9.2 [Feature Dependency Matrix](#92-feature-dependency-matrix)
+   9.3 [Operational Workflows](#93-operational-workflows)
+   9.4 [Deployment Scenarios](#94-deployment-scenarios)
+   9.5 [Testing Strategy](#95-testing-strategy)
+   9.6 [Troubleshooting Guide](#96-troubleshooting-guide)
+
+10. [Appendices](#10-appendices)
+    10.1 [Appendix A: API Contract Specification](#101-appendix-a-api-contract-specification)
+    10.2 [Appendix B: CSV Format Examples](#102-appendix-b-csv-format-examples)
+    10.3 [Appendix C: Glossary](#103-appendix-c-glossary)
+    10.4 [Appendix D: Change History](#104-appendix-d-change-history)
 
 ---
 
@@ -2356,11 +2372,287 @@ carol@example.com,"CN=Developers,OU=Groups,DC=example,DC=com"
 
 ---
 
-## 7. Quality Attributes
+## 7. Development Requirements
 
-### 7.1 Testability
+> **Note on Future Modularization**: This section will be extracted to a separate `development/quality-standards.md` document in a future update to improve document organization and maintainability. The requirements defined here remain mandatory for all development work.
 
-#### 7.1.1 Unit Test Requirements
+### 7.1 Overview
+
+This section defines **MANDATORY** development standards that ALL contributors MUST follow. No development work shall proceed without strict adherence to these requirements. These standards ensure code quality, security, and maintainability through automated enforcement.
+
+**Key Principle**: All pre-commit checks MUST be enforced locally AND in CI/CD pipelines with zero tolerance for violations.
+
+### 7.2 Pre-commit Hook Requirements
+
+#### 7.2.1 Code Formatting Standards
+
+**FR-DEV-001**: Pre-commit hooks MUST enforce consistent code formatting across all file types:
+
+- **Python**: Black formatter (`black --check`, line length 88)
+- **Shell Scripts**: shfmt formatter (`shfmt -i 2 -ci`)
+- **Line Endings**: LF (Unix) line endings enforced across all text files
+- **End-of-File**: All files MUST end with single newline character
+- **Trailing Whitespace**: Automatically removed from all lines
+- **EditorConfig**: All files MUST comply with `.editorconfig` rules
+
+**Rationale**: Consistent formatting eliminates style debates, reduces merge conflicts, and ensures professional code quality.
+
+**Enforcement**: Pre-commit hook runs before every commit; CI blocks PRs on formatting violations.
+
+#### 7.2.2 Linting Requirements
+
+**FR-DEV-002**: Pre-commit hooks MUST enforce comprehensive linting standards:
+
+- **Python**: Ruff linter (no autofix in CI, strict mode)
+- **Shell Scripts**: ShellCheck (`-S error`, severity threshold: error only)
+- **Markdown**: PyMarkdown with repository configuration (`.pymarkdown.json`)
+- **YAML**: `check-yaml` + `sort-simple-yaml` for validation and consistency
+- **JSON**: Validation + pretty-format (no key sorting to preserve intent)
+- **VCS Hygiene**: Check for merge conflicts, case conflicts, large files, VCS permalinks
+
+**Rationale**: Early detection of code issues prevents bugs, improves maintainability, and enforces best practices.
+
+**Enforcement**: Zero linting errors tolerated; CI blocks PRs on any violation.
+
+#### 7.2.3 Security Scanning Requirements
+
+**FR-DEV-003**: Pre-commit hooks MUST perform comprehensive security scanning:
+
+- **Secret Detection**: `detect-secrets` with maintained baseline (`.secrets.baseline`)
+  - Excludes: `secrets/` directory (documented safe paths)
+  - Baseline updated only for intentional test fixtures
+  - New secrets detected: **PR blocked immediately**
+
+- **Python Security SAST**: Bandit static analysis
+  - Severity threshold: MEDIUM or higher blocks PR
+  - Configuration: `.bandit` with security-focused rules
+  - Target: All Python code in `src/` and `tests/`
+
+- **Dependency Vulnerabilities**: pip-audit scans Python dependencies
+  - Severity threshold: HIGH or CRITICAL blocks PR
+  - Runs on: `requirements.txt`, `pyproject.toml`
+  - Private package handling: Configured exclusions for internal dependencies
+
+**Rationale**: Prevent security vulnerabilities from entering codebase; shift-left security to development phase.
+
+**Enforcement**: Any security violation **immediately blocks** PR merge; no exceptions.
+
+#### 7.2.4 Repository Policy Gates
+
+**FR-DEV-004**: Pre-commit hooks MUST enforce repository workflow policies:
+
+- **Branch Protection**: Direct commits to `main` branch are **FORBIDDEN**
+- **Branch Naming**: All branches MUST match regex `^[0-9]+-[a-z0-9-]+$` (e.g., `123-fix-auth`)
+- **Commit Messages**: MUST reference GitHub issue (e.g., "Fixes #123" or "#123")
+- **Enforcement**: Pre-commit hook validates locally; CI double-checks compliance
+
+**Rationale**: Ensures all work is tracked via issues, prevents accidental main branch commits, maintains clean git history.
+
+**Enforcement**: Violations prevent commit locally; CI blocks untracked work.
+
+#### 7.2.5 Code Duplication (DRY) Requirements
+
+**FR-DEV-005**: Pre-commit hooks MUST enforce DRY (Don't Repeat Yourself) principle:
+
+- **Threshold**: Duplicate blocks ≥15 lines appearing in ≥2 locations are violations
+- **Scanner**: jscpd (Copy/Paste Detector) configured in `.jscpd.json`
+- **Scope**: Python, Shell, YAML, Markdown files
+- **Exclusions**: Generated code, vendored dependencies (documented in config)
+
+**Rationale**: Reduces maintenance burden, prevents bug duplication, encourages modular design.
+
+**Enforcement**: Any duplication violation **blocks PR merge**.
+
+#### 7.2.6 GitHub Actions Workflow Linting
+
+**FR-DEV-006**: Pre-commit hooks MUST lint all GitHub Actions workflows:
+
+- **Tool**: actionlint via pre-commit hook and CI
+- **Scope**: All `.github/workflows/*.yml` files
+- **Validation**: Syntax, action versions, job dependencies, shell correctness
+
+**Rationale**: Prevents CI/CD pipeline failures from invalid workflow syntax or deprecated actions.
+
+**Enforcement**: Any actionlint violation blocks PR merge.
+
+### 7.3 CI/CD Integration Requirements
+
+#### 7.3.1 Local-CI Parity
+
+**FR-DEV-007**: CI MUST mirror ALL pre-commit checks with identical versions and configurations:
+
+**Parity Matrix**:
+
+| Check | Local (pre-commit) | CI (GitHub Actions) | Status |
+|-------|-------------------|---------------------|---------|
+| Black | `.pre-commit-config.yaml` version | Same version in CI | ✅ Required |
+| Ruff | `.pre-commit-config.yaml` version | Same version in CI | ✅ Required |
+| ShellCheck | `.pre-commit-config.yaml` version | Same version in CI | ✅ Required |
+| PyMarkdown | `.pre-commit-config.yaml` version | Same version in CI | ✅ Required |
+| detect-secrets | `.pre-commit-config.yaml` version | Same version in CI | ✅ Required |
+| Bandit | `.pre-commit-config.yaml` version | Same version in CI | ✅ Required |
+| pip-audit | `.pre-commit-config.yaml` version | Same version in CI | ✅ Required |
+| actionlint | `.pre-commit-config.yaml` version | Same version in CI | ✅ Required |
+| jscpd | `.pre-commit-config.yaml` version | Same version in CI | ✅ Required |
+
+**Rationale**: Eliminates "works on my machine" issues; ensures consistent quality gates; prevents CI surprises.
+
+**Enforcement**: CI runs `pre-commit run --all-files` with identical configuration; any failure **blocks PR merge**.
+
+#### 7.3.2 PR Blocking Requirements
+
+**FR-DEV-008**: GitHub Actions workflow MUST block PR merges on ANY pre-commit check failure:
+
+- **Workflow**: `.github/workflows/pre-commit.yml` (required status check)
+- **Trigger**: Every PR commit
+- **Behavior**: Runs all pre-commit hooks; any failure = PR blocked
+- **Branch Protection**: `main` branch requires "pre-commit" status check to pass
+
+**Rationale**: Enforces quality gates at merge time; prevents substandard code from entering main branch.
+
+**Enforcement**: GitHub branch protection rules + required status checks.
+
+#### 7.3.3 Hook Version Management
+
+**FR-DEV-009**: Pre-commit hook versions MUST be managed with strict controls:
+
+- **Versioning**: All hooks pinned to immutable SHAs or semantic version tags
+- **Updates**: Reviewed quarterly minimum; captured in CHANGELOG
+- **Validation**: Version updates tested in CI before merging
+- **Rollback**: Previous working versions documented for emergency rollback
+
+**Rationale**: Prevents surprise breakage from upstream hook changes; maintains reproducible builds.
+
+**Enforcement**: `.pre-commit-config.yaml` uses only pinned versions; automated alerts for outdated hooks.
+
+### 7.4 Development Workflow Standards
+
+#### 7.4.1 Local Development Setup
+
+**FR-DEV-010**: All developers MUST install pre-commit hooks before first commit:
+
+```bash
+# Install pre-commit framework
+pip install pre-commit
+
+# Install project hooks
+pre-commit install
+
+# Verify installation
+pre-commit run --all-files
+```
+
+**Rationale**: Catches issues before commit; provides fast feedback loop.
+
+**Enforcement**: CI detects commits without pre-commit signatures; onboarding documentation mandates setup.
+
+#### 7.4.2 Commit Workflow
+
+**Required Workflow**:
+
+1. **Feature Branch**: Create branch following naming convention (`###-feature-name`)
+2. **Local Development**: Write code with real-time linting feedback
+3. **Pre-commit Check**: Hooks run automatically on `git commit`
+4. **Fix Issues**: Address all hook failures before commit completes
+5. **Push**: Only clean commits reach remote repository
+6. **CI Validation**: GitHub Actions re-validates all checks
+7. **PR Review**: Human review after automated checks pass
+8. **Merge**: Only after CI success + approvals
+
+**Forbidden Patterns**:
+- ❌ `git commit --no-verify` (bypassing hooks)
+- ❌ `SKIP=hook-name git commit` (selectively skipping hooks)
+- ❌ Committing directly to `main` branch
+- ❌ Force-pushing to shared branches
+
+#### 7.4.3 Continuous Integration Workflow
+
+**FR-DEV-011**: CI MUST run on every PR commit with the following stages:
+
+**Stage 1: Pre-commit Validation** (required, blocking)
+
+```yaml
+- Run: pre-commit run --all-files
+- Fail-Fast: true
+- Blocks: Merge
+```
+
+**Stage 2: Unit Tests** (required, blocking)
+
+```yaml
+- Run: pytest tests/unit/
+- Coverage: ≥90% required
+- Blocks: Merge
+```
+
+**Stage 3: Integration Tests** (required, blocking)
+
+```yaml
+- Run: pytest tests/integration/
+- Blocks: Merge
+```
+
+**Stage 4: Build Validation** (required, blocking)
+
+```yaml
+- Run: pip install -e .
+- Validate: Package installs successfully
+- Blocks: Merge
+```
+
+### 7.5 Success Criteria for Development Requirements
+
+**SC-DEV-001**: 100% of commits pass local pre-commit hooks before push
+
+**Measurement**: Pre-commit hook failure rate = 0% in CI (all failures caught locally)
+
+**SC-DEV-002**: 0 violations in quarterly security audits
+
+**Measurement**: Bandit, pip-audit, detect-secrets find zero issues in main branch
+
+**SC-DEV-003**: 100% CI/CD parity with local checks
+
+**Measurement**: Identical tool versions in `.pre-commit-config.yaml` and `.github/workflows/pre-commit.yml`
+
+**SC-DEV-004**: 0 formatting inconsistencies across codebase
+
+**Measurement**: `black --check` and `shfmt` report zero changes when run on entire repository
+
+**SC-DEV-005**: 0 code duplication violations above DRY threshold
+
+**Measurement**: jscpd reports zero violations of ≥15 lines in ≥2 locations
+
+**SC-DEV-006**: 100% branch naming compliance
+
+**Measurement**: All branches in repository match pattern `^[0-9]+-[a-z0-9-]+$`
+
+**SC-DEV-007**: 0 direct commits to main branch
+
+**Measurement**: Git history shows no commits directly to main (all via PR)
+
+**SC-DEV-008**: 100% of PRs blocked on quality failures
+
+**Measurement**: GitHub branch protection enforces all required status checks
+
+### 7.6 Tool Configuration Reference
+
+**Pre-commit Configuration**: `.pre-commit-config.yaml`
+**PyMarkdown Configuration**: `.pymarkdown.json`
+**Bandit Configuration**: `.bandit`
+**jscpd Configuration**: `.jscpd.json`
+**EditorConfig**: `.editorconfig`
+**Secrets Baseline**: `.secrets.baseline`
+**GitHub Actions Workflow**: `.github/workflows/pre-commit.yml`
+
+**Documentation**: See project README.md for detailed tool setup instructions.
+
+---
+
+## 8. Quality Attributes
+
+### 9.1 Testability
+
+#### 9.1.1 Unit Test Requirements
 
 **Requirement**: All core modules MUST have ≥90% code coverage with unit tests.
 
@@ -2382,7 +2674,7 @@ carol@example.com,"CN=Developers,OU=Groups,DC=example,DC=com"
 
 ---
 
-#### 7.1.2 Integration Test Requirements
+#### 9.1.2 Integration Test Requirements
 
 **Requirement**: All external interfaces MUST have integration tests with mocked external services.
 
@@ -2403,7 +2695,7 @@ carol@example.com,"CN=Developers,OU=Groups,DC=example,DC=com"
 
 ---
 
-#### 7.1.3 End-to-End Test Requirements
+#### 9.1.3 End-to-End Test Requirements
 
 **Requirement**: Complete synchronization workflows MUST be tested end-to-end with representative data.
 
@@ -2420,9 +2712,9 @@ carol@example.com,"CN=Developers,OU=Groups,DC=example,DC=com"
 
 ---
 
-### 7.2 Traceability
+### 9.2 Traceability
 
-#### 7.2.1 Requirements Traceability Matrix
+#### 9.2.1 Requirements Traceability Matrix
 
 | Requirement ID | Test Coverage | Implementation | Documentation |
 |---------------|---------------|----------------|---------------|
@@ -2438,7 +2730,7 @@ carol@example.com,"CN=Developers,OU=Groups,DC=example,DC=com"
 
 ---
 
-#### 7.2.2 Change Traceability
+#### 9.2.2 Change Traceability
 
 **Requirement**: All specification changes MUST be documented with:
 - Change description
@@ -2453,9 +2745,9 @@ carol@example.com,"CN=Developers,OU=Groups,DC=example,DC=com"
 
 ---
 
-### 7.3 Maintainability
+### 9.3 Maintainability
 
-#### 7.3.1 Code Quality Standards
+#### 9.3.1 Code Quality Standards
 
 **Requirement**: All code MUST meet quality standards enforced by automated tooling:
 
@@ -2471,7 +2763,7 @@ carol@example.com,"CN=Developers,OU=Groups,DC=example,DC=com"
 
 ---
 
-#### 7.3.2 Documentation Standards
+#### 9.3.2 Documentation Standards
 
 **Requirement**: All code MUST be documented according to standards:
 
@@ -2503,7 +2795,7 @@ def extract_cn(ldap_dn: str) -> str:
 
 ---
 
-#### 7.3.2 Modularity Requirements
+#### 9.3.2 Modularity Requirements
 
 **Requirement**: System MUST be organized into logical modules with clear responsibilities:
 
@@ -2524,13 +2816,13 @@ def extract_cn(ldap_dn: str) -> str:
 
 ---
 
-## 8. Implementation Guidance for Production Teams
+## 9. Implementation Guidance for Production Teams
 
 This section provides comprehensive guidance for production teams implementing the XC Group Sync tool, including feature priorities, dependencies, operational workflows, and deployment scenarios.
 
-### 8.1 Feature Implementation Roadmap
+### 9.1 Feature Implementation Roadmap
 
-#### 8.1.1 Implementation Priority Classification
+#### 9.1.1 Implementation Priority Classification
 
 Features are classified by priority to guide implementation sequencing:
 
@@ -2546,7 +2838,7 @@ Features are classified by priority to guide implementation sequencing:
 **P2 (Medium Priority - Operational Enhancements)**:
 - Feature 6: Resource Pruning and Reconciliation (Section 3.6)
 
-#### 8.1.2 Recommended Implementation Sequence
+#### 9.1.2 Recommended Implementation Sequence
 
 **Phase 1: Minimum Viable Product (MVP) - 2-3 weeks**
 
@@ -2699,7 +2991,7 @@ Features are classified by priority to guide implementation sequencing:
 
 ---
 
-### 8.2 Feature Dependency Matrix
+### 9.2 Feature Dependency Matrix
 
 Understanding feature dependencies helps teams parallelize work and identify critical paths.
 
@@ -2761,9 +3053,9 @@ Understanding feature dependencies helps teams parallelize work and identify cri
 
 ---
 
-### 8.3 Operational Workflows
+### 9.3 Operational Workflows
 
-#### 8.3.1 Initial Setup Workflow
+#### 9.3.1 Initial Setup Workflow
 
 **Scenario**: DevOps engineer setting up tool for first time
 
@@ -2845,7 +3137,7 @@ Understanding feature dependencies helps teams parallelize work and identify cri
 
 ---
 
-#### 8.3.2 Regular Synchronization Workflow
+#### 9.3.2 Regular Synchronization Workflow
 
 **Scenario**: IAM administrator performing periodic group sync
 
@@ -2925,7 +3217,7 @@ Understanding feature dependencies helps teams parallelize work and identify cri
 
 ---
 
-#### 8.3.3 Prune Operation Workflow
+#### 9.3.3 Prune Operation Workflow
 
 **Scenario**: Platform engineer performing full reconciliation to remove orphaned resources
 
@@ -3001,9 +3293,16 @@ Understanding feature dependencies helps teams parallelize work and identify cri
 
 ---
 
-### 8.4 Deployment Scenarios
+### 9.4 Deployment Scenarios
 
-#### 8.4.1 Manual Execution (Development/Testing)
+This section covers CI/CD integration patterns for automated synchronization. For repository automation (branch protection, label management, security settings), see `scripts/repository-settings.sh` and `.github/repository-settings.json`.
+
+**Additional Resources**:
+- CI/CD samples: `samples/ci-cd/` (GitHub Actions, Jenkins examples)
+- Repository automation: `scripts/repository-settings.sh`
+- GitLab CI examples: Planned for future addition
+
+#### 9.4.1 Manual Execution (Development/Testing)
 
 **Use Case**: Developers and IAM admins running tool manually for testing or one-off operations
 
@@ -3040,7 +3339,7 @@ xc_user_group_sync sync --csv User-Database.csv --dry-run
 
 ---
 
-#### 8.4.2 GitHub Actions (Recommended for GitHub Users)
+#### 9.4.2 GitHub Actions (Recommended for GitHub Users)
 
 **Use Case**: Automated synchronization triggered by CSV commits or scheduled runs
 
@@ -3131,7 +3430,7 @@ xc_user_group_sync sync --csv User-Database.csv --dry-run
 
 ---
 
-#### 8.4.3 Jenkins Pipeline
+#### 9.4.3 Jenkins Pipeline
 
 **Use Case**: Automated synchronization in Jenkins-based CI/CD environments
 
@@ -3231,7 +3530,7 @@ xc_user_group_sync sync --csv User-Database.csv --dry-run
 
 ---
 
-#### 8.4.4 Cron Job (Linux Server)
+#### 9.4.4 Cron Job (Linux Server)
 
 **Use Case**: Scheduled execution on dedicated Linux server
 
@@ -3318,9 +3617,9 @@ xc_user_group_sync sync --csv User-Database.csv --dry-run
 
 ---
 
-### 8.5 Testing and Validation Strategy
+### 9.5 Testing and Validation Strategy
 
-#### 8.5.1 Unit Testing Strategy
+#### 9.5.1 Unit Testing Strategy
 
 **Objective**: Verify individual components function correctly in isolation
 
@@ -3403,7 +3702,7 @@ pytest -k "test_extract_cn" -v
 
 ---
 
-#### 8.5.2 Integration Testing Strategy
+#### 9.5.2 Integration Testing Strategy
 
 **Objective**: Verify components work together correctly with mocked external services
 
@@ -3491,7 +3790,7 @@ pytest tests/integration/ --log-cli-level=DEBUG
 
 ---
 
-#### 8.5.3 End-to-End Testing Strategy
+#### 9.5.3 End-to-End Testing Strategy
 
 **Objective**: Verify complete system functionality with real or near-real F5 XC environment
 
@@ -3570,9 +3869,9 @@ pytest tests/e2e/ --e2e-env=staging --profile
 
 ---
 
-### 8.6 Troubleshooting Guide for Production Teams
+### 9.6 Troubleshooting Guide for Production Teams
 
-#### 8.6.1 Common Issues and Resolutions
+#### 9.6.1 Common Issues and Resolutions
 
 **Issue 1: Authentication Failures**
 
@@ -3716,7 +4015,7 @@ export XC_API_URL="https://${TENANT_ID}.console.ves.volterra.io"
 
 ---
 
-#### 8.6.2 Diagnostic Commands
+#### 9.6.2 Diagnostic Commands
 
 **Check Configuration**:
 
@@ -3776,9 +4075,9 @@ grep -i "failed" sync-debug.log
 
 ---
 
-## 9. Appendices
+## 10. Appendices
 
-### 8.1 Appendix A: API Contract Specification
+### 9.1 Appendix A: API Contract Specification
 
 The F5 Distributed Cloud IAM API contract is defined in OpenAPI 3.0 format. The complete contract is maintained in a separate file for version control and reusability.
 
@@ -3821,7 +4120,7 @@ The F5 Distributed Cloud IAM API contract is defined in OpenAPI 3.0 format. The 
 
 ---
 
-### 8.2 Appendix B: CSV Format Examples
+### 9.2 Appendix B: CSV Format Examples
 
 #### Example 1: Minimal Valid CSV
 
@@ -3873,7 +4172,7 @@ alice@example.com,"CN=QA,OU=Groups,DC=example,DC=com"
 
 ---
 
-### 8.3 Appendix C: Glossary
+### 9.3 Appendix C: Glossary
 
 **Active Directory (AD)**: Microsoft's directory service providing authentication, authorization, and centralized management for Windows domain networks.
 
@@ -3919,7 +4218,7 @@ alice@example.com,"CN=QA,OU=Groups,DC=example,DC=com"
 
 ---
 
-### 8.4 Appendix D: Change History
+### 9.4 Appendix D: Change History
 
 This appendix documents major changes to the specification since initial creation.
 
