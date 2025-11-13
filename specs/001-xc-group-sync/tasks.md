@@ -1,6 +1,6 @@
 # Tasks: XC Group Sync (Spec 001)
 
-Input: Design documents from `specs/001-xc-group-sync/`
+Input: Design documents from `specs/001-xc_user_group_sync/`
 Prerequisites: plan.md (required), spec.md (required), research.md, data-model.md, contracts/
 
 Organization: Tasks are grouped by user story to enable independent implementation and testing of each story.
@@ -26,7 +26,7 @@ Purpose: Project initialization and basic structure
 Purpose: Core infrastructure that MUST be complete before ANY user story can be implemented.
 
 - T004 Create LDAP DN parsing utility `src/xc_user_group_sync/ldap_utils.py` using `ldap3.utils.dn.parse_dn` and validate CN against naming rules
-- T005 [P] Implement XC API client with retries in `src/xc_user_group_sync/client.py` for endpoints from `specs/001-xc-group-sync/contracts/xc-iam.yaml`
+- T005 [P] Implement XC API client with retries in `src/xc_user_group_sync/client.py` for endpoints from `specs/001-xc_user_group_sync/contracts/xc-iam.yaml`
 - T006 [P] Add CLI options and environment loading for auth, tenant, dry-run, cleanup in `src/xc_user_group_sync/cli.py`
 - T007 Implement CSV schema validation for required columns in `src/xc_user_group_sync/cli.py`
 - T008 Configure logging levels and ensure secrets are never logged in `src/xc_user_group_sync/cli.py`
@@ -98,15 +98,15 @@ Independent Test: Single `.p12` in `~/Downloads` named `mytenant-api.p12` → `.
 ### Implementation for User Story 5
 
 - T021 [US5] Implement setup script `scripts/setup_xc_credentials.sh` (derive TENANT_ID, split p12 to PEM, write `.env`)
-- T022 [P] [US5] Create workflow `.github/workflows/xc-group-sync.yml` to decode secrets and run sync
-- T023 [US5] Document CI secrets and setup steps in `specs/001-xc-group-sync/quickstart.md`
+- T022 [P] [US5] Create workflow `.github/workflows/xc_user_group_sync.yml` to decode secrets and run sync
+- T023 [US5] Document CI secrets and setup steps in `specs/001-xc_user_group_sync/quickstart.md`
 
 ---
 
 ## Phase N: Polish & Cross-Cutting
 
 - T024 [P] Update README.md with usage and dry-run examples in `README.md`
-- T025 Add performance knobs (max retries, backoff) and document in `specs/001-xc-group-sync/quickstart.md`
+- T025 Add performance knobs (max retries, backoff) and document in `specs/001-xc_user_group_sync/quickstart.md`
 - T026 Security review: verify no secrets are logged and HTTPS validation is enforced across `src/xc_user_group_sync/*`
 
 ---

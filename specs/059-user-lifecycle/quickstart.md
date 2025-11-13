@@ -537,7 +537,7 @@ Before committing:
 
 - **F5 XC Credentials**: Configured via `scripts/setup_xc_credentials.sh`
 - **CSV File**: Active Directory export with required columns
-- **Python Environment**: Tool installed and accessible via `xc-group-sync` command
+- **Python Environment**: Tool installed and accessible via `xc_user_group_sync` command
 
 ### CSV Format Requirements
 
@@ -562,7 +562,7 @@ charlie@example.com,Charlie Jones,T,
 
 ```bash
 # Dry-run to see what would happen (no changes made)
-xc-group-sync sync-users --csv users.csv --dry-run
+xc_user_group_sync sync-users --csv users.csv --dry-run
 
 # Output:
 # Users planned from CSV: 1067
@@ -581,7 +581,7 @@ xc-group-sync sync-users --csv users.csv --dry-run
 
 ```bash
 # Sync users without deletions (safe default)
-xc-group-sync sync-users --csv users.csv
+xc_user_group_sync sync-users --csv users.csv
 
 # Output:
 # Users planned from CSV: 1067
@@ -600,7 +600,7 @@ xc-group-sync sync-users --csv users.csv
 
 ```bash
 # Preview deletions first (ALWAYS recommended)
-xc-group-sync sync-users --csv users.csv --delete-users --dry-run
+xc_user_group_sync sync-users --csv users.csv --delete-users --dry-run
 
 # Output:
 # Users planned from CSV: 1066
@@ -615,7 +615,7 @@ xc-group-sync sync-users --csv users.csv --delete-users --dry-run
 # User sync complete.
 
 # Execute deletions (only if dry-run output is correct)
-xc-group-sync sync-users --csv users.csv --delete-users
+xc_user_group_sync sync-users --csv users.csv --delete-users
 
 # Output:
 # Users planned from CSV: 1066
@@ -636,10 +636,10 @@ xc-group-sync sync-users --csv users.csv --delete-users
 ```bash
 # 1. Export users from Active Directory to CSV
 # 2. Preview import
-xc-group-sync sync-users --csv initial_users.csv --dry-run
+xc_user_group_sync sync-users --csv initial_users.csv --dry-run
 
 # 3. Execute import
-xc-group-sync sync-users --csv initial_users.csv
+xc_user_group_sync sync-users --csv initial_users.csv
 
 # Expected: All users created, no errors
 ```text
@@ -648,10 +648,10 @@ xc-group-sync sync-users --csv initial_users.csv
 ```bash
 # 1. Export updated CSV from Active Directory
 # 2. Preview changes
-xc-group-sync sync-users --csv daily_sync.csv --dry-run
+xc_user_group_sync sync-users --csv daily_sync.csv --dry-run
 
 # 3. Execute sync (create/update only, no deletions)
-xc-group-sync sync-users --csv daily_sync.csv
+xc_user_group_sync sync-users --csv daily_sync.csv
 
 # Expected: New users created, changed users updated, no deletions
 ```text
@@ -660,11 +660,11 @@ xc-group-sync sync-users --csv daily_sync.csv
 ```bash
 # 1. Export current active users from Active Directory
 # 2. Preview deletions (CRITICAL: verify output carefully)
-xc-group-sync sync-users --csv active_users.csv --delete-users --dry-run
+xc_user_group_sync sync-users --csv active_users.csv --delete-users --dry-run
 
 # 3. Review dry-run output: ensure only terminated users are listed for deletion
 # 4. Execute cleanup (only if dry-run is correct)
-xc-group-sync sync-users --csv active_users.csv --delete-users
+xc_user_group_sync sync-users --csv active_users.csv --delete-users
 
 # Expected: Terminated users deleted, active users unchanged
 ```text

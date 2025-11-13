@@ -38,9 +38,9 @@ black .
 mypy src/
 
 # Run the tool
-xc-group-sync --csv User-Database.csv --dry-run
-xc-group-sync --csv User-Database.csv --sync-users  # groups + users
-xc-group-sync --csv User-Database.csv --no-sync-groups --sync-users  # users only
+xc_user_group_sync --csv User-Database.csv --dry-run
+xc_user_group_sync --csv User-Database.csv --sync-users  # groups + users
+xc_user_group_sync --csv User-Database.csv --no-sync-groups --sync-users  # users only
 ```
 
 ### CLI Usage

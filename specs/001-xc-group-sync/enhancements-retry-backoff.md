@@ -1,6 +1,6 @@
 # Enhancement Specification: Advanced Retry & Backoff Configuration
 
-**Parent Spec**: `001-xc-group-sync`
+**Parent Spec**: `001-xc_user_group_sync`
 **Enhancement ID**: `001-ENH-003`
 **Created**: 2025-11-11
 **Status**: Reverse-Engineered from Implementation
@@ -187,7 +187,7 @@ service = GroupSyncService(client)
 **Future Enhancement**: Add CLI flags for runtime configuration
 
 ```bash
-xc-group-sync sync --csv test.csv \
+xc_user_group_sync sync --csv test.csv \
     --retry-attempts 5 \
     --backoff-multiplier 2.0 \
     --backoff-min 0.5 \

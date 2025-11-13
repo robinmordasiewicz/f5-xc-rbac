@@ -28,7 +28,7 @@ f5-xc-user-group-sync/
 │   ├── cert.pem            # API certificate
 │   └── key.pem             # API private key
 ├── .github/workflows/      # CI/CD
-│   └── xc-group-sync.yml   # GitHub Actions workflow
+│   └── xc_user_group_sync.yml   # GitHub Actions workflow
 ├── pyproject.toml          # Python package configuration
 ├── README.md               # User documentation
 └── .gitignore              # Git ignore rules
@@ -37,7 +37,7 @@ f5-xc-user-group-sync/
 
 ### CLI Layer (`cli.py`)
 
-- Entry point: `xc-group-sync` command
+- Entry point: `xc_user_group_sync` command
 - Commands: Main command (with --dry-run, --prune, --log-level options)
 - Handles environment loading, authentication, error reporting
 
