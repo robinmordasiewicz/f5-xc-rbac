@@ -46,6 +46,7 @@ Located in `jenkins/`:
 - Go to: **Settings → Secrets and variables → Actions**
 - Add required secrets:
   - `TENANT_ID` - Your F5 XC tenant ID
+  - `XC_API_URL` - (Optional) F5 XC API endpoint (defaults to production if not set)
   - **Option A (PEM)**: `XC_CERT` and `XC_CERT_KEY`
   - **Option B (P12)**: `XC_P12` (base64 encoded) and `XC_P12_PASSWORD`
 
@@ -68,6 +69,7 @@ Located in `jenkins/`:
 - Go to: **Jenkins → Credentials → System → Global credentials**
 - Add secrets with these IDs:
   - `TENANT_ID` (Secret text)
+  - `XC_API_URL` (Secret text - Optional, defaults to production if not set)
   - `XC_CERT` (Secret text - PEM certificate content)
   - `XC_CERT_KEY` (Secret text - PEM private key content)
 
@@ -120,6 +122,154 @@ Generate base64:
 ```bash
 base64 -w 0 your-file.p12 > xc_p12_base64.txt
 ```
+
+## Environment-Specific Configuration
+
+The tool supports targeting different F5 XC environments (production, staging, custom deployments) via the `XC_API_URL` environment variable.
+
+### Production vs Staging
+
+**Production (default)**:
+
+- URL: `https://{tenant}.console.ves.volterra.io`
+- Auto-detected if `XC_API_URL` not provided
+- No additional configuration needed
+
+**Staging**:
+
+- URL: `https://{tenant}.staging.volterra.us`
+- Requires explicit `XC_API_URL` configuration
+- Note: May have SSL certificate issues (see local setup script warnings)
+
+**Custom Deployments**:
+
+- URL: Your organization's custom F5 XC endpoint
+- Contact your F5 administrator for the correct URL
+
+### CI/CD Setup for Non-Production Environments
+
+#### GitHub Actions Configuration
+
+Add the `XC_API_URL` secret for non-production environments:
+
+1. Go to **Settings → Secrets and variables → Actions**
+2. Add secret:
+    - Name: `XC_API_URL`
+    - Value: `https://your-tenant.staging.volterra.us` (or your custom endpoint)
+
+**Example for staging**:
+
+```yaml
+XC_API_URL: https://acme-corp.staging.volterra.us
+```
+
+If `XC_API_URL` is not provided, the workflow automatically defaults to production:
+
+```text
+https://{TENANT_ID}.console.ves.volterra.io
+```
+
+#### Jenkins Configuration
+
+Add the `XC_API_URL` credential for non-production environments:
+
+1. Go to **Jenkins → Credentials → System → Global credentials**
+2. Click **Add Credentials**
+3. Configure:
+    - Kind: Secret text
+    - Scope: Global
+    - Secret: `https://your-tenant.staging.volterra.us`  <!-- pragma: allowlist secret -->
+    - ID: `XC_API_URL`
+    - Description: F5 XC API URL (staging/custom)
+
+**Note**: The credential ID **must** be `XC_API_URL` to match the Jenkinsfile configuration.
+
+If the `XC_API_URL` credential does not exist, Jenkins will use the production endpoint.
+
+### Local Development vs CI/CD
+
+**Local Development** (using setup script):
+
+- The `scripts/setup_xc_credentials.sh` script automatically detects the environment from your P12 filename
+- Production: `tenant.console.ves.volterra.io.p12` → `https://tenant.console.ves.volterra.io`
+- Staging: `tenant.staging.p12` → `https://tenant.staging.volterra.us`
+- Writes correct `XC_API_URL` to `secrets/.env`
+
+**CI/CD Pipelines**:
+
+- Must explicitly configure `XC_API_URL` as a secret/credential for non-production
+- Falls back to production if not provided (backward compatible)
+- No automatic environment detection from certificate names
+
+### Environment-Specific Workflows
+
+For organizations with multiple environments, consider separate workflows:
+
+#### GitHub Actions Multi-Environment Example
+
+```yaml
+# .github/workflows/xc-sync-staging.yml
+name: XC Sync (Staging)
+on:
+  workflow_dispatch:
+env:
+  XC_API_URL: ${{ secrets.XC_API_URL_STAGING }}
+  XC_TENANT_ID: ${{ secrets.TENANT_ID_STAGING }}
+```
+
+```yaml
+# .github/workflows/xc-sync-production.yml
+name: XC Sync (Production)
+on:
+  schedule:
+    - cron: '0 2 * * *'
+env:
+  XC_TENANT_ID: ${{ secrets.TENANT_ID_PROD }}
+  # XC_API_URL not set = production default
+```
+
+#### Jenkins Multi-Environment Example
+
+Create separate Jenkins jobs or use parameters:
+
+```groovy
+parameters {
+    choice(
+        name: 'ENVIRONMENT',
+        choices: ['production', 'staging'],
+        description: 'Target F5 XC environment'
+    )
+}
+
+// Then in Prepare Credentials stage:
+string(
+    credentialsId: params.ENVIRONMENT == 'staging' ? 'XC_API_URL_STAGING' : 'XC_API_URL_PROD',
+    variable: 'XC_API_URL_VALUE',
+    defaultValue: ''
+)
+```
+
+### Troubleshooting Environment Configuration
+
+**Problem**: Tool connects to production instead of staging
+
+**Solution**: Verify `XC_API_URL` secret/credential is:
+
+- Created with exact ID: `XC_API_URL`
+- Set to correct value (e.g., `https://tenant.staging.volterra.us`)
+- Accessible to the workflow/pipeline
+
+**Problem**: SSL certificate errors with staging
+
+**Solution**: Staging environments may have self-signed or non-standard certificates. This is expected and documented in the setup script. Contact F5 support if this blocks automation.
+
+**Problem**: "Connection refused" or timeout errors
+
+**Solution**:
+
+- Verify the `XC_API_URL` format (must include `https://` and full domain)
+- Ensure network access from CI/CD runners to the F5 XC endpoint
+- Check firewall rules and proxy configuration
 
 ## Customization Guide
 

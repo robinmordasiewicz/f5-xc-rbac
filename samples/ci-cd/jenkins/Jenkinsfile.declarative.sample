@@ -88,7 +88,8 @@ pipeline {
                     withCredentials([
                         string(credentialsId: 'XC_CERT', variable: 'XC_CERT_CONTENT'),
                         string(credentialsId: 'XC_CERT_KEY', variable: 'XC_CERT_KEY_CONTENT'),
-                        string(credentialsId: 'TENANT_ID', variable: 'TENANT_ID_VALUE')
+                        string(credentialsId: 'TENANT_ID', variable: 'TENANT_ID_VALUE'),
+                        string(credentialsId: 'XC_API_URL', variable: 'XC_API_URL_VALUE', defaultValue: '')
                     ]) {
                         sh '''
                             # Write certificate files
@@ -99,8 +100,11 @@ pipeline {
                             chmod 600 ${SECRETS_DIR}/*.pem
 
                             # Create .env file
+                            # Use provided XC_API_URL or default to production endpoint
+                            XC_API_URL_FINAL="${XC_API_URL_VALUE:-https://${TENANT_ID_VALUE}.console.ves.volterra.io}"
                             cat > ${SECRETS_DIR}/.env << EOF
 TENANT_ID=${TENANT_ID_VALUE}
+XC_API_URL=${XC_API_URL_FINAL}
 VOLT_API_CERT_FILE=${SECRETS_DIR}/cert.pem
 VOLT_API_CERT_KEY_FILE=${SECRETS_DIR}/key.pem
 EOF
