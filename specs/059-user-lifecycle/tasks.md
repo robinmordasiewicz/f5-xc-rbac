@@ -64,9 +64,9 @@ Single project structure (from plan.md):
 **Independent Test**:
 
 1. Create CSV with test users (new and existing with changes)
-2. Run `xc-group-sync sync --csv test.csv --dry-run`
+2. Run `xc_user_group_sync sync --csv test.csv --dry-run`
 3. Verify: Dry-run logs show correct creates and updates
-4. Run `xc-group-sync sync --csv test.csv`
+4. Run `xc_user_group_sync sync --csv test.csv`
 5. Verify: Users created/updated in F5 XC match CSV exactly
 6. Run sync again with same CSV
 7. Verify: Idempotent - no changes on second run (all unchanged)
@@ -132,11 +132,11 @@ Single project structure (from plan.md):
 **Independent Test**:
 
 1. Create CSV without a user that exists in F5 XC
-2. Run `xc-group-sync sync --csv test.csv --dry-run` (WITHOUT --delete-users)
+2. Run `xc_user_group_sync sync --csv test.csv --dry-run` (WITHOUT --delete-users)
 3. Verify: No deletion logged (safe default)
-4. Run `xc-group-sync sync --csv test.csv --delete-users --dry-run`
+4. Run `xc_user_group_sync sync --csv test.csv --delete-users --dry-run`
 5. Verify: Dry-run logs show user would be deleted
-6. Run `xc-group-sync sync --csv test.csv --delete-users`
+6. Run `xc_user_group_sync sync --csv test.csv --delete-users`
 7. Verify: User deleted from F5 XC
 
 ### Tests for US3 (TDD - Write FIRST)
@@ -175,7 +175,7 @@ Single project structure (from plan.md):
 **Independent Test**:
 
 1. Create CSV with mix of new users, updates, and deletions
-2. Run `xc-group-sync sync --csv test.csv --delete-users --dry-run`
+2. Run `xc_user_group_sync sync --csv test.csv --delete-users --dry-run`
 3. Verify: All operations logged with "Would create/update/delete" prefix
 4. Verify: No actual API calls made to F5 XC
 5. Verify: Summary shows planned operation counts

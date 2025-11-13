@@ -107,7 +107,7 @@ scripts/
 └── setup_xc_credentials.sh # Credential setup (existing - preserved)
 
 .github/workflows/
-└── xc-group-sync.yml     # CI/CD pipeline (MODIFY: add user sync testing)
+└── xc_user_group_sync.yml     # CI/CD pipeline (MODIFY: add user sync testing)
 ```text
 **Structure Decision**: Single project structure maintained (existing). All enhancements add to `src/xc_user_group_sync/` package following established patterns. Tests mirror source structure in `tests/` directory. No new top-level directories created - pure enhancement of existing codebase.
 
@@ -333,11 +333,11 @@ class UserSyncService:
 
 ```bash
 # Sync users from CSV (create/update only)
-xc-group-sync sync --csv users.csv --dry-run
+xc_user_group_sync sync --csv users.csv --dry-run
 
 # Sync users with deletion enabled
-xc-group-sync sync --csv users.csv --delete-users --dry-run
-xc-group-sync sync --csv users.csv --delete-users  # Apply after dry-run verification
+xc_user_group_sync sync --csv users.csv --delete-users --dry-run
+xc_user_group_sync sync --csv users.csv --delete-users  # Apply after dry-run verification
 ```text
 **Artifact**: [quickstart.md](./quickstart.md) - Complete guide generated below
 

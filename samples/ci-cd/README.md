@@ -132,7 +132,7 @@ base64 -w 0 your-file.p12 > xc_p12_base64.txt
 ```yaml
 - name: Dry-run sync
   run: |
-    xc-group-sync \
+    xc_user_group_sync \
       --csv ./User-Database.csv \
       --dry-run \
       --prune \               # Add to delete users and groups not in CSV
@@ -158,7 +158,7 @@ parameters {
 **GitHub Actions**:
 
 ```yaml
-run: xc-group-sync --csv ./data/production-users.csv --dry-run
+run: xc_user_group_sync --csv ./data/production-users.csv --dry-run
 ```
 
 **Jenkins** - Change parameter default:

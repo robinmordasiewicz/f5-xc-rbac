@@ -68,7 +68,7 @@ duplicate_emails = {
 echo "Email,User Display Name,Employee Status,Entitlement Display Name" > test.csv
 echo "john@example.com,John Doe,A,CN=group1" >> test.csv
 echo "john@example.com,John Doe,A,CN=group2" >> test.csv
-xc-group-sync sync_users --csv test.csv --dry-run
+xc_user_group_sync sync_users --csv test.csv --dry-run
 
 # Should display: "⚠️ Validation Warnings: - 1 duplicate email(s) found: • john@example.com (rows: 2, 3)"
 
@@ -153,7 +153,7 @@ if entitlements:
 
 echo "Email,User Display Name,Employee Status,Entitlement Display Name" > test.csv
 echo 'john@example.com,John Doe,A,CN=admins,OU=Groups|CN=users,OU=Groups' >> test.csv
-xc-group-sync sync_users --csv test.csv --dry-run
+xc_user_group_sync sync_users --csv test.csv --dry-run
 
 # Should parse both 'admins' and 'users' groups
 
@@ -418,25 +418,25 @@ def test_order_independent_groups():
 
 # Test CSV validation feedback
 
-xc-group-sync sync_users --csv invalid_emails.csv --dry-run
+xc_user_group_sync sync_users --csv invalid_emails.csv --dry-run
 
 # Expect: Invalid email warnings displayed
 
 # Test duplicate detection
 
-xc-group-sync sync_users --csv duplicates.csv --dry-run
+xc_user_group_sync sync_users --csv duplicates.csv --dry-run
 
 # Expect: Duplicate email warnings with row numbers
 
 # Test pipe-separated groups
 
-xc-group-sync sync_users --csv multi_groups.csv --dry-run
+xc_user_group_sync sync_users --csv multi_groups.csv --dry-run
 
 # Expect: Users show multiple group assignments
 
 # Test error reporting
 
-xc-group-sync sync_users --csv valid.csv --delete-users
+xc_user_group_sync sync_users --csv valid.csv --delete-users
 
 # Expect: Error details section if API failures occur
 
