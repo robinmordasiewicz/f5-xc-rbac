@@ -5,6 +5,7 @@ Automated synchronization tool for managing F5 Distributed Cloud (XC) users and 
 [![Python Version](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Code Quality](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Test Coverage](https://img.shields.io/badge/coverage-93%25-brightgreen)](https://github.com/robinmordasiewicz/f5-xc-user-group-sync)
 
 ## Overview
 
@@ -18,7 +19,8 @@ Automated synchronization tool for managing F5 Distributed Cloud (XC) users and 
 - **🚀 CI/CD Ready**: Sample workflows for GitHub Actions and Jenkins
 - **📊 Detailed Reporting**: Comprehensive statistics and error tracking
 - **🔁 Retry Logic**: Automatic retry with exponential backoff for API failures
-- **🎯 Flexible Control**: Independent user/group synchronization with optional pruning
+- **🎯 Flexible Control**: Optional pruning for automated cleanup
+- **🧪 Well-Tested**: 195 tests with 93% code coverage
 
 ### What Does It Do?
 
@@ -35,7 +37,7 @@ This tool performs bidirectional reconciliation between your CSV user database a
 - ✅ **Validates** all data before making changes
 - ✅ **Dry-run mode** to preview changes safely
 - ✅ **Error handling** with detailed reporting
-- ✅ **Transaction safety** with rollback capabilities
+- ✅ **Transaction safety** with atomic operations
 
 ## Table of Contents
 
@@ -358,38 +360,46 @@ xc_user_group_sync [OPTIONS]
 | `--timeout <seconds>` | Integer | `30` | HTTP request timeout |
 | `--max-retries <n>` | Integer | `3` | Maximum retries for API errors |
 
+### Default Behavior
+
+By default, the tool synchronizes **both users and groups**:
+
+- Creates users and groups from CSV that don't exist in F5 XC
+- Updates existing users and groups to match CSV data
+- Does **not** delete anything unless `--prune` flag is specified
+
 ### Usage Examples
 
 #### Basic Operations
 
 ```bash
 # Preview reconciliation (recommended first step)
-xc_user_group_sync --csv users.csv --dry-run
+xc_user_group_sync --csv User-Database.csv --dry-run
 
 # Apply reconciliation (create/update only)
-xc_user_group_sync --csv users.csv
+xc_user_group_sync --csv User-Database.csv
 
 # Full reconciliation including pruning
-xc_user_group_sync --csv users.csv --prune
+xc_user_group_sync --csv User-Database.csv --prune
 
 # Dry-run with pruning preview
-xc_user_group_sync --csv users.csv --prune --dry-run
+xc_user_group_sync --csv User-Database.csv --prune --dry-run
 ```
 
 #### Advanced Configuration
 
 ```bash
 # Debug logging for troubleshooting
-xc_user_group_sync --csv users.csv --dry-run --log-level debug
+xc_user_group_sync --csv User-Database.csv --dry-run --log-level debug
 
 # Increased timeout for large datasets
-xc_user_group_sync --csv users.csv --timeout 60
+xc_user_group_sync --csv User-Database.csv --timeout 60
 
 # More retries for unstable networks
-xc_user_group_sync --csv users.csv --max-retries 5
+xc_user_group_sync --csv User-Database.csv --max-retries 5
 
 # Combined: debug with increased retry
-xc_user_group_sync --csv users.csv --log-level debug --max-retries 5 --timeout 60
+xc_user_group_sync --csv User-Database.csv --log-level debug --max-retries 5 --timeout 60
 ```
 
 ### Output Example
@@ -521,7 +531,8 @@ f5-xc-user-group-sync/
 │   ├── integration/               # Integration tests
 │   └── test_*.py                  # Component tests
 ├── scripts/                       # Utility scripts
-│   └── setup_xc_credentials.sh    # Credential setup automation
+│   ├── setup_xc_credentials.sh    # Credential setup automation
+│   └── repository-settings.sh     # GitHub settings automation
 ├── samples/                       # Reference implementations
 │   └── ci-cd/                     # CI/CD sample configurations
 │       ├── github-actions/        # GitHub Actions workflows
@@ -553,21 +564,54 @@ f5-xc-user-group-sync/
 
 ### Synchronization Flow
 
-```mermaid
-graph TD
-    A[Load CSV] --> B[Parse Users & Groups]
-    B --> C[Validate Data]
-    C --> D[Fetch Existing State from F5 XC]
-    D --> E{Dry Run?}
-    E -->|Yes| F[Display Changes]
-    E -->|No| G[Apply Changes]
-    G --> H[Create Missing Resources]
-    H --> I[Update Existing Resources]
-    I --> J{Prune Enabled?}
-    J -->|Yes| K[Delete Orphaned Resources]
-    J -->|No| L[Report Statistics]
-    K --> L
-    F --> L
+```text
+┌─────────────┐
+│  Load CSV   │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────────────┐
+│ Parse Users/Groups  │
+└──────┬──────────────┘
+       │
+       ▼
+┌─────────────────┐
+│  Validate Data  │
+└──────┬──────────┘
+       │
+       ▼
+┌─────────────────────────────┐
+│ Fetch Existing from F5 XC   │
+└──────┬──────────────────────┘
+       │
+       ▼
+    Dry Run?
+   ╱         ╲
+  ╱           ╲
+Yes           No
+ │             │
+ ▼             ▼
+Display    Apply Changes
+Changes    │
+ │         ▼
+ │    Create Missing
+ │         │
+ │         ▼
+ │    Update Existing
+ │         │
+ │         ▼
+ │    Prune Enabled?
+ │     ╱         ╲
+ │    ╱           ╲
+ │   Yes          No
+ │    │            │
+ │    ▼            │
+ │  Delete         │
+ │  Orphaned       │
+ │    │            │
+ └────┴────────────┤
+                   ▼
+           Report Statistics
 ```
 
 ### Error Handling
@@ -581,7 +625,7 @@ The tool implements comprehensive error handling:
 
 ### Testing
 
-**Test Coverage**: 199 tests across unit and integration suites
+**Test Coverage**: 195 tests with 93.13% code coverage
 
 **Test Categories** (via pytest markers):
 
@@ -656,7 +700,7 @@ This project enforces:
 - **Black** - Code formatting (line length: 88)
 - **Ruff** - Fast Python linter (PEP 8, import sorting)
 - **MyPy** - Static type checking
-- **pytest** - Testing framework (minimum 80% coverage)
+- **pytest** - Testing framework (minimum 80% coverage, currently 93%)
 - **pre-commit** - Git hooks for automated checks
 
 ### Contributing Guidelines

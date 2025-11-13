@@ -39,15 +39,15 @@ mypy src/
 
 # Run the tool
 xc_user_group_sync --csv User-Database.csv --dry-run
-xc_user_group_sync --csv User-Database.csv --sync-users  # groups + users
-xc_user_group_sync --csv User-Database.csv --no-sync-groups --sync-users  # users only
+xc_user_group_sync --csv User-Database.csv  # Syncs both groups and users by default
+xc_user_group_sync --csv User-Database.csv --prune  # Full reconciliation with cleanup
 ```
 
 ### CLI Usage
 
-**Default behavior**: Synchronizes groups only
-**User sync**: Add `--sync-users` flag
-**Flexible control**: Use `--sync-groups/--no-sync-groups` and `--sync-users/--no-sync-users`
+**Default behavior**: Synchronizes both users and groups
+**Pruning**: Add `--prune` flag to delete resources not in CSV
+**Dry-run**: Always test with `--dry-run` before applying changes
 
 ## Code Style
 
