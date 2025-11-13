@@ -32,7 +32,7 @@ All specifications in this directory conform to:
 - External interface specifications - CLI, API, CSV (Section 4)
 - 22 non-functional requirements - performance, security, quality (Section 5)
 - Data requirements and transformations (Section 6)
-- **Development requirements** - pre-commit hooks, CI/CD, quality gates (Section 7)
+- **Development requirements** - see [`development/quality-standards.md`](development/quality-standards.md)
 - Quality attributes - testability, traceability, maintainability (Section 8)
 - Implementation guidance with phased roadmap (Section 9)
 - Testing strategy and troubleshooting guide (Section 9)
@@ -74,10 +74,33 @@ All specifications in this directory conform to:
 - Request/response schemas
 - Error handling
 
+## Development Standards
+
+### Quality Standards Document
+
+**File**: [`development/quality-standards.md`](development/quality-standards.md)
+
+**Status**: Mandatory for all development work
+**Version**: 1.0.0
+**Last Updated**: 2025-11-13
+
+**Contents**:
+
+- **FR-DEV-001 through FR-DEV-011**: Functional requirements for pre-commit hooks, linting, security, CI/CD
+- **SC-DEV-001 through SC-DEV-008**: Success criteria and measurements
+- **Pre-commit Hook Requirements**: Code formatting, linting, security scanning, repository policies, DRY enforcement
+- **CI/CD Integration**: Local-CI parity matrix, PR blocking, hook version management
+- **Development Workflow**: Local setup, commit workflow, CI stages
+- **Tool Configuration Reference**: All configuration file locations
+- **Troubleshooting**: Common issues and solutions
+
+**Key Principle**: Zero tolerance for violations - all checks MUST pass locally and in CI.
+
 ## Document Relationships
 
 ```text
 user-group-sync-srs.md (System Specification)
+├── References: development/quality-standards.md (Development Requirements)
 ├── Includes: user-lifecycle-management-srs.md (Feature)
 └── References: api/contracts/xc-iam.yaml (API Contract)
 ```
@@ -130,9 +153,9 @@ All requirements are uniquely identified:
 
 Complete traceability matrices are provided in each specification linking requirements to test cases and implementation.
 
-## Development Standards
+## For Developers
 
-All development work MUST adhere to mandatory requirements defined in Section 7 of the System Requirements Specification:
+All development work MUST adhere to mandatory requirements defined in [`development/quality-standards.md`](development/quality-standards.md):
 
 - **Pre-commit Hooks**: Black, Ruff, MyPy, ShellCheck, PyMarkdown, detect-secrets, Bandit, pip-audit, actionlint, jscpd
 - **Code Quality**: 95%+ test coverage, zero linting errors, zero duplication violations (≥15 lines)
@@ -140,7 +163,11 @@ All development work MUST adhere to mandatory requirements defined in Section 7 
 - **Security**: Zero tolerance for secrets, MEDIUM+ Bandit issues, HIGH/CRITICAL pip-audit vulnerabilities
 - **Workflow**: Feature branches only (`###-feature-name`), no direct commits to main, all work tracked via GitHub issues
 
-**See**: [Section 7: Development Requirements](user-group-sync-srs.md#7-development-requirements) for complete details
+**Quick Links**:
+
+- [Complete Development Requirements](development/quality-standards.md)
+- [System Requirements Specification](user-group-sync-srs.md)
+- [API Contracts](api/contracts/xc-iam.yaml)
 
 ## Quality Standards
 
@@ -153,24 +180,38 @@ All specifications in this directory meet:
 - ✅ Professional documentation standards
 - ✅ Mandatory development quality gates
 
-## Future Modularization
+## Document Organization
 
-To improve document organization and maintainability, future updates will modularize the specifications into focused documents:
+Specifications are organized for different audiences:
 
-- `requirements/` - Core IEEE 29148 SRS documents
-- `development/` - Quality standards, CI/CD requirements, tool configurations
+### Current Structure
+
+```text
+docs/specifications/
+├── user-group-sync-srs.md           # System Requirements (IEEE 29148)
+├── user-lifecycle-management-srs.md # Feature Specifications
+├── development/
+│   └── quality-standards.md         # Development Requirements (FR-DEV, SC-DEV)
+├── api/contracts/
+│   └── xc-iam.yaml                  # OpenAPI 3.0 API Contracts
+└── README.md                        # This file
+```
+
+### Future Modularization (Phase 2+)
+
+Additional focused documents planned:
+
 - `implementation/` - Roadmaps, workflows, deployment patterns, testing strategies
 - `guides/` - Operational procedures (GitHub Actions, Jenkins, credential setup)
 - `examples/` - Reference samples (CSV formats, API payloads, workflow files)
 
-This modularization will maintain IEEE 29148 compliance while improving usability for different audiences (developers, DevOps, QA, operations).
-
-**See**: GitHub issue for Phase 1 modularization plan (to be created)
+**See**: [Issue #121](https://github.com/robinmordasiewicz/f5-xc-user-group-sync/issues/121) for Phase 1 completion and future phases
 
 ## Version History
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 1.1.0 | 2025-11-13 | Phase 1 modularization: Extracted development standards to `development/quality-standards.md`, reduced SRS by 267 lines |
 | 1.0.1 | 2025-11-13 | Added Development Requirements (Section 7), consolidated all specs/ content, removed redundant development artifacts |
 | 1.0.0 | 2025-11-13 | Initial production release with complete system and feature specifications |
 
