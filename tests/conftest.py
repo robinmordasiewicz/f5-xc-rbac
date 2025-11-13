@@ -61,11 +61,11 @@ def sample_user_roles_response():
 @pytest.fixture
 def sample_csv_content():
     """Sample CSV content for testing."""
-    return """Email,Entitlement Display Name
-admin@example.com,"CN=admins,OU=Groups,DC=example,DC=com"
-root@example.com,"CN=admins,OU=Groups,DC=example,DC=com"
-dev1@example.com,"CN=developers,OU=Groups,DC=example,DC=com"
-dev2@example.com,"CN=developers,OU=Groups,DC=example,DC=com"
+    return """Email,User Display Name,Employee Status,Entitlement Display Name
+admin@example.com,Admin User,Active,"CN=admins,OU=Groups,DC=example,DC=com"
+root@example.com,Root User,Active,"CN=admins,OU=Groups,DC=example,DC=com"
+dev1@example.com,Dev One,Active,"CN=developers,OU=Groups,DC=example,DC=com"
+dev2@example.com,Dev Two,Active,"CN=developers,OU=Groups,DC=example,DC=com"
 """
 
 

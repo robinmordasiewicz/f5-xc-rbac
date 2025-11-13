@@ -33,8 +33,8 @@ def test_cli_dry_run_happy_path(monkeypatch, tmp_path):
     # prepare a small CSV
     csv_file = tmp_path / "sample.csv"
     csv_file.write_text(
-        "Email,Entitlement Display Name\n"
-        'joe@example.com,"CN=admins,OU=Groups,DC=example,DC=com"\n'
+        "Email,User Display Name,Employee Status,Entitlement Display Name\n"
+        'joe@example.com,Joe User,Active,"CN=admins,OU=Groups,DC=example,DC=com"\n'
     )
 
     # monkeypatch client creation to return a fake repository-like object
@@ -71,8 +71,8 @@ def test_cli_dry_run_happy_path(monkeypatch, tmp_path):
 def test_cli_create_client_failure(monkeypatch, tmp_path):
     csv_file = tmp_path / "sample.csv"
     csv_file.write_text(
-        "Email,Entitlement Display Name\n"
-        'joe@example.com,"CN=admins,OU=Groups,DC=example,DC=com"\n'
+        "Email,User Display Name,Employee Status,Entitlement Display Name\n"
+        'joe@example.com,Joe User,Active,"CN=admins,OU=Groups,DC=example,DC=com"\n'
     )
     monkeypatch.setenv("TENANT_ID", "tenant")
     monkeypatch.setenv("DOTENV_PATH", "/dev/null")
@@ -90,18 +90,21 @@ def test_cli_create_client_failure(monkeypatch, tmp_path):
 def test_cli_api_list_groups_failure(monkeypatch, tmp_path):
     csv_file = tmp_path / "sample.csv"
     csv_file.write_text(
-        "Email,Entitlement Display Name\n"
-        'joe@example.com,"CN=admins,OU=Groups,DC=example,DC=com"\n'
+        "Email,User Display Name,Employee Status,Entitlement Display Name\n"
+        'joe@example.com,Joe User,Active,"CN=admins,OU=Groups,DC=example,DC=com"\n'
     )
 
     class BadRepo:
+        def list_users(self, namespace: str = "system"):
+            return {"items": []}
+
+        def create_user(self, user: dict, namespace: str = "system"):
+            return {"username": user.get("email")}
+
         def list_groups(self, namespace: str = "system"):
             import requests
 
             raise requests.RequestException("api down")
-
-        def list_users(self, namespace: str = "system"):
-            return {"items": []}
 
     monkeypatch.setenv("TENANT_ID", "tenant")
     monkeypatch.setenv("DOTENV_PATH", "/dev/null")
@@ -115,8 +118,8 @@ def test_cli_api_list_groups_failure(monkeypatch, tmp_path):
 def test_cli_sync_reports_errors(monkeypatch, tmp_path):
     csv_file = tmp_path / "sample.csv"
     csv_file.write_text(
-        "Email,Entitlement Display Name\n"
-        'joe@example.com,"CN=admins,OU=Groups,DC=example,DC=com"\n'
+        "Email,User Display Name,Employee Status,Entitlement Display Name\n"
+        'joe@example.com,Joe User,Active,"CN=admins,OU=Groups,DC=example,DC=com"\n'
     )
 
     class Repo:
@@ -150,14 +153,14 @@ def test_cli_sync_reports_errors(monkeypatch, tmp_path):
     runner = CliRunner()
     result = runner.invoke(cli.cli, ["--csv", str(csv_file)], catch_exceptions=False)
     assert result.exit_code != 0
-    assert "One or more operations failed" in result.output
+    assert "One or more group operations failed" in result.output
 
 
 def test_cli_cleanup_failure(monkeypatch, tmp_path):
     csv_file = tmp_path / "sample.csv"
     csv_file.write_text(
-        "Email,Entitlement Display Name\n"
-        'joe@example.com,"CN=admins,OU=Groups,DC=example,DC=com"\n'
+        "Email,User Display Name,Employee Status,Entitlement Display Name\n"
+        'joe@example.com,Joe User,Active,"CN=admins,OU=Groups,DC=example,DC=com"\n'
     )
 
     class Repo:
@@ -229,6 +232,9 @@ def test_cli_sync_users_dry_run_happy_path(monkeypatch, tmp_path):
         def list_users(self, namespace: str = "system"):
             return {"items": []}
 
+        def list_user_roles(self, namespace: str = "system"):
+            return {"items": [{"username": "alice@example.com"}]}
+
         def create_user(self, user_data: dict, namespace: str = "system"):
             return {"email": user_data["email"]}
 
@@ -245,7 +251,7 @@ def test_cli_sync_users_dry_run_happy_path(monkeypatch, tmp_path):
     assert result.exit_code == 0
     assert "Users planned from CSV: 1" in result.output
     assert "Active: 1, Inactive: 0" in result.output
-    assert "User sync complete" in result.output
+    assert "SYNCHRONIZATION COMPLETE" in result.output
 
 
 def test_cli_sync_users_requires_tenant_id(monkeypatch, tmp_path):

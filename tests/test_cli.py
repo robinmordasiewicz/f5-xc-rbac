@@ -231,13 +231,16 @@ class TestCLISyncCommand:
         mock_user_service.fetch_existing_users.return_value = {}
 
         user_stats_mock = Mock()
+        user_stats_mock.summary.return_value = (
+            "Users: created=0, updated=0, deleted=0, unchanged=0, errors=0"
+        )
         user_stats_mock.has_errors.return_value = False
         mock_user_service.sync_users.return_value = user_stats_mock
 
         result = runner.invoke(cli, ["--csv", temp_csv_file, "--dry-run"])
 
         assert result.exit_code != 0
-        assert "operations failed" in result.output
+        assert "group operations failed" in result.output
 
     @patch("xc_user_group_sync.cli.UserSyncService")
     @patch("xc_user_group_sync.cli.GroupSyncService")
@@ -254,15 +257,33 @@ class TestCLISyncCommand:
         """Test sync with CSV parse error."""
         from xc_user_group_sync.sync_service import CSVParseError
 
+        # Setup user service mock to parse successfully
+        mock_user_service = Mock()
+        mock_user_service_class.return_value = mock_user_service
+
+        csv_validation_result = Mock()
+        csv_validation_result.total_count = 0
+        csv_validation_result.active_count = 0
+        csv_validation_result.inactive_count = 0
+        csv_validation_result.users = []
+        csv_validation_result.unique_groups = set()
+        csv_validation_result.has_warnings.return_value = False
+        mock_user_service.parse_csv_to_users.return_value = csv_validation_result
+        mock_user_service.fetch_existing_users.return_value = {}
+
+        user_stats_mock = Mock()
+        user_stats_mock.summary.return_value = (
+            "Users: created=0, updated=0, deleted=0, unchanged=0, errors=0"
+        )
+        user_stats_mock.has_errors.return_value = False
+        mock_user_service.sync_users.return_value = user_stats_mock
+
+        # Now setup group service to fail
         mock_group_service = Mock()
         mock_group_service_class.return_value = mock_group_service
         mock_group_service.parse_csv_to_groups.side_effect = CSVParseError(
             "Missing required columns"
         )
-
-        # Setup user service mock
-        mock_user_service = Mock()
-        mock_user_service_class.return_value = mock_user_service
 
         result = runner.invoke(cli, ["--csv", temp_csv_file])
 
@@ -284,16 +305,34 @@ class TestCLISyncCommand:
         """Test sync with API error."""
         import requests
 
+        # Setup user service mock to parse and sync successfully
+        mock_user_service = Mock()
+        mock_user_service_class.return_value = mock_user_service
+
+        csv_validation_result = Mock()
+        csv_validation_result.total_count = 0
+        csv_validation_result.active_count = 0
+        csv_validation_result.inactive_count = 0
+        csv_validation_result.users = []
+        csv_validation_result.unique_groups = set()
+        csv_validation_result.has_warnings.return_value = False
+        mock_user_service.parse_csv_to_users.return_value = csv_validation_result
+        mock_user_service.fetch_existing_users.return_value = {}
+
+        user_stats_mock = Mock()
+        user_stats_mock.summary.return_value = (
+            "Users: created=0, updated=0, deleted=0, unchanged=0, errors=0"
+        )
+        user_stats_mock.has_errors.return_value = False
+        mock_user_service.sync_users.return_value = user_stats_mock
+
+        # Now setup group service to fail with API error
         mock_group_service = Mock()
         mock_group_service_class.return_value = mock_group_service
         mock_group_service.parse_csv_to_groups.return_value = []
         mock_group_service.fetch_existing_groups.side_effect = (
             requests.RequestException("API connection failed")
         )
-
-        # Setup user service mock
-        mock_user_service = Mock()
-        mock_user_service_class.return_value = mock_user_service
 
         result = runner.invoke(cli, ["--csv", temp_csv_file])
 
