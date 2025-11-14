@@ -26,7 +26,7 @@ import csv
 import logging
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import ClassVar, Dict, List, Set
+from typing import ClassVar, Dict, List, Set, Tuple
 
 from tenacity import (
     retry_if_exception_type,
@@ -34,7 +34,7 @@ from tenacity import (
     wait_exponential,
 )
 
-from .ldap_utils import LdapParseError, extract_cn
+from .ldap_utils import LdapParseError, extract_cn, normalize_group_name_dns1035
 from .models import Group
 from .protocols import GroupRepository
 
@@ -108,7 +108,8 @@ class GroupSyncService:
             CSVParseError: If CSV is malformed or missing required columns
 
         """
-        members: Dict[str, Set[str]] = defaultdict(set)
+        # Track members by normalized name, storing tuples of (original_name, email)
+        members: Dict[str, Set[Tuple[str, str]]] = defaultdict(set)
 
         with open(csv_path, newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
@@ -129,16 +130,31 @@ class GroupSyncService:
 
                 try:
                     cn = extract_cn(dn)
+                    # Normalize to DNS-1035 for F5 XC API
+                    normalized_name = normalize_group_name_dns1035(cn)
                 except LdapParseError as e:
                     logging.warning("Skipping row due to DN parse error: %s", e)
                     continue
 
-                members[cn].add(email)
+                # Track members by normalized name, but keep original
+                members[normalized_name].add((cn, email))
 
         planned = []
-        for name, users in sorted(members.items()):
-            grp = Group(name=name, users=sorted(users))
+        for normalized_name, user_data in sorted(members.items()):
+            # Extract just emails and get original name from first entry
+            original_name = next(iter(user_data))[0]
+            user_emails = sorted([email for _, email in user_data])
+
+            grp = Group(
+                name=normalized_name, original_name=original_name, users=user_emails
+            )
             planned.append(grp)
+
+            # Log normalization if name changed
+            if normalized_name != original_name:
+                logging.info(
+                    "Normalized group name: '%s' → '%s'", original_name, normalized_name
+                )
 
         return planned
 
@@ -153,11 +169,15 @@ class GroupSyncService:
 
         """
         list_resp = self.repository.list_groups()
+        # F5 XC API returns groups under 'user_groups' key, not 'items'
+        groups_list = list_resp.get("user_groups", list_resp.get("items", []))
+        logging.debug(f"list_groups returned {len(groups_list)} groups")
         existing = {
-            g["name"]: g
-            for g in list_resp.get("items", [])
-            if isinstance(g, dict) and "name" in g
+            g["name"]: g for g in groups_list if isinstance(g, dict) and "name" in g
         }
+        logging.info(f"Fetched {len(existing)} existing groups from F5 XC")
+        if existing:
+            logging.debug(f"Existing group names: {list(existing.keys())}")
         return existing
 
     def fetch_existing_users(self) -> Set[str] | None:

@@ -106,11 +106,14 @@ Execute pruning operations in these scenarios:
 **REQUIRED**: Backup current F5 XC state before pruning:
 
 ```bash
-# Export current groups for backup
+# Export current groups for backup using the tool
+xc_user_group_sync --csv User-Database.csv --dry-run > f5xc-state-backup-$(date +%Y%m%d).log
+
+# Alternatively, use curl with P12 certificate (requires cert/key extraction)
+# Note: The tool handles P12 extraction automatically; manual curl requires extraction
 curl -X GET \
   "https://${TENANT_ID}.console.ves.volterra.io/api/web/namespaces/system/user_groups" \
-  --cert ${VOLT_API_CERT_FILE} \
-  --key ${VOLT_API_CERT_KEY_FILE} \
+  --cert-type P12 --cert "${VOLT_API_P12_FILE}:${VES_P12_PASSWORD}" \
   > f5xc-groups-backup-$(date +%Y%m%d).json
 ```
 
