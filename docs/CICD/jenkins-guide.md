@@ -108,7 +108,7 @@ stage('Sync') {
   steps {
     sh '''
       . .venv/bin/activate
-      xc_user_group_sync sync --csv User-Database.csv --prune
+      xc_user_group_sync --csv User-Database.csv --prune
     '''
   }
 }
@@ -163,7 +163,7 @@ stage('Validation') {
       steps {
         sh '''
           . .venv/bin/activate
-          xc_user_group_sync sync --csv User-Database.csv --dry-run
+          xc_user_group_sync --csv User-Database.csv --dry-run
         '''
       }
     }

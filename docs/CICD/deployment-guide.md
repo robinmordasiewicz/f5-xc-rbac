@@ -30,7 +30,7 @@ pip install -e .
 ./scripts/setup_xc_credentials.sh --p12 ~/Downloads/tenant.p12
 
 # Run manually
-xc_user_group_sync sync --csv User-Database.csv --dry-run
+xc_user_group_sync --csv User-Database.csv --dry-run
 ```
 
 **Pros**:

@@ -1278,15 +1278,15 @@ This feature is important for security and compliance but lower priority than cr
 
 # Without --prune flag (default, safe)
 
-xc_user_group_sync sync --csv users.csv
+xc_user_group_sync --csv users.csv
 
 # With --prune flag (explicit deletion enabled)
 
-xc_user_group_sync sync --csv users.csv --prune
+xc_user_group_sync --csv users.csv --prune
 
 # With dry-run (preview deletions safely)
 
-xc_user_group_sync sync --csv users.csv --prune --dry-run
+xc_user_group_sync --csv users.csv --prune --dry-run
 
 ```
 
@@ -1880,7 +1880,7 @@ def _create_user(self, user: User, dry_run: bool, stats: UserSyncStats):
 
 # Before running sync on new CSV format
 
-xc_user_group_sync sync --csv new_export.csv --dry-run
+xc_user_group_sync --csv new_export.csv --dry-run
 
 # Review output to ensure parsing works correctly
 
@@ -1896,7 +1896,7 @@ xc_user_group_sync sync --csv new_export.csv --dry-run
 
 # ALWAYS dry-run before deleting users
 
-xc_user_group_sync sync --csv active_users.csv --prune --dry-run
+xc_user_group_sync --csv active_users.csv --prune --dry-run
 
 # Review deletion list carefully
 
@@ -1904,7 +1904,7 @@ xc_user_group_sync sync --csv active_users.csv --prune --dry-run
 
 # Apply deletions after verification
 
-xc_user_group_sync sync --csv active_users.csv --prune
+xc_user_group_sync --csv active_users.csv --prune
 
 ```
 
@@ -1914,7 +1914,7 @@ xc_user_group_sync sync --csv active_users.csv --prune
 
 # Run dry-run to see what would happen
 
-xc_user_group_sync sync --csv users.csv --dry-run --log-level DEBUG
+xc_user_group_sync --csv users.csv --dry-run --log-level DEBUG
 
 # Review detailed logs to identify issues
 
@@ -2147,7 +2147,7 @@ class UserSyncStats:
 ### 4.1.2 Command Structure
 
 ```bash
-xc_user_group_sync sync [OPTIONS]
+xc_user_group_sync [OPTIONS]
 
 ```
 
@@ -2176,7 +2176,7 @@ There is no option to prune only users or only groups independently. This unifie
 **Basic Synchronization** (create and update only):
 
 ```bash
-xc_user_group_sync sync --csv /path/to/users.csv
+xc_user_group_sync --csv /path/to/users.csv
 
 ```
 
@@ -2184,7 +2184,7 @@ xc_user_group_sync sync --csv /path/to/users.csv
 
 ```bash
 
-xc_user_group_sync sync --csv /path/to/users.csv --dry-run
+xc_user_group_sync --csv /path/to/users.csv --dry-run
 
 ```
 
@@ -2192,7 +2192,7 @@ xc_user_group_sync sync --csv /path/to/users.csv --dry-run
 
 ```bash
 
-xc_user_group_sync sync --csv /path/to/users.csv --prune
+xc_user_group_sync --csv /path/to/users.csv --prune
 
 ```
 
@@ -2200,7 +2200,7 @@ xc_user_group_sync sync --csv /path/to/users.csv --prune
 
 ```bash
 
-xc_user_group_sync sync --csv /path/to/users.csv --log-level DEBUG --timeout 180
+xc_user_group_sync --csv /path/to/users.csv --log-level DEBUG --timeout 180
 
 ```
 
@@ -2208,7 +2208,7 @@ xc_user_group_sync sync --csv /path/to/users.csv --log-level DEBUG --timeout 180
 
 ```bash
 
-xc_user_group_sync sync --csv /path/to/users.csv --prune --dry-run
+xc_user_group_sync --csv /path/to/users.csv --prune --dry-run
 
 ```
 
@@ -2256,9 +2256,9 @@ If `VOLT_API_P12_FILE` is provided but `VOLT_API_CERT_FILE` and `VOLT_API_CERT_K
 ### 4.1.7 Help Output
 
 ```bash
-$ xc_user_group_sync sync --help
+$ xc_user_group_sync --help
 
-Usage: xc_user_group_sync sync [OPTIONS]
+Usage: xc_user_group_sync [OPTIONS]
 
   Synchronize users and groups from CSV to F5 Distributed Cloud.
 
@@ -2280,16 +2280,16 @@ Options:
 
 Examples:
   # Basic sync (create and update only)
-  xc_user_group_sync sync --csv users.csv
+  xc_user_group_sync --csv users.csv
 
   # Preview changes before applying
-  xc_user_group_sync sync --csv users.csv --dry-run
+  xc_user_group_sync --csv users.csv --dry-run
 
   # Sync with user deletion enabled
-  xc_user_group_sync sync --csv users.csv --prune
+  xc_user_group_sync --csv users.csv --prune
 
   # Debug mode with verbose logging
-  xc_user_group_sync sync --csv users.csv --log-level DEBUG
+  xc_user_group_sync --csv users.csv --log-level DEBUG
 
 For more information: https://github.com/example/f5-xc-user-group-sync
 
@@ -4742,8 +4742,8 @@ def parse_csv_safe(csv_path: str) -> List[User]:
 4. Use backup CSV to restore users:
 
    ```bash
-   xc_user_group_sync sync --csv backup_users.csv --dry-run  # Verify restoration plan
-   xc_user_group_sync sync --csv backup_users.csv           # Restore users
+   xc_user_group_sync --csv backup_users.csv --dry-run  # Verify restoration plan
+   xc_user_group_sync --csv backup_users.csv           # Restore users
 
    ```
 
@@ -4802,13 +4802,13 @@ ls -lt csvs/
 
 # 2. Dry-run to verify rollback plan
 
-xc_user_group_sync sync --csv backups/users_2025-11-12.csv --dry-run
+xc_user_group_sync --csv backups/users_2025-11-12.csv --dry-run
 
 # 3. Review output: should show updates reverting to old values
 
 # 4. Execute rollback
 
-xc_user_group_sync sync --csv backups/users_2025-11-12.csv
+xc_user_group_sync --csv backups/users_2025-11-12.csv
 
 # 5. Verify success
 
@@ -4822,7 +4822,7 @@ xc_user_group_sync sync --csv backups/users_2025-11-12.csv
 
 # 1. Restore from backup CSV
 
-xc_user_group_sync sync --csv backups/users_2025-11-12.csv --dry-run
+xc_user_group_sync --csv backups/users_2025-11-12.csv --dry-run
 
 # 2. Verify creates match deleted users
 
@@ -4830,7 +4830,7 @@ xc_user_group_sync sync --csv backups/users_2025-11-12.csv --dry-run
 
 # 3. Execute restoration
 
-xc_user_group_sync sync --csv backups/users_2025-11-12.csv
+xc_user_group_sync --csv backups/users_2025-11-12.csv
 
 # 4. Verify restored users in F5 XC console
 
@@ -5596,13 +5596,13 @@ xc_user_group_sync check
 
 # 4. Dry-run with sample CSV
 
-xc_user_group_sync sync --csv sample_users.csv --dry-run
+xc_user_group_sync --csv sample_users.csv --dry-run
 
 # Expected: Dry-run summary with no errors
 
 # 5. Small sync test
 
-xc_user_group_sync sync --csv test_single_user.csv
+xc_user_group_sync --csv test_single_user.csv
 
 # Expected: 1 user created successfully
 
@@ -5697,7 +5697,7 @@ VOLT_API_TOKEN=dev-test-token
 
 # Load automatically (python-dotenv)
 
-xc_user_group_sync sync --csv users.csv
+xc_user_group_sync --csv users.csv
 
 ```
 
@@ -6147,7 +6147,7 @@ if [[ "$DELETE_USERS" == "true" ]]; then
   python backup_f5xc_state.py
 fi
 
-xc_user_group_sync sync --csv users.csv --prune
+xc_user_group_sync --csv users.csv --prune
 
 ```
 
@@ -6186,12 +6186,12 @@ xc_user_group_sync sync --csv users.csv --prune
 
    ```bash
    # Option A: Restore from CSV backup
-   xc_user_group_sync sync \
+   xc_user_group_sync \
 
      --csv /backups/xc-sync/csv/users_YESTERDAY.csv \
      --dry-run  # Preview restoration
 
-   xc_user_group_sync sync \
+   xc_user_group_sync \
 
      --csv /backups/xc-sync/csv/users_YESTERDAY.csv  # Execute restoration
 
@@ -6249,7 +6249,7 @@ xc_user_group_sync sync --csv users.csv --prune
 
    ```bash
    # Dry-run with previous day's backup
-   xc_user_group_sync sync \
+   xc_user_group_sync \
 
      --csv /backups/xc-sync/csv/users_PREVIOUS_DAY.csv \
      --dry-run
@@ -6257,7 +6257,7 @@ xc_user_group_sync sync --csv users.csv --prune
    # Review dry-run output for expected changes
 
    # Execute rollback
-   xc_user_group_sync sync \
+   xc_user_group_sync \
 
      --csv /backups/xc-sync/csv/users_PREVIOUS_DAY.csv
 
@@ -6285,7 +6285,7 @@ echo "Testing restoration from: $LATEST_BACKUP"
 
 # Dry-run sync with backup (should succeed)
 
-xc_user_group_sync sync --csv "$LATEST_BACKUP" --dry-run
+xc_user_group_sync --csv "$LATEST_BACKUP" --dry-run
 
 if [ $? -eq 0 ]; then
   echo "✅ Backup validation passed: $LATEST_BACKUP"
