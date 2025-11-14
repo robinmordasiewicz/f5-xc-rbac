@@ -26,8 +26,7 @@ HTTP 401 Unauthorized
 1. Invalid or expired P12 certificate
 2. Incorrect P12 password
 3. Certificate not trusted by F5 XC
-4. Incorrect API token
-5. P12 file corrupted or not accessible
+4. P12 file corrupted or not accessible
 
 **Resolution Steps**:
 
@@ -38,11 +37,9 @@ openssl pkcs12 -in secrets/your-tenant.p12 -noout -passin pass:your-password
 # For OpenSSL 3.x, use -legacy flag if needed
 openssl pkcs12 -legacy -in secrets/your-tenant.p12 -noout -passin pass:your-password
 
-# Re-run setup with new P12 file
-./scripts/setup_xc_credentials.sh --p12 /path/to/new.p12
-
 # Verify environment variables are set correctly
 echo $TENANT_ID
+echo $XC_API_URL
 echo $VOLT_API_P12_FILE
 echo $VES_P12_PASSWORD  # Should show password (be careful with this in shared terminals)
 
@@ -543,16 +540,49 @@ def test_user_create():
 
 ### Test API Connectivity
 
+**Using P12 Certificate**:
+
 ```bash
-# Test API endpoint reachability
-curl -v https://${TENANT_ID}.console.ves.volterra.io/api/web/namespaces/system/user_groups \
-  --cert ${VOLT_API_CERT_FILE} \
-  --key ${VOLT_API_CERT_KEY_FILE}
+# Extract certificate and key from P12 for curl testing
+# Note: The tool handles this automatically - this is just for manual testing
+openssl pkcs12 -in ${VOLT_API_P12_FILE} -passin pass:${VES_P12_PASSWORD} \
+  -clcerts -nokeys -out /tmp/test-cert.pem
+
+openssl pkcs12 -in ${VOLT_API_P12_FILE} -passin pass:${VES_P12_PASSWORD} \
+  -nocerts -nodes -out /tmp/test-key.pem
+
+# Test API endpoint reachability with extracted credentials
+curl -v https://${TENANT_ID}.console.ves.volterra.io/api/web/custom/namespaces/system/user_groups \
+  --cert /tmp/test-cert.pem \
+  --key /tmp/test-key.pem
+
+# Cleanup temporary files
+rm -f /tmp/test-cert.pem /tmp/test-key.pem
 
 # Expected: HTTP 200 with JSON response
-# If 401: Authentication failure
+# If 401: Authentication failure - check P12 password or certificate validity
 # If connection timeout: Network/firewall issue
 ```
+
+**Using Custom API URL** (staging environment):
+
+```bash
+# Extract cert/key from P12
+openssl pkcs12 -in ${VOLT_API_P12_FILE} -passin pass:${VES_P12_PASSWORD} \
+  -clcerts -nokeys -out /tmp/test-cert.pem
+openssl pkcs12 -in ${VOLT_API_P12_FILE} -passin pass:${VES_P12_PASSWORD} \
+  -nocerts -nodes -out /tmp/test-key.pem
+
+# Test with custom API URL
+curl -v ${XC_API_URL}/api/web/custom/namespaces/system/user_groups \
+  --cert /tmp/test-cert.pem \
+  --key /tmp/test-key.pem
+
+# Cleanup
+rm -f /tmp/test-cert.pem /tmp/test-key.pem
+```
+
+**Recommended**: Use the Python interactive debugging methods (see above) for API testing instead of curl, as they handle P12 authentication automatically without manual certificate extraction.
 
 ### Validate CSV
 

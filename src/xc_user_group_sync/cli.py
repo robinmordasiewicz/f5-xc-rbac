@@ -227,8 +227,8 @@ def cli(
 
     Authentication via environment variables:
     - TENANT_ID (required): Your XC tenant ID
-    - XC_API_TOKEN: API token for authentication
-    - VOLT_API_CERT_FILE + VOLT_API_CERT_KEY_FILE: Certificate-based auth
+    - VOLT_API_P12_FILE + VES_P12_PASSWORD: P12 certificate with passphrase
+    - XC_API_URL (optional): Custom API endpoint (e.g., staging environment)
 
     Examples:
         # Reconcile users and groups (create/update only)
