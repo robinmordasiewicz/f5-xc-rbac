@@ -173,6 +173,374 @@ ls -la secrets/.env
 python3 -c "from dotenv import load_dotenv; load_dotenv('secrets/.env'); import os; print(os.getenv('TENANT_ID'))"
 ```
 
+### Python Interactive Debugging
+
+#### Debug Authentication and Client Setup
+
+```python
+# Start Python shell in project directory
+python3
+
+# Load environment and create client
+from dotenv import load_dotenv
+import os
+load_dotenv('secrets/.env')
+
+# Verify environment variables loaded
+print(f"TENANT_ID: {os.getenv('TENANT_ID')}")
+print(f"XC_API_URL: {os.getenv('XC_API_URL')}")
+print(f"VOLT_API_P12_FILE: {os.getenv('VOLT_API_P12_FILE')}")
+print(f"VES_P12_PASSWORD: {'[SET]' if os.getenv('VES_P12_PASSWORD') else '[NOT SET]'}")
+
+# Create client with P12 authentication
+from xc_user_group_sync.client import XCClient
+
+client = XCClient(
+    tenant_id=os.getenv('TENANT_ID'),
+    p12_file=os.getenv('VOLT_API_P12_FILE'),
+    p12_password=os.getenv('VES_P12_PASSWORD'),
+    api_url=os.getenv('XC_API_URL')
+)
+
+# Inspect client configuration
+print(f"Base URL: {client.base_url}")
+print(f"Timeout: {client.timeout}s")
+print(f"Max Retries: {client.max_retries}")
+print(f"Session cert configured: {client.session.cert is not None}")
+print(f"Temp cert file: {client._temp_cert_file}")
+print(f"Temp key file: {client._temp_key_file}")
+```
+
+#### Test API Endpoints Interactively
+
+```python
+# List existing users (test authentication)
+try:
+    users_response = client.list_user_roles()
+    print(f"✅ Authentication successful!")
+    print(f"Total users: {len(users_response.get('items', []))}")
+
+    # Display first user
+    if users_response.get('items'):
+        first_user = users_response['items'][0]
+        print(f"Sample user: {first_user.get('name')}")
+except Exception as e:
+    print(f"❌ Authentication failed: {e}")
+
+# List existing groups
+try:
+    groups_response = client.list_groups()
+    print(f"Total groups: {len(groups_response.get('items', []))}")
+
+    # Display all group names
+    for group in groups_response.get('items', []):
+        print(f" - {group['name']}: {len(group.get('usernames', []))} users")
+except Exception as e:
+    print(f"Error listing groups: {e}")
+
+# Get specific user
+try:
+    user = client.get_user('testuser@example.com')
+    print(f"User found: {user.get('name')}")
+    print(f"Display name: {user.get('display_name')}")
+    print(f"First name: {user.get('first_name')}")
+    print(f"Last name: {user.get('last_name')}")
+except Exception as e:
+    print(f"User not found or error: {e}")
+```
+
+#### Inspect HTTP Request Details
+
+```python
+# Access session headers
+print("Request Headers:")
+for header, value in client.session.headers.items():
+    # Mask sensitive values
+    if 'auth' in header.lower() or 'token' in header.lower():
+        print(f"  {header}: [REDACTED]")
+    else:
+        print(f"  {header}: {value}")
+
+# Check certificate configuration
+if client.session.cert:
+    cert_file, key_file = client.session.cert
+    print(f"\nCertificate Auth:")
+    print(f"  Cert file: {cert_file}")
+    print(f"  Key file: {key_file}")
+
+# Test raw API request with detailed output
+import requests
+
+try:
+    # Make manual request to see full response details
+    url = f"{client.base_url}/api/web/custom/namespaces/system/user_groups"
+    response = client.session.get(url, timeout=client.timeout)
+
+    print(f"\nAPI Request Details:")
+    print(f"  URL: {url}")
+    print(f"  Status Code: {response.status_code}")
+    print(f"  Response Headers:")
+    for header, value in response.headers.items():
+        print(f"    {header}: {value}")
+
+    # Parse JSON response
+    data = response.json()
+    print(f"  Response Keys: {list(data.keys())}")
+
+except requests.exceptions.SSLError as e:
+    print(f"❌ SSL Error: {e}")
+    print("Hint: Check certificate validity or CA trust")
+except requests.exceptions.ConnectionError as e:
+    print(f"❌ Connection Error: {e}")
+    print("Hint: Check network connectivity and firewall")
+except requests.exceptions.Timeout as e:
+    print(f"❌ Timeout Error: {e}")
+    print("Hint: Increase timeout or check F5 XC status")
+except requests.HTTPError as e:
+    print(f"❌ HTTP Error: {e}")
+    if response.status_code == 401:
+        print("Hint: Authentication failed - check credentials")
+    elif response.status_code == 429:
+        print("Hint: Rate limited - reduce request frequency")
+```
+
+#### Debug CSV Parsing
+
+```python
+# Parse CSV and inspect validation results
+from xc_user_group_sync.user_sync_service import UserSyncService
+
+user_service = UserSyncService(client)
+
+# Parse CSV file
+csv_path = '/tmp/test-users.csv'
+try:
+    validation_result = user_service.parse_csv_to_users(csv_path)
+
+    print(f"CSV Validation Results:")
+    print(f"  Total users: {validation_result.total_count}")
+    print(f"  Active users: {validation_result.active_count}")
+    print(f"  Inactive users: {validation_result.inactive_count}")
+    print(f"  Unique groups: {len(validation_result.unique_groups)}")
+
+    # Check for warnings
+    if validation_result.has_warnings():
+        print(f"\n⚠️ Validation Warnings:")
+        if validation_result.duplicate_emails:
+            print(f"  Duplicate emails: {len(validation_result.duplicate_emails)}")
+        if validation_result.invalid_emails:
+            print(f"  Invalid emails: {len(validation_result.invalid_emails)}")
+        if validation_result.users_without_groups > 0:
+            print(f"  Users without groups: {validation_result.users_without_groups}")
+
+    # Inspect first user
+    if validation_result.users:
+        user = validation_result.users[0]
+        print(f"\nSample User:")
+        print(f"  Email: {user.email}")
+        print(f"  Display name: {user.display_name}")
+        print(f"  Active: {user.active}")
+        print(f"  Groups: {user.groups}")
+
+except ValueError as e:
+    print(f"❌ CSV Validation Error: {e}")
+except Exception as e:
+    print(f"❌ Parse Error: {e}")
+```
+
+#### Debug Group Synchronization
+
+```python
+# Parse groups from CSV
+from xc_user_group_sync.sync_service import GroupSyncService
+
+group_service = GroupSyncService(client)
+
+try:
+    planned_groups = group_service.parse_csv_to_groups(csv_path)
+
+    print(f"Planned Groups from CSV:")
+    for group in planned_groups:
+        print(f"  {group.name}:")
+        print(f"    Display name: {group.display_name}")
+        print(f"    User count: {len(group.users)}")
+        print(f"    Users: {', '.join(group.users[:5])}")
+        if len(group.users) > 5:
+            print(f"           ... and {len(group.users) - 5} more")
+
+    # Fetch existing groups from F5 XC
+    existing_groups = group_service.fetch_existing_groups()
+    print(f"\nExisting Groups in F5 XC: {len(existing_groups)}")
+    for group in existing_groups:
+        print(f"  {group['name']}: {len(group.get('usernames', []))} users")
+
+except Exception as e:
+    print(f"❌ Group Parse Error: {e}")
+```
+
+#### Test P12 Certificate Extraction
+
+```python
+# Debug P12 file loading and certificate extraction
+from cryptography.hazmat.primitives.serialization import pkcs12
+from cryptography.hazmat.backends import default_backend
+
+p12_file = os.getenv('VOLT_API_P12_FILE')
+p12_password = os.getenv('VES_P12_PASSWORD')
+
+try:
+    # Load P12 file
+    with open(p12_file, 'rb') as f:
+        p12_data = f.read()
+
+    print(f"P12 file size: {len(p12_data)} bytes")
+
+    # Extract certificate and key
+    private_key, certificate, additional_certs = pkcs12.load_key_and_certificates(
+        p12_data,
+        p12_password.encode(),
+        backend=default_backend()
+    )
+
+    print(f"✅ P12 loaded successfully")
+    print(f"Private key: {type(private_key).__name__}")
+    print(f"Certificate: {type(certificate).__name__}")
+
+    # Inspect certificate details
+    print(f"\nCertificate Details:")
+    print(f"  Subject: {certificate.subject}")
+    print(f"  Issuer: {certificate.issuer}")
+    print(f"  Not valid before: {certificate.not_valid_before_utc}")
+    print(f"  Not valid after: {certificate.not_valid_after_utc}")
+    print(f"  Serial number: {certificate.serial_number}")
+
+    # Check if certificate is expired
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    if now < certificate.not_valid_before_utc:
+        print("⚠️ Certificate not yet valid")
+    elif now > certificate.not_valid_after_utc:
+        print("❌ Certificate expired!")
+    else:
+        print("✅ Certificate is valid")
+
+except FileNotFoundError:
+    print(f"❌ P12 file not found: {p12_file}")
+except ValueError as e:
+    print(f"❌ Invalid P12 password or corrupted file: {e}")
+except Exception as e:
+    print(f"❌ P12 load error: {e}")
+```
+
+#### Test Retry Logic and Rate Limiting
+
+```python
+# Test client retry configuration
+print(f"Retry Configuration:")
+print(f"  Max retries: {client.max_retries}")
+print(f"  Backoff multiplier: {client.backoff_multiplier}")
+print(f"  Backoff min: {client.backoff_min}s")
+print(f"  Backoff max: {client.backoff_max}s")
+
+# Simulate retry behavior with custom settings
+test_client = XCClient(
+    tenant_id=os.getenv('TENANT_ID'),
+    p12_file=os.getenv('VOLT_API_P12_FILE'),
+    p12_password=os.getenv('VES_P12_PASSWORD'),
+    api_url=os.getenv('XC_API_URL'),
+    max_retries=5,  # Increase retries
+    backoff_multiplier=2.0,  # Double backoff each retry
+    backoff_min=2.0,  # Start with 2s delay
+    backoff_max=16.0  # Max 16s delay
+)
+
+print(f"\nCustom Retry Configuration:")
+print(f"  Max retries: {test_client.max_retries}")
+print(f"  Backoff sequence (approx): 2s, 4s, 8s, 16s, 16s")
+
+# Test with endpoint that might rate limit
+import time
+
+print(f"\nTesting rate limit handling...")
+start = time.time()
+
+try:
+    # Make multiple rapid requests to test rate limiting
+    for i in range(3):
+        print(f"  Request {i+1}...")
+        response = client.list_groups()
+        print(f"    ✅ Success ({time.time() - start:.2f}s elapsed)")
+except requests.exceptions.HTTPError as e:
+    if e.response.status_code == 429:
+        print(f"    ⚠️ Rate limited (HTTP 429)")
+        print(f"    Retry-After header: {e.response.headers.get('Retry-After')}")
+    else:
+        print(f"    ❌ HTTP Error: {e.response.status_code}")
+except Exception as e:
+    print(f"    ❌ Error: {e}")
+
+total_time = time.time() - start
+print(f"\nTotal time for 3 requests: {total_time:.2f}s")
+print(f"Average time per request: {total_time/3:.2f}s")
+```
+
+#### Monitor API Response Times
+
+```python
+# Benchmark API endpoint performance
+import time
+
+def benchmark_endpoint(endpoint_func, name, iterations=5):
+    """Benchmark an API endpoint."""
+    print(f"\nBenchmarking {name}:")
+    times = []
+
+    for i in range(iterations):
+        start = time.time()
+        try:
+            result = endpoint_func()
+            elapsed = time.time() - start
+            times.append(elapsed)
+            print(f"  Attempt {i+1}: {elapsed:.3f}s ✅")
+        except Exception as e:
+            elapsed = time.time() - start
+            print(f"  Attempt {i+1}: {elapsed:.3f}s ❌ ({e})")
+
+    if times:
+        avg = sum(times) / len(times)
+        min_time = min(times)
+        max_time = max(times)
+        print(f"  Average: {avg:.3f}s")
+        print(f"  Min: {min_time:.3f}s, Max: {max_time:.3f}s")
+        return avg
+    return None
+
+# Benchmark different endpoints
+benchmark_endpoint(client.list_groups, "list_groups")
+benchmark_endpoint(client.list_user_roles, "list_user_roles")
+
+# Test specific operations
+def test_user_create():
+    user_data = {
+        "email": "benchmark@example.com",
+        "username": "benchmark@example.com",
+        "display_name": "Benchmark User",
+        "first_name": "Bench",
+        "last_name": "Mark"
+    }
+    try:
+        return client.create_user(user_data)
+    finally:
+        # Cleanup
+        try:
+            client.delete_user("benchmark@example.com")
+        except:
+            pass
+
+# Note: Only run create tests in non-production environments
+# benchmark_endpoint(test_user_create, "create_user", iterations=1)
+```
+
 ### Test API Connectivity
 
 ```bash
