@@ -231,8 +231,8 @@ def api_client():
     """Provide configured API client for tests."""
     return APIClient(
         tenant_id="test-tenant",
-        cert_file="test-cert.pem",
-        key_file="test-key.pem"
+        p12_file="test-cert.p12",
+        p12_password="test-password"  # pragma: allowlist secret
     )
 
 def test_with_fixture(api_client):

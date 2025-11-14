@@ -193,8 +193,8 @@ pytest tests/integration/ --log-cli-level=DEBUG
 # Configure for staging environment
 export XC_API_URL="https://tenant.staging.volterra.us"
 export TENANT_ID="test-tenant"
-export VOLT_API_CERT_FILE="staging-cert.pem"
-export VOLT_API_CERT_KEY_FILE="staging-key.pem"
+export VOLT_API_P12_FILE="staging-cert.p12"
+export VES_P12_PASSWORD="test-password"  # pragma: allowlist secret
 
 # Run E2E test
 pytest tests/e2e/ --e2e-env=staging

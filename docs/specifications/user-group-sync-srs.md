@@ -828,25 +828,19 @@ Flexible configuration system supporting hierarchical environment variable loadi
 
 ---
 
-#### FR-ENV-004: Multiple Authentication Methods
+#### FR-ENV-004: P12 Certificate Authentication
 
-**Requirement**: The system MUST support three authentication methods with automatic selection:
-1. P12 certificate file (`.p12`with password)
-2. PEM certificate and key files (separate`.pem`files)
-3. API token (string token)
+**Requirement**: The system MUST support P12 certificate authentication with password:
+1. P12 certificate file (`.p12` with password via `VOLT_API_P12_FILE` and `VES_P12_PASSWORD`)
 
-**Priority Order**: P12 > PEM > Token (when multiple methods configured)
-
-**Rationale**: Supports diverse enterprise authentication requirements; P12 preferred for organizational deployments.
+**Rationale**: P12 certificate authentication provides secure, standardized authentication for organizational deployments.
 
 **Acceptance Criteria**:
-- AC-ENV-004.1: System detects and uses P12 when`VOLT_API_P12_FILE`and`VES_P12_PASSWORD`are set
-- AC-ENV-004.2: System falls back to PEM when`VOLT_API_CERT_FILE`and`VOLT_API_CERT_KEY_FILE`are set (and P12 not available)
-- AC-ENV-004.3: System falls back to token when`XC_API_TOKEN`is set (and certificates not available)
-- AC-ENV-004.4: Missing authentication credentials cause immediate failure with clear error message listing required variables
-- AC-ENV-004.5: P12 files are extracted to temporary PEM files for requests library compatibility
-- AC-ENV-004.6: Temporary PEM files are cleaned up after use
-- AC-ENV-004.7: System logs which authentication method is being used (for debugging)
+- AC-ENV-004.1: System requires P12 authentication via `VOLT_API_P12_FILE` and `VES_P12_PASSWORD`
+- AC-ENV-004.2: Missing P12 credentials cause immediate failure with clear error message listing required variables
+- AC-ENV-004.3: P12 files are extracted to temporary PEM files for requests library compatibility
+- AC-ENV-004.4: Temporary PEM files are cleaned up after use
+- AC-ENV-004.5: System logs P12 authentication initialization for debugging
 
 **Testing**: Integration tests with each authentication method; verify correct auth headers in API calls.
 
@@ -1235,7 +1229,7 @@ Automated credential extraction from P12 certificates, environment detection, se
 **Rationale**: Automated .env generation eliminates manual configuration; ensures consistency between credentials and environment settings.
 
 **Acceptance Criteria**:
-- AC-SETUP-002.1:`secrets/.env`file created with variables:`TENANT_ID`,`XC_API_URL`,`VOLT_API_CERT_FILE`,`VOLT_API_CERT_KEY_FILE`,`VOLT_API_P12_FILE`,`VES_P12_PASSWORD`
+- AC-SETUP-002.1:`secrets/.env`file created with variables:`TENANT_ID`,`XC_API_URL`,`VOLT_API_P12_FILE`,`VES_P12_PASSWORD`
 - AC-SETUP-002.2: Certificate paths use absolute paths ($(pwd)/secrets/...)
 - AC-SETUP-002.3: File created with mode 600 (owner read/write only)
 - AC-SETUP-002.4: Existing`secrets/.env`file backed up before overwrite (timestamped backup)
@@ -1603,10 +1597,8 @@ The system does not interface directly with hardware devices. All hardware inter
 
 **Required Variables**:
 -`TENANT_ID`: F5 XC tenant identifier
-- Authentication variables (one set required):
+- Authentication variables (required):
   -`VOLT_API_P12_FILE`+`VES_P12_PASSWORD`(P12 certificate)
-  -`VOLT_API_CERT_FILE`+`VOLT_API_CERT_KEY_FILE`(PEM certificates)
-  -`XC_API_TOKEN`(API token string)
 
 **Optional Variables**:
 -`XC_API_URL`: Custom API endpoint URL
@@ -2084,12 +2076,9 @@ The system does not interface directly with hardware devices. All hardware inter
 - Default:`https://{tenant_id}.console.ves.volterra.io`
 - Example:`https://acme-corp.staging.volterra.us`
 
--`auth`(object, required): Authentication credentials (exactly one method)
+-`auth`(object, required): Authentication credentials
   -`p12_file`(string): Path to P12 certificate file
   -`p12_password`(string): P12 file password
-  -`cert_file`(string): Path to PEM certificate file
-  -`key_file`(string): Path to PEM private key file
-  -`api_token`(string): API authentication token
 
 -`dry_run`(boolean): Simulation mode flag
 - Default: false
