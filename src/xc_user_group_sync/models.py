@@ -48,15 +48,17 @@ class Group(BaseModel):
     """Represents an F5 XC user group with members and roles.
 
     Attributes:
-        name: Group name matching F5 XC constraints
-            (alphanumeric, dash, underscore, 1-128 chars)
+        name: DNS-1035 compliant group name used in API calls
+            (lowercase alphanumeric or hyphen, starts with letter)
+        original_name: Original group name from CSV/LDAP before normalization
         description: Optional human-readable description
         users: List of user email addresses belonging to the group
         roles: List of role names assigned to the group
 
     """
 
-    name: GroupName
+    name: str  # DNS-1035 compliant normalized name
+    original_name: Optional[str] = None  # Original name from source
     description: Optional[str] = None
     users: List[str] = Field(default_factory=list)
     roles: List[str] = Field(default_factory=list)
@@ -69,6 +71,8 @@ class Config(BaseModel):
         tenant_id: F5 XC tenant identifier
         volt_api_cert_file: Optional path to API certificate file (for cert-based auth)
         volt_api_cert_key_file: Optional path to API key file (for cert-based auth)
+        volt_api_p12_file: Optional path to P12/PKCS12 certificate archive
+        ves_p12_password: Optional password for P12 file
         xc_api_token: Optional API token (for token-based auth)
 
     """
@@ -76,4 +80,6 @@ class Config(BaseModel):
     tenant_id: str
     volt_api_cert_file: Optional[str] = None
     volt_api_cert_key_file: Optional[str] = None
+    volt_api_p12_file: Optional[str] = None
+    ves_p12_password: Optional[str] = None
     xc_api_token: Optional[str] = None

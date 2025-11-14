@@ -7,8 +7,8 @@ pipeline {
 
   environment {
     TENANT_ID = credentials('xc-tenant-id')
-    VOLT_API_CERT_FILE = credentials('xc-cert')
-    VOLT_API_CERT_KEY_FILE = credentials('xc-cert-key')
+    VOLT_API_P12_FILE = credentials('xc-p12')
+    VES_P12_PASSWORD = credentials('xc-p12-password')
   }
 
   stages {

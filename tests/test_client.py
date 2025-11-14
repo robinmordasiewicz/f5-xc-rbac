@@ -59,6 +59,44 @@ class TestXCClientInit:
         assert client.backoff_min == 2.0
         assert client.backoff_max == 16.0
 
+    def test_init_with_p12(self):
+        """Test client initialization with P12 file."""
+        # Mock the P12 loading process
+        with patch(
+            "cryptography.hazmat.primitives.serialization.pkcs12.load_key_and_certificates"
+        ) as mock_load:
+            with patch("xc_user_group_sync.client.tempfile.mkstemp") as mock_mkstemp:
+                with patch("builtins.open", create=True):
+                    # Setup mocks
+                    mock_key = Mock()
+                    mock_cert = Mock()
+                    mock_key.private_bytes.return_value = b"fake-key"
+                    mock_cert.public_bytes.return_value = b"fake-cert"
+                    mock_load.return_value = (
+                        mock_key,
+                        mock_cert,
+                        None,
+                    )
+                    mock_mkstemp.side_effect = [
+                        (1, "/tmp/cert.pem"),
+                        (2, "/tmp/key.pem"),
+                    ]
+
+                    client = XCClient(
+                        tenant_id="test-tenant",
+                        p12_file="/path/to/cert.p12",
+                        p12_password="test-password",  # pragma: allowlist secret
+                    )
+
+                    assert client.tenant_id == "test-tenant"
+                    assert client._temp_cert_file is not None
+                    assert client._temp_key_file is not None
+
+    def test_init_with_p12_missing_password(self):
+        """Test that P12 without password raises error."""
+        with pytest.raises(ValueError, match="No authentication provided"):
+            XCClient(tenant_id="test-tenant", p12_file="/path/to/cert.p12")
+
 
 class TestXCClientGroupOperations:
     """Test group CRUD operations."""

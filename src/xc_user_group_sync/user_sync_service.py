@@ -387,6 +387,9 @@ class UserSyncService:
     def _update_user(self, user: User, dry_run: bool, stats: UserSyncStats) -> None:
         """Update an existing user in F5 XC.
 
+        If user_roles entry doesn't exist (404), skips the update since the user
+        exists in the system and groups can still be managed.
+
         Args:
             user: User with updated data
             dry_run: If True, log without executing
@@ -395,11 +398,24 @@ class UserSyncService:
         try:
             if dry_run:
                 logger.info(f"[DRY-RUN] Would update user: {user.email}")
+                stats.updated += 1
             else:
                 user_data = user.model_dump()
-                self.repository.update_user(user.email, user_data)
-                logger.info(f"Updated user: {user.email}")
-            stats.updated += 1
+                try:
+                    self.repository.update_user(user.email, user_data)
+                    logger.info(f"Updated user: {user.email}")
+                    stats.updated += 1
+                except Exception as update_err:
+                    # If 404, user exists but doesn't have roles entry
+                    # This is OK - user exists and can still be added to groups
+                    if "404" in str(update_err):
+                        logger.info(
+                            f"User {user.email} exists but has no roles entry "
+                            "(likely managed elsewhere) - skipping role update"
+                        )
+                        stats.unchanged += 1
+                    else:
+                        raise
         except Exception as e:
             logger.error(f"Failed to update user {user.email}: {e}")
             stats.errors += 1

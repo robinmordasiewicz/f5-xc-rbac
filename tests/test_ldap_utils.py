@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import pytest
 
-from xc_user_group_sync.ldap_utils import GROUP_NAME_RE, LdapParseError, extract_cn
+from xc_user_group_sync.ldap_utils import (
+    GROUP_NAME_RE,
+    LdapParseError,
+    extract_cn,
+    normalize_group_name_dns1035,
+)
 
 
 class TestGroupNameRegex:
@@ -151,3 +156,104 @@ class TestExtractCn:
         dn = "CN=группа,OU=Groups,DC=example,DC=com"  # Cyrillic
         with pytest.raises(LdapParseError, match="Invalid group name"):
             extract_cn(dn)
+
+
+class TestNormalizeGroupNameDns1035:
+    """Test DNS-1035 group name normalization."""
+
+    def test_lowercase_conversion(self):
+        """Test uppercase letters are converted to lowercase."""
+        assert normalize_group_name_dns1035("ADMIN") == "admin"
+        assert normalize_group_name_dns1035("DevOps") == "devops"
+        assert normalize_group_name_dns1035("IT-Support") == "it-support"
+
+    def test_underscore_to_hyphen(self):
+        """Test underscores are replaced with hyphens."""
+        assert normalize_group_name_dns1035("admin_group") == "admin-group"
+        assert normalize_group_name_dns1035("team_alpha_prod") == "team-alpha-prod"
+        assert normalize_group_name_dns1035("dev_ops") == "dev-ops"
+
+    def test_mixed_normalization(self):
+        """Test combined uppercase and underscore normalization."""
+        assert normalize_group_name_dns1035("EADMIN_STD") == "eadmin-std"
+        assert normalize_group_name_dns1035("Dev_Team_US") == "dev-team-us"
+        assert normalize_group_name_dns1035("IT_Support_L2") == "it-support-l2"
+
+    def test_already_normalized(self):
+        """Test names that are already DNS-1035 compliant."""
+        assert normalize_group_name_dns1035("admin") == "admin"
+        assert normalize_group_name_dns1035("dev-ops") == "dev-ops"
+        assert normalize_group_name_dns1035("team123") == "team123"
+
+    def test_starts_with_letter(self):
+        """Test validation that name starts with a letter."""
+        assert normalize_group_name_dns1035("admins") == "admins"
+
+        with pytest.raises(LdapParseError, match="must start with a letter"):
+            normalize_group_name_dns1035("123admin")
+
+        with pytest.raises(LdapParseError, match="must start with a letter"):
+            normalize_group_name_dns1035("-admin")
+
+    def test_ends_with_alphanumeric(self):
+        """Test trailing non-alphanumeric characters are removed."""
+        assert normalize_group_name_dns1035("admin-") == "admin"
+        assert normalize_group_name_dns1035("team--") == "team"
+        assert normalize_group_name_dns1035("dev---") == "dev"
+
+    def test_truncation_to_63_chars(self):
+        """Test truncation to DNS-1035 63-character limit."""
+        long_name = "a" * 70
+        result = normalize_group_name_dns1035(long_name)
+        assert len(result) == 63
+        assert result == "a" * 63
+
+    def test_truncation_with_trailing_cleanup(self):
+        """Test truncation followed by trailing character cleanup."""
+        # Create name that will have hyphen at position 63 after truncation
+        long_name = "a" * 62 + "-extra"
+        result = normalize_group_name_dns1035(long_name)
+        assert len(result) <= 63
+        assert result[-1].isalnum()  # Must end with alphanumeric
+
+    def test_empty_name_raises_error(self):
+        """Test empty name raises error."""
+        with pytest.raises(LdapParseError, match="cannot be empty"):
+            normalize_group_name_dns1035("")
+
+    def test_invalid_after_normalization(self):
+        """Test names that become invalid after normalization."""
+        with pytest.raises(LdapParseError):
+            normalize_group_name_dns1035("---")  # Only hyphens
+
+        with pytest.raises(LdapParseError):
+            normalize_group_name_dns1035("_")  # Only underscore
+
+    def test_preserves_numbers(self):
+        """Test that numbers are preserved in the name."""
+        assert normalize_group_name_dns1035("team123") == "team123"
+        assert normalize_group_name_dns1035("dev-team-2024") == "dev-team-2024"
+        assert normalize_group_name_dns1035("L2_Support") == "l2-support"
+
+    def test_real_world_examples(self):
+        """Test real-world group name examples."""
+        # Common LDAP group naming patterns
+        assert normalize_group_name_dns1035("Domain_Admins") == "domain-admins"
+        assert normalize_group_name_dns1035("BUILTIN_Users") == "builtin-users"
+        assert normalize_group_name_dns1035("IT_Support_L1") == "it-support-l1"
+        assert normalize_group_name_dns1035("Dev_Team_Alpha") == "dev-team-alpha"
+        assert normalize_group_name_dns1035("QA_TEAM") == "qa-team"
+
+    def test_special_dns_cases(self):
+        """Test edge cases for DNS-1035 compliance."""
+        # Single character (valid)
+        assert normalize_group_name_dns1035("a") == "a"
+
+        # Two characters
+        assert normalize_group_name_dns1035("ab") == "ab"
+
+        # Starting with letter, ending with number
+        assert normalize_group_name_dns1035("team1") == "team1"
+
+        # Mixed case with numbers
+        assert normalize_group_name_dns1035("Team1Alpha2") == "team1alpha2"

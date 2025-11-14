@@ -88,7 +88,7 @@ xc_user_group_sync sync --csv User-Database.csv --dry-run
 
 **Setup Summary**:
 
-1. Configure GitHub repository secrets (TENANT_ID, XC_CERT, XC_CERT_KEY)
+1. Configure GitHub repository secrets (TENANT_ID, XC_P12, XC_P12_PASSWORD)
 2. Create workflow file `.github/workflows/xc-sync.yml`
 3. Configure triggers (schedule, CSV commits, manual dispatch)
 4. Enable dry-run for pull requests
@@ -124,7 +124,7 @@ xc_user_group_sync sync --csv User-Database.csv --dry-run
 
 **Setup Summary**:
 
-1. Configure Jenkins credentials (TENANT_ID, XC_CERT, XC_CERT_KEY)
+1. Configure Jenkins credentials (TENANT_ID, XC_P12, XC_P12_PASSWORD)
 2. Create Jenkinsfile with setup, dry-run, and sync stages
 3. Configure cron trigger for scheduled runs
 4. Set up post-actions for logging and notifications

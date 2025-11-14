@@ -59,13 +59,18 @@ Use the automated setup script:
 
 # Or specify P12 file path
 ./scripts/setup_xc_credentials.sh --p12 ~/Downloads/your-tenant.p12
+
+# Optionally set GitHub repository secrets for CI/CD
+./scripts/setup_xc_credentials.sh --p12 ~/Downloads/your-tenant.p12 --github-secrets
 ```
 
 The script will:
 - Extract tenant ID from the P12 filename
-- Convert P12 to PEM certificate and key files
-- Create `secrets/.env` with required variables
-- Set GitHub repository secrets (if using CI/CD)
+- Copy P12 file to `secrets/` directory
+- Create `secrets/.env` with P12 path and password
+- Optionally set GitHub repository secrets (with `--github-secrets` flag)
+
+**Note**: The tool uses native P12 authentication. Certificate and key are extracted at runtime into temporary files and automatically cleaned up.
 
 ### 2. Prepare Your CSV File
 

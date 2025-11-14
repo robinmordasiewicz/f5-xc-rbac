@@ -23,16 +23,15 @@ jobs:
         run: |
           pip install -e .
 
-      - name: Decode credentials
+      - name: Decode P12 certificate
         run: |
-          echo "${{ secrets.XC_CERT }}" | base64 -d > cert.pem
-          echo "${{ secrets.XC_CERT_KEY }}" | base64 -d > key.pem
+          echo "${{ secrets.XC_P12 }}" | base64 -d > /tmp/cert.p12
 
       - name: Sync groups (dry-run on PR)
         env:
           TENANT_ID: ${{ secrets.TENANT_ID }}
-          VOLT_API_CERT_FILE: cert.pem
-          VOLT_API_CERT_KEY_FILE: key.pem
+          VOLT_API_P12_FILE: /tmp/cert.p12
+          VES_P12_PASSWORD: ${{ secrets.XC_P12_PASSWORD }}
         run: |
           if [ "${{ github.event_name }}" == "pull_request" ]; then
             xc_user_group_sync --csv User-Database.csv --dry-run

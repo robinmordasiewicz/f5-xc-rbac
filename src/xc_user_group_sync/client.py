@@ -7,9 +7,15 @@ methods, and exponential backoff.
 
 from __future__ import annotations
 
+import atexit
+import logging
+import tempfile
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 import requests
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
 from requests import Response
 from tenacity import (
     Retrying,
@@ -17,6 +23,8 @@ from tenacity import (
     stop_after_attempt,
     wait_exponential,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class XCClient:
@@ -33,6 +41,8 @@ class XCClient:
         api_token: Optional[str] = None,
         cert_file: Optional[str] = None,
         key_file: Optional[str] = None,
+        p12_file: Optional[str] = None,
+        p12_password: Optional[str] = None,
         api_url: Optional[str] = None,
         timeout: int = 30,
         max_retries: int = 3,
@@ -44,9 +54,11 @@ class XCClient:
 
         Args:
             tenant_id: F5 XC tenant identifier
-            api_token: API token for authentication (mutually exclusive with cert/key)
+            api_token: API token for authentication
             cert_file: Path to API certificate file (requires key_file)
             key_file: Path to API key file (requires cert_file)
+            p12_file: Path to P12/PKCS12 certificate archive (requires p12_password)
+            p12_password: Password for P12 file (required with p12_file)
             api_url: Optional API base URL (defaults to production endpoint)
             timeout: HTTP request timeout in seconds
             max_retries: Maximum number of retry attempts for failed requests
@@ -67,12 +79,115 @@ class XCClient:
         self.backoff_min = backoff_min
         self.backoff_max = backoff_max
 
+        # Store temp file paths for cleanup
+        self._temp_cert_file: Optional[Path] = None
+        self._temp_key_file: Optional[Path] = None
+
         if api_token:
             self.session.headers.update({"Authorization": f"APIToken {api_token}"})
+        elif p12_file and p12_password:
+            self._setup_p12_auth(p12_file, p12_password)
         elif cert_file and key_file:
             self.session.cert = (cert_file, key_file)
         else:
-            raise ValueError("No authentication provided (token or cert/key)")
+            raise ValueError(
+                "No authentication provided (token, cert/key, or p12/password)"
+            )
+
+    def _setup_p12_auth(self, p12_file: str, p12_password: str) -> None:
+        """Extract cert and key from P12 and configure session.
+
+        Creates temporary PEM files from P12 archive and registers cleanup.
+
+        Args:
+            p12_file: Path to P12/PKCS12 file
+            p12_password: Password for P12 file
+
+        Raises:
+            ValueError: If P12 file cannot be loaded or parsed
+        """
+        try:
+            from cryptography.hazmat.primitives.serialization import pkcs12
+
+            # Load P12 file
+            with open(p12_file, "rb") as f:
+                p12_data = f.read()
+
+            # Extract private key and certificate
+            private_key, certificate, _ = pkcs12.load_key_and_certificates(
+                p12_data,
+                p12_password.encode(),
+                backend=default_backend(),
+            )
+
+            if not private_key or not certificate:
+                raise ValueError("P12 file does not contain valid certificate and key")
+
+            # Create temporary files in system temp directory
+            cert_fd, cert_path = tempfile.mkstemp(suffix=".pem", prefix="xc_cert_")
+            key_fd, key_path = tempfile.mkstemp(suffix=".pem", prefix="xc_key_")
+
+            self._temp_cert_file = Path(cert_path)
+            self._temp_key_file = Path(key_path)
+
+            try:
+                # Write certificate to temp file
+                with open(cert_fd, "wb") as cert_file:
+                    cert_file.write(
+                        certificate.public_bytes(serialization.Encoding.PEM)
+                    )
+
+                # Write private key to temp file
+                with open(key_fd, "wb") as key_file:
+                    key_file.write(
+                        private_key.private_bytes(
+                            encoding=serialization.Encoding.PEM,
+                            format=serialization.PrivateFormat.PKCS8,
+                            encryption_algorithm=serialization.NoEncryption(),
+                        )
+                    )
+
+                # Configure requests session with temp files
+                self.session.cert = (
+                    str(self._temp_cert_file),
+                    str(self._temp_key_file),
+                )
+
+                # Register cleanup on exit
+                atexit.register(self._cleanup_temp_files)
+
+                logger.debug(
+                    f"Extracted P12 to temporary cert/key files: "
+                    f"{self._temp_cert_file}, {self._temp_key_file}"
+                )
+
+            except Exception:
+                # If writing fails, clean up immediately
+                self._cleanup_temp_files()
+                raise
+
+        except Exception as e:
+            raise ValueError(f"Failed to load P12 file: {e}") from e
+
+    def _cleanup_temp_files(self) -> None:
+        """Clean up temporary certificate and key files."""
+        if self._temp_cert_file and self._temp_cert_file.exists():
+            try:
+                self._temp_cert_file.unlink()
+                logger.debug(f"Deleted temporary cert file: {self._temp_cert_file}")
+            except Exception as e:
+                logger.warning(f"Failed to delete temp cert file: {e}")
+
+        if self._temp_key_file and self._temp_key_file.exists():
+            try:
+                self._temp_key_file.unlink()
+                logger.debug(f"Deleted temporary key file: {self._temp_key_file}")
+            except Exception as e:
+                logger.warning(f"Failed to delete temp key file: {e}")
+
+    def __del__(self) -> None:
+        """Cleanup temp files when object is garbage collected."""
+        self._cleanup_temp_files()
 
     def _request(self, method: str, path: str, **kwargs: Any) -> Response:
         url = f"{self.base_url}{path}"
