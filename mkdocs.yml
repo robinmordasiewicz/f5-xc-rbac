@@ -16,6 +16,21 @@ nav:
   - Configuration: configuration.md
   - CLI Reference: cli-reference.md
   - Development: development.md
+  - Specifications:
+    - Overview: specifications/README.md
+    - User Group Sync SRS: specifications/user-group-sync-srs.md
+    - User Lifecycle Management SRS: specifications/user-lifecycle-management-srs.md
+    - Development:
+      - Quality Standards: specifications/development/quality-standards.md
+    - Implementation:
+      - Workflows: specifications/implementation/workflows.md
+      - Testing Strategy: specifications/implementation/testing-strategy.md
+      - Roadmap: specifications/implementation/roadmap.md
+    - Guides:
+      - Deployment Guide: specifications/guides/deployment-guide.md
+      - GitHub Actions Guide: specifications/guides/github-actions-guide.md
+      - Jenkins Guide: specifications/guides/jenkins-guide.md
+      - Troubleshooting Guide: specifications/guides/troubleshooting-guide.md
 
 repo_name: robinmordasiewicz/f5-xc-user-group-sync
 repo_url: https://github.com/robinmordasiewicz/f5-xc-user-group-sync
