@@ -27,23 +27,28 @@ Navigate to: `Settings → Secrets → Actions → New repository secret`
 | Secret Name | Description |
 |-------------|-------------|
 | `TENANT_ID` | Your F5 XC tenant ID |
-| `XC_CERT` | Base64-encoded PEM certificate |
-| `XC_CERT_KEY` | Base64-encoded PEM private key |
+| `XC_P12` | Base64-encoded P12/PKCS12 certificate file |
+| `XC_P12_PASSWORD` | Password for P12 certificate file |
 
 **Setup Options**:
 
 **Option A: Automated** (Recommended)
 
 ```bash
-./scripts/setup_xc_credentials.sh --p12 ~/Downloads/tenant.p12
-# Script extracts, encodes, and displays GitHub secrets configuration
+./scripts/setup_xc_credentials.sh --p12 ~/Downloads/tenant.p12 --github-secrets
+# Script automatically sets TENANT_ID, XC_P12, and XC_P12_PASSWORD secrets
 ```
 
 **Option B: Manual**
 
 ```bash
-base64 -i secrets/cert.pem | pbcopy  # macOS
-base64 -w 0 secrets/cert.pem         # Linux (copy output)
+# Encode P12 file to base64
+base64 -i ~/Downloads/tenant.p12 | pbcopy  # macOS
+base64 -w 0 ~/Downloads/tenant.p12         # Linux (copy output)
+
+# Add XC_P12 secret with base64 output
+# Add XC_P12_PASSWORD secret with your P12 password
+# Add TENANT_ID secret with your tenant ID
 ```
 
 ### 2. Create Workflow File
@@ -122,8 +127,8 @@ jobs:
   if: github.event_name == 'schedule'
   env:
     TENANT_ID: ${{ secrets.TENANT_ID }}
-    VOLT_API_CERT_FILE: cert.pem
-    VOLT_API_CERT_KEY_FILE: key.pem
+    VOLT_API_P12_FILE: /tmp/cert.p12
+    VES_P12_PASSWORD: ${{ secrets.XC_P12_PASSWORD }}
   run: |
     xc_user_group_sync sync --csv User-Database.csv --prune
 ```
@@ -172,7 +177,8 @@ jobs:
 **Credentials Management**:
 
 - Always use GitHub Secrets, never commit credentials
-- Rotate certificates periodically
+- Rotate P12 certificates periodically
+- Use strong passwords for P12 files
 - Use environment-specific secrets for production/staging
 
 **Audit Trail**:

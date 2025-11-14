@@ -378,7 +378,7 @@ class TestCLISyncCommand:
 class TestCLIAuthentication:
     """Test authentication handling in CLI."""
 
-    def test_auth_with_cert_key(self, runner, temp_csv_file, monkeypatch):
+    def test_auth_with_cert_key(self, runner, temp_csv_file, clean_env, monkeypatch):
         """Test authentication with certificate and key files."""
         monkeypatch.setenv("TENANT_ID", "test-tenant")
         monkeypatch.setenv("VOLT_API_CERT_FILE", "/path/to/cert.pem")
@@ -391,6 +391,8 @@ class TestCLIAuthentication:
                 call_kwargs = mock_client.call_args[1]
                 assert call_kwargs.get("cert_file") == "/path/to/cert.pem"
                 assert call_kwargs.get("key_file") == "/path/to/key.pem"
+                assert call_kwargs.get("p12_file") is None
+                assert call_kwargs.get("p12_password") is None
 
     def test_auth_with_api_token(self, runner, temp_csv_file, clean_env, monkeypatch):
         """Test authentication with API token."""
@@ -407,8 +409,24 @@ class TestCLIAuthentication:
                 assert call_kwargs.get("cert_file") is None
                 assert call_kwargs.get("key_file") is None
 
+    def test_p12_authentication(self, runner, temp_csv_file, clean_env, monkeypatch):
+        """Test authentication with P12 file and password."""
+        monkeypatch.setenv("TENANT_ID", "test-tenant")
+        monkeypatch.setenv("VOLT_API_P12_FILE", "/path/to/cert.p12")
+        monkeypatch.setenv("VES_P12_PASSWORD", "test-password")
+
+        with patch("xc_user_group_sync.cli.XCClient") as mock_client:
+            with patch("xc_user_group_sync.cli.GroupSyncService"):
+                runner.invoke(cli, ["--csv", temp_csv_file, "--dry-run"])
+
+                call_kwargs = mock_client.call_args[1]
+                assert call_kwargs.get("p12_file") == "/path/to/cert.p12"
+                assert call_kwargs.get("p12_password") == "test-password"
+                assert call_kwargs.get("cert_file") is None
+                assert call_kwargs.get("key_file") is None
+
     def test_p12_warning_logged(self, runner, temp_csv_file, mock_env, monkeypatch):
-        """Test that P12 file triggers informational message."""
+        """Test that P12 file without password still works (fallback to cert/key)."""
         monkeypatch.setenv("VOLT_API_P12_FILE", "/path/to/cert.p12")
 
         with patch("xc_user_group_sync.cli.XCClient"):

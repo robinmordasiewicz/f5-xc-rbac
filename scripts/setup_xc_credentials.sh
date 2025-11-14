@@ -4,31 +4,33 @@ umask 077
 
 # Setup script for F5 XC credentials and CI secrets
 # - Derive TENANT_ID from a p12 filename or prompt
-# - Split p12 to PEM cert/key with openssl (no password)
+# - Configure P12 file authentication (no extraction needed - native P12 support)
 # - Create .env with appropriate variables (now written under secrets/ by default)
-# - Create GitHub repo secrets via gh CLI by default (opt-out available)
+# - Optionally create GitHub repo secrets via gh CLI (opt-in with --github-secrets)
 
 usage() {
   cat <<'USAGE'
-Usage: scripts/setup_xc_credentials.sh [--p12 <path>] [--tenant <id>] [--no-secrets] [--no-env]
+Usage: scripts/setup_xc_credentials.sh [--p12 <path>] [--tenant <id>] [--github-secrets] [--no-env]
 
 Options:
-  --p12 <path>       Path to p12 file; if omitted, auto-detect in ~/Downloads when exactly one .p12 exists
-  --tenant <id>      Tenant ID (prefix before '.' in https://<tenant>.console.ves.volterra.io)
-  --no-secrets       Do NOT set GitHub repo secrets (default is to set them)
-  --no-env           Do NOT write a .env file (default writes secrets/.env)
+  --p12 <path>          Path to p12 file; if omitted, auto-detect in ~/Downloads when exactly one .p12 exists
+  --tenant <id>         Tenant ID (prefix before '.' in https://<tenant>.console.ves.volterra.io)
+  --github-secrets      Set GitHub repository secrets via gh CLI (TENANT_ID, XC_P12, XC_P12_PASSWORD)
+  --no-env              Do NOT write a .env file (default writes secrets/.env)
 
 This script will:
-  - Split p12 to PEM (cert.pem/key.pem) in ./secrets/ (created if missing)
-  - Write secrets/.env with TENANT_ID and either VOLT_API_P12_FILE/VES_P12_PASSWORD or VOLT_API_CERT_FILE/VOLT_API_CERT_KEY_FILE (unless --no-env)
-  - Set repo secrets (TENANT_ID, XC_CERT, XC_CERT_KEY, XC_P12, XC_P12_PASSWORD) via gh CLI by default (unless --no-secrets)
+  - Copy p12 file to ./secrets/ (created if missing)
+  - Write secrets/.env with TENANT_ID, VOLT_API_P12_FILE, and VES_P12_PASSWORD (unless --no-env)
+  - Optionally set repo secrets via gh CLI (only if --github-secrets is provided)
   - Avoid leftover temporary files
+
+Note: The tool now supports P12 authentication natively - no cert/key extraction needed!
 USAGE
 }
 
 P12=""
 TENANT=""
-SET_SECRETS="true"
+SET_SECRETS="false"
 WRITE_ENV="true"
 
 while [[ $# -gt 0 ]]; do
@@ -41,13 +43,8 @@ while [[ $# -gt 0 ]]; do
       TENANT=${2:-}
       shift 2
       ;;
-    --set-secrets)
-      # Backward compatibility: previously opted in; now default is on
+    --github-secrets)
       SET_SECRETS="true"
-      shift
-      ;;
-    --no-secrets)
-      SET_SECRETS="false"
       shift
       ;;
     --no-env)
@@ -150,29 +147,16 @@ if [[ "$ENV_TYPE" == "staging" ]]; then
 fi
 
 mkdir -p secrets
-CERT_PATH="secrets/cert.pem"
-KEY_PATH="secrets/key.pem"
 
 # Track temporary files for cleanup on failure
-TMP_CERT=""
-TMP_KEY=""
+TMP_P12=""
 TMP_ENV=""
 cleanup() {
   # Remove any temp files if they still exist
-  [[ -n "$TMP_CERT" && -f "$TMP_CERT" ]] && rm -f "$TMP_CERT" || true
-  [[ -n "$TMP_KEY" && -f "$TMP_KEY" ]] && rm -f "$TMP_KEY" || true
+  [[ -n "$TMP_P12" && -f "$TMP_P12" ]] && rm -f "$TMP_P12" || true
   [[ -n "$TMP_ENV" && -f "$TMP_ENV" ]] && rm -f "$TMP_ENV" || true
 }
 trap cleanup EXIT
-
-# Helper: run openssl pkcs12, retrying with -legacy on failure (for OpenSSL 3)
-pkcs12_extract() {
-  # usage: pkcs12_extract <args...> (e.g., -in file -clcerts -nokeys -out out -passin pass:xxx)
-  if ! openssl pkcs12 "$@" 2>/dev/null; then
-    # Retry with -legacy when available
-    openssl pkcs12 -legacy "$@" 2>/dev/null
-  fi
-}
 
 # Obtain p12 password
 if [[ -n "${VES_P12_PASSWORD:-}" ]]; then
@@ -188,83 +172,73 @@ else
   fi
 fi
 
-# Split p12 to PEM cert chain and key (no password on key), with -legacy fallback, atomically
-TMP_CERT=$(mktemp secrets/cert.pem.XXXXXX)
-TMP_KEY=$(mktemp secrets/key.pem.XXXXXX)
-pkcs12_extract -in "$P12" -nokeys -out "$TMP_CERT" -passin pass:"$P12_PASS"
-pkcs12_extract -in "$P12" -nocerts -nodes -out "$TMP_KEY" -passin pass:"$P12_PASS"
-
-# Some keys may be encrypted; ensure passwordless key
-if grep -q "ENCRYPTED" "$TMP_KEY"; then
-  openssl rsa -in "$TMP_KEY" -out "${TMP_KEY}_nopass" 1>/dev/null
-  mv "${TMP_KEY}_nopass" "$TMP_KEY"
+# Validate P12 file by attempting to read it (doesn't extract, just validates)
+if ! openssl pkcs12 -in "$P12" -noout -passin pass:"$P12_PASS" 2>/dev/null; then
+  # Try with -legacy flag for OpenSSL 3.x
+  if ! openssl pkcs12 -legacy -in "$P12" -noout -passin pass:"$P12_PASS" 2>/dev/null; then
+    echo "Error: Failed to validate P12 file. Check password and file integrity." >&2
+    exit 1
+  fi
 fi
 
-# Move into place with correct permissions
-install -m 600 "$TMP_CERT" "$CERT_PATH"
-install -m 600 "$TMP_KEY" "$KEY_PATH"
-# Remove temporary files now that installs succeeded
-rm -f "$TMP_CERT" "$TMP_KEY" || true
-# Clear temp file vars so trap won't remove the installed files
-TMP_CERT=""
-TMP_KEY=""
+# Copy P12 file to secrets directory with secure permissions
+P12_DEST="secrets/$(basename "$P12")"
+TMP_P12=$(mktemp "secrets/$(basename "$P12").XXXXXX")
+cp "$P12" "$TMP_P12"
+chmod 600 "$TMP_P12"
+mv "$TMP_P12" "$P12_DEST"
+TMP_P12=""
 
-echo "Wrote $CERT_PATH and $KEY_PATH"
+echo "Copied P12 file to $P12_DEST"
 
 if [[ "$WRITE_ENV" == "true" ]]; then
-  # Write secrets/.env (prefers cert/key since requests can't use p12 directly)
+  # Write secrets/.env with P12 authentication (native P12 support)
   ENV_DIR="secrets"
   ENV_PATH="$ENV_DIR/.env"
   TMP_ENV=$(mktemp "$ENV_DIR/.env.XXXXXX")
   cat >"$TMP_ENV" <<ENV
 TENANT_ID=$TENANT
 XC_API_URL=$XC_API_URL
-VOLT_API_CERT_FILE=$(pwd)/$CERT_PATH
-VOLT_API_CERT_KEY_FILE=$(pwd)/$KEY_PATH
-# If you prefer p12 in other tooling, keep for reference:
-VOLT_API_P12_FILE=$(realpath "$P12")
+VOLT_API_P12_FILE=$(pwd)/$P12_DEST
 VES_P12_PASSWORD=$P12_PASS
 ENV
   install -m 600 "$TMP_ENV" "$ENV_PATH"
   rm -f "$TMP_ENV" || true
   TMP_ENV=""
-  echo "Wrote $ENV_PATH with TENANT_ID and cert/key paths"
+  echo "Wrote $ENV_PATH with TENANT_ID and P12 authentication"
 else
   echo "Skipped writing .env (use --no-env to opt out; default writes secrets/.env)" >/dev/null
 fi
 
 if [[ "$SET_SECRETS" == "true" ]]; then
   if ! command -v gh >/dev/null 2>&1; then
-    echo "gh CLI not found; install GitHub CLI to set secrets or pass --no-secrets to skip" >&2
+    echo "gh CLI not found; install GitHub CLI to set secrets" >&2
     exit 1
   fi
-  # Store PEM files directly (no base64 encoding needed)
-  # GitHub Actions can handle multi-line secrets natively
-  echo "Setting GitHub repo secrets (TENANT_ID, XC_CERT, XC_CERT_KEY, XC_P12, XC_P12_PASSWORD)..."
+  echo "Setting GitHub repo secrets (TENANT_ID, XC_P12, XC_P12_PASSWORD)..."
   # TENANT_ID is customer information and should be kept as a secret for privacy
   printf "%s" "$TENANT" | gh secret set TENANT_ID --body - 1>/dev/null || true
-  cat "$CERT_PATH" | gh secret set XC_CERT --body - 1>/dev/null || true
-  cat "$KEY_PATH" | gh secret set XC_CERT_KEY --body - 1>/dev/null || true
-  # P12 must be base64 (binary file), but use -w 0 for single line
-  base64 -w 0 <"$P12" 2>/dev/null | gh secret set XC_P12 --body - 1>/dev/null ||
-    base64 <"$P12" | tr -d '\n' | gh secret set XC_P12 --body - 1>/dev/null || true
+  # P12 must be base64 encoded (binary file)
+  # Use -w 0 on Linux or tr -d '\n' on macOS to ensure single line
+  base64 -w 0 <"$P12_DEST" 2>/dev/null | gh secret set XC_P12 --body - 1>/dev/null ||
+    base64 <"$P12_DEST" | tr -d '\n' | gh secret set XC_P12 --body - 1>/dev/null || true
   printf "%s" "$P12_PASS" | gh secret set XC_P12_PASSWORD --body - 1>/dev/null || true
   echo "Secrets set."
 fi
 
 # Always clean up any historical temp-suffix files left by prior runs
-# Only remove files matching: secrets/{.env,cert.pem,key.pem}.XXXXXX (6 alphanumeric)
+# Only remove files matching: secrets/.env.XXXXXX (6 alphanumeric)
 (
   shopt -s nullglob
-  for base in .env cert.pem key.pem; do
-    for tmp in "secrets/$base".*; do
+  for tmp in "secrets/.env".*; do
+    if [[ -f "$tmp" ]]; then
       name=${tmp##*/}
       suffix=${name##*.}
       stem=${name%.*}
-      if [[ "$stem" == "$base" && "$suffix" =~ ^[[:alnum:]]{6}$ ]]; then
+      if [[ "$stem" == ".env" && "$suffix" =~ ^[[:alnum:]]{6}$ ]]; then
         rm -f "$tmp" || true
       fi
-    done
+    fi
   done
   shopt -u nullglob
 )

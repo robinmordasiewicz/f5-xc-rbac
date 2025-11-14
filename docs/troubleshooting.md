@@ -27,24 +27,27 @@ HTTP 401 Unauthorized
 2. Incorrect P12 password
 3. Certificate not trusted by F5 XC
 4. Incorrect API token
+5. P12 file corrupted or not accessible
 
 **Resolution Steps**:
 
 ```bash
-# Verify certificate validity
-openssl x509 -in secrets/cert.pem -noout -dates -subject
+# Verify P12 file can be read with password
+openssl pkcs12 -in secrets/your-tenant.p12 -noout -passin pass:your-password
 
-# Check certificate expiration
-openssl x509 -in secrets/cert.pem -noout -checkend 0
+# For OpenSSL 3.x, use -legacy flag if needed
+openssl pkcs12 -legacy -in secrets/your-tenant.p12 -noout -passin pass:your-password
 
-# Re-extract certificate from P12 with correct password
+# Re-run setup with new P12 file
 ./scripts/setup_xc_credentials.sh --p12 /path/to/new.p12
 
-# Test connectivity
-curl -X GET \
-  "https://${TENANT_ID}.console.ves.volterra.io/api/web/namespaces/system/user_groups" \
-  --cert ${VOLT_API_CERT_FILE} \
-  --key ${VOLT_API_CERT_KEY_FILE}
+# Verify environment variables are set correctly
+echo $TENANT_ID
+echo $VOLT_API_P12_FILE
+echo $VES_P12_PASSWORD  # Should show password (be careful with this in shared terminals)
+
+# Test authentication (tool will handle P12 extraction internally)
+xc_user_group_sync --csv test.csv --dry-run
 ```
 
 ---

@@ -64,44 +64,34 @@ class TestGroup:
         assert group.name == name
         assert len(group.name) == 128
 
-    def test_invalid_group_name_empty(self):
-        """Test that empty group name is rejected."""
-        with pytest.raises(ValidationError) as exc_info:
-            Group(name="")
-        errors = exc_info.value.errors()
-        assert any("name" in str(e["loc"]) for e in errors)
+    def test_group_with_original_name(self):
+        """Test group with both normalized and original name."""
+        group = Group(name="eadmin-std", original_name="EADMIN_STD")
+        assert group.name == "eadmin-std"
+        assert group.original_name == "EADMIN_STD"
 
-    def test_invalid_group_name_too_long(self):
-        """Test that group name exceeding 128 chars is rejected."""
-        name = "a" * 129
-        with pytest.raises(ValidationError) as exc_info:
-            Group(name=name)
-        errors = exc_info.value.errors()
-        assert any("name" in str(e["loc"]) for e in errors)
+    def test_group_accepts_any_string_name(self):
+        """Test that Group model accepts any string name.
 
-    def test_invalid_group_name_with_space(self):
-        """Test that group name with spaces is rejected."""
-        with pytest.raises(ValidationError) as exc_info:
-            Group(name="admin group")
-        errors = exc_info.value.errors()
-        assert any("name" in str(e["loc"]) for e in errors)
+        Note: The Group model now stores DNS-1035 compliant normalized names.
+        Validation and normalization happen in normalize_group_name_dns1035()
+        during CSV parsing.
+        """
+        # Empty name (would be rejected during normalization)
+        group = Group(name="")
+        assert group.name == ""
 
-    def test_invalid_group_name_special_chars(self):
-        """Test that group names with invalid special characters are rejected."""
-        invalid_names = [
-            "admin@domain",  # @ sign
-            "team.prod",  # dot
-            "dev/ops",  # slash
-            "group$",  # dollar sign
-            "team!",  # exclamation
-            "group#1",  # hash
-            "team*",  # asterisk
-        ]
-        for name in invalid_names:
-            with pytest.raises(ValidationError) as exc_info:
-                Group(name=name)
-            errors = exc_info.value.errors()
-            assert any("name" in str(e["loc"]) for e in errors)
+        # Long name (would be truncated during normalization)
+        group = Group(name="a" * 200)
+        assert len(group.name) == 200
+
+        # Name with spaces (would be rejected during normalization)
+        group = Group(name="admin group")
+        assert group.name == "admin group"
+
+        # Special characters (would be rejected or normalized during parsing)
+        group = Group(name="admin@domain")
+        assert group.name == "admin@domain"
 
     def test_group_users_default_empty_list(self):
         """Test that users defaults to empty list."""

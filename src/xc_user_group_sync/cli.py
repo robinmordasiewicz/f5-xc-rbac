@@ -25,6 +25,8 @@ def _create_client(
     api_token: str | None,
     cert_file: str | None,
     key_file: str | None,
+    p12_file: str | None,
+    p12_password: str | None,
     api_url: str | None,
     timeout: int,
     max_retries: int,
@@ -36,6 +38,8 @@ def _create_client(
         api_token: Optional API token for authentication
         cert_file: Optional certificate file path
         key_file: Optional key file path
+        p12_file: Optional P12/PKCS12 certificate archive path
+        p12_password: Optional password for P12 file
         api_url: Optional API base URL
         timeout: HTTP request timeout in seconds
         max_retries: Maximum number of retries for failed requests
@@ -47,7 +51,16 @@ def _create_client(
         click.UsageError: If no valid authentication method provided
 
     """
-    if cert_file and key_file:
+    if p12_file and p12_password:
+        return XCClient(
+            tenant_id=tenant_id,
+            p12_file=p12_file,
+            p12_password=p12_password,
+            api_url=api_url,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
+    elif cert_file and key_file:
         return XCClient(
             tenant_id=tenant_id,
             cert_file=cert_file,
@@ -66,17 +79,21 @@ def _create_client(
         )
     else:
         raise click.UsageError(
-            "Provide XC_API_TOKEN or VOLT_API_CERT_FILE/VOLT_API_CERT_KEY_FILE"
+            "Provide XC_API_TOKEN, VOLT_API_P12_FILE/VES_P12_PASSWORD, "
+            "or VOLT_API_CERT_FILE/VOLT_API_CERT_KEY_FILE"
         )
 
 
-def _load_configuration() -> tuple[str, str | None, str | None, str | None, str | None]:
+def _load_configuration() -> (
+    tuple[str, str | None, str | None, str | None, str | None, str | None, str | None]
+):
     """Load configuration from environment variables.
 
     Checks for secrets/.env first (GitHub Actions), then fallback to default .env.
 
     Returns:
-        Tuple of (tenant_id, api_token, api_url, cert_file, key_file)
+        Tuple of (tenant_id, api_token, api_url, cert_file, key_file,
+                  p12_file, p12_password)
 
     Raises:
         click.UsageError: If TENANT_ID is not set
@@ -97,18 +114,11 @@ def _load_configuration() -> tuple[str, str | None, str | None, str | None, str 
     api_token = os.getenv("XC_API_TOKEN")
     api_url = os.getenv("XC_API_URL")
     p12_file = os.getenv("VOLT_API_P12_FILE")
+    p12_password = os.getenv("VES_P12_PASSWORD")
     cert_file = os.getenv("VOLT_API_CERT_FILE")
     key_file = os.getenv("VOLT_API_CERT_KEY_FILE")
 
-    # P12 not supported by requests - warn only if no cert/key available
-    if p12_file and not (cert_file and key_file):
-        logging.warning(
-            "P12 file provided but Python requests library cannot use it "
-            "directly. Please run setup_xc_credentials.sh to extract "
-            "cert/key files."
-        )
-
-    return tenant_id, api_token, api_url, cert_file, key_file
+    return tenant_id, api_token, api_url, cert_file, key_file, p12_file, p12_password
 
 
 def _display_csv_validation(result: CSVValidationResult, dry_run: bool = False) -> None:
@@ -252,12 +262,28 @@ def cli(
     )
 
     # Load configuration from environment
-    tenant_id, api_token, api_url, cert_file, key_file = _load_configuration()
+    (
+        tenant_id,
+        api_token,
+        api_url,
+        cert_file,
+        key_file,
+        p12_file,
+        p12_password,
+    ) = _load_configuration()
 
     # Create authenticated client
     try:
         client = _create_client(
-            tenant_id, api_token, cert_file, key_file, api_url, timeout, max_retries
+            tenant_id,
+            api_token,
+            cert_file,
+            key_file,
+            p12_file,
+            p12_password,
+            api_url,
+            timeout,
+            max_retries,
         )
     except click.UsageError:
         raise
