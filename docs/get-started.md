@@ -76,10 +76,7 @@ See the [CSV Format](configuration.md#csv-format) section for complete specifica
 Always test first to preview changes:
 
 ```bash
-# Load credentials
 source secrets/.env
-
-# Preview reconciliation (no actual changes)
 xc_user_group_sync --csv ./User-Database.csv --dry-run
 ```
 
@@ -88,12 +85,10 @@ xc_user_group_sync --csv ./User-Database.csv --dry-run
 Once satisfied with dry-run results:
 
 ```bash
-# Reconcile users and groups (create/update only)
 xc_user_group_sync --csv ./User-Database.csv
-
-# Full reconciliation including pruning
-xc_user_group_sync --csv ./User-Database.csv --prune
 ```
+
+See [CLI Reference](cli-reference.md) for all available options including `--prune`, `--log-level`, `--timeout`, and more.
 
 ## Next Steps
 

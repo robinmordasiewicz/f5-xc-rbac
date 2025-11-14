@@ -48,7 +48,7 @@ xc_user_group_sync sync --csv User-Database.csv --dry-run
 
 **Best For**: Development, testing, troubleshooting, one-off operations
 
-**Detailed Guide**: See [Operational Workflows](../implementation/workflows.md) for step-by-step manual execution procedures.
+**Detailed Guide**: See [Operations Guide](../operations-guide.md) for step-by-step manual execution procedures.
 
 ---
 
@@ -78,7 +78,7 @@ xc_user_group_sync sync --csv User-Database.csv --dry-run
 
 **Best For**: On-premise deployments, air-gapped environments, simple scheduled execution
 
-**Detailed Guide**: See [Operational Workflows](../implementation/workflows.md#cron-job-linux-server) for complete cron setup instructions.
+**Detailed Guide**: See [Operations Guide](../operations-guide.md) for complete cron setup instructions.
 
 ---
 
@@ -166,8 +166,8 @@ xc_user_group_sync sync --csv User-Database.csv --dry-run
 
 ## Related Documentation
 
-- [Operational Workflows](../implementation/workflows.md) - Step-by-step operational procedures
+- [Operations Guide](../operations-guide.md) - Step-by-step operational procedures
 - [GitHub Actions Guide](github-actions-guide.md) - Complete GitHub Actions configuration
 - [Jenkins Guide](jenkins-guide.md) - Complete Jenkins pipeline configuration
-- [Troubleshooting Guide](troubleshooting-guide.md) - Common deployment issues and resolutions
-- [Testing Strategy](../implementation/testing-strategy.md) - Validation approaches for all deployment scenarios
+- [Troubleshooting Guide](../troubleshooting.md) - Common deployment issues and resolutions
+- [Testing Strategy](../specifications/implementation/testing-strategy.md) - Validation approaches for all deployment scenarios

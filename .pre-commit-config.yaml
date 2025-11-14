@@ -23,7 +23,7 @@ repos:
         exclude: '^\.git/'
       - id: sort-simple-yaml
         files: \.ya?ml$
-        exclude: '(^\.git/|^\.pre-commit-config\.yaml$|\.github/workflows/)'
+        exclude: '(^\.git/|^\.pre-commit-config\.yaml$|\.github/workflows/|docs/CICD/examples/)'
       - id: check-json
         exclude: '^\.git/'
       - id: pretty-format-json

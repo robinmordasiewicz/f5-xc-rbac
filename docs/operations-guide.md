@@ -58,6 +58,8 @@ xc_user_group_sync --csv User-Database.csv --dry-run
 xc_user_group_sync --csv User-Database.csv
 ```
 
+For advanced options like `--prune`, `--log-level debug`, or `--timeout`, see [CLI Reference](../cli-reference.md).
+
 ### Post-Sync Validation
 
 After synchronization completes:
@@ -124,10 +126,7 @@ xc_user_group_sync --csv User-Database.csv --prune --dry-run
 #    - Groups to be deleted (not in CSV)
 #    - Users to be deleted (not in any CSV group)
 
-# 4. Validate with stakeholders
-#    - Confirm deletions are intentional
-#    - Check for production-critical groups
-#    - Verify no active users lose access unintentionally
+# 4. Validate with stakeholders before execution
 
 # 5. Execute prune (only after validation)
 xc_user_group_sync --csv User-Database.csv --prune
