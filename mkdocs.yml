@@ -1,0 +1,47 @@
+docs_dir: docs
+site_dir: site
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started: get-started.md
+  - Configuration: configuration.md
+  - CLI Reference: cli-reference.md
+  - Development: development.md
+
+repo_name: robinmordasiewicz/f5-xc-user-group-sync
+repo_url: https://github.com/robinmordasiewicz/f5-xc-user-group-sync
+
+site_name: F5 Distributed Cloud User and Group Sync
+site_url: https://robinmordasiewicz.github.io/f5-xc-user-group-sync/
+site_description: Synchronize users and groups from CSV to F5 Distributed Cloud
+site_author: Robin Mordasiewicz
+
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - search.suggest
+    - search.highlight
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode

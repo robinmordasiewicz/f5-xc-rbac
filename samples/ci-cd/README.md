@@ -154,8 +154,8 @@ Add the `XC_API_URL` secret for non-production environments:
 
 1. Go to **Settings → Secrets and variables → Actions**
 2. Add secret:
-    - Name: `XC_API_URL`
-    - Value: `https://your-tenant.staging.volterra.us` (or your custom endpoint)
+   - Name: `XC_API_URL`
+   - Value: `https://your-tenant.staging.volterra.us` (or your custom endpoint)
 
 **Example for staging**:
 
@@ -176,11 +176,11 @@ Add the `XC_API_URL` credential for non-production environments:
 1. Go to **Jenkins → Credentials → System → Global credentials**
 2. Click **Add Credentials**
 3. Configure:
-    - Kind: Secret text
-    - Scope: Global
-    - Secret: `https://your-tenant.staging.volterra.us`  <!-- pragma: allowlist secret -->
-    - ID: `XC_API_URL`
-    - Description: F5 XC API URL (staging/custom)
+   - Kind: Secret text
+   - Scope: Global
+   - Secret: `https://your-tenant.staging.volterra.us`  <!-- pragma: allowlist secret -->
+   - ID: `XC_API_URL`
+   - Description: F5 XC API URL (staging/custom)
 
 **Note**: The credential ID **must** be `XC_API_URL` to match the Jenkinsfile configuration.
 
