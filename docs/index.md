@@ -21,12 +21,61 @@ Automated synchronization tool for managing F5 Distributed Cloud (XC) users and 
 - **🎯 Flexible Control**: Optional pruning for automated cleanup
 - **🧪 Well-Tested**: 195 tests with 93% code coverage
 
-## Quick Links
+## Getting Started by Role
 
-- [Getting Started](get-started.md) - Installation and first steps
-- [Configuration](configuration.md) - Environment setup and credentials
-- [CLI Reference](cli-reference.md) - Command-line options and usage
-- [Development](development.md) - Contributing and development setup
+### 👤 First-Time Users
+
+**Goal**: Install and run your first synchronization
+
+1. [Installation](get-started.md#installation) - Set up the tool
+2. [Setup Credentials](get-started.md#setup-credentials) - Configure F5 XC access
+3. [Prepare CSV](configuration.md#csv-format) - Format your user database
+4. [Quick Start](get-started.md#quick-start) - Run your first sync
+
+**Next Steps**: [Configuration Guide](configuration.md) for advanced options
+
+---
+
+### 🔧 DevOps Engineers / Operators
+
+**Goal**: Automate user synchronization in production
+
+1. [Operations Guide](operations-guide.md) - Production workflows and best practices
+2. [CI/CD Deployment](CICD/deployment-guide.md) - Automation strategies
+   - [GitHub Actions](CICD/github-actions-guide.md) - Automated workflows
+   - [Jenkins](CICD/jenkins-guide.md) - Pipeline integration
+3. [Troubleshooting](troubleshooting.md) - Common issues and solutions
+4. [CLI Reference](cli-reference.md) - Complete command options
+
+**Next Steps**: [Operations Guide](operations-guide.md#pruning-operations) for advanced reconciliation
+
+---
+
+### 💻 Contributors / Developers
+
+**Goal**: Contribute code and improvements
+
+1. [Development Setup](development.md#development-setup) - Environment configuration
+2. [Contributing Guide](contributing.md) - Workflow and guidelines
+3. [Quality Standards](quality-standards.md) - Code requirements
+4. [Testing Guide](testing.md) - Writing and running tests
+
+**Next Steps**: Review [Project Structure](development.md#project-structure) and pick an issue
+
+---
+
+## Quick Reference
+
+| Task | Guide | Section |
+|------|-------|---------|
+| Install tool | [Getting Started](get-started.md) | Installation |
+| Configure credentials | [Configuration](configuration.md) | Environment Variables |
+| Format CSV file | [Configuration](configuration.md) | CSV Format |
+| Run first sync | [Getting Started](get-started.md) | Quick Start |
+| Automate with CI/CD | [Deployment Guide](CICD/deployment-guide.md) | Scenarios |
+| Troubleshoot errors | [Troubleshooting](troubleshooting.md) | Common Issues |
+| Contribute code | [Contributing](contributing.md) | Development Workflow |
+| Write tests | [Testing](testing.md) | Writing Tests |
 
 ## What Does It Do?
 
