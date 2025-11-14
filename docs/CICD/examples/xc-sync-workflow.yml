@@ -1,0 +1,41 @@
+name: XC Group Sync
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM UTC
+  workflow_dispatch:      # Manual trigger
+  push:
+    paths:
+      - 'User-Database.csv'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install -e .
+
+      - name: Decode credentials
+        run: |
+          echo "${{ secrets.XC_CERT }}" | base64 -d > cert.pem
+          echo "${{ secrets.XC_CERT_KEY }}" | base64 -d > key.pem
+
+      - name: Sync groups (dry-run on PR)
+        env:
+          TENANT_ID: ${{ secrets.TENANT_ID }}
+          VOLT_API_CERT_FILE: cert.pem
+          VOLT_API_CERT_KEY_FILE: key.pem
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            xc_user_group_sync --csv User-Database.csv --dry-run
+          else
+            xc_user_group_sync --csv User-Database.csv
+          fi

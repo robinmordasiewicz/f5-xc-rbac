@@ -280,8 +280,8 @@ If issue persists:
 
 ## Related Documentation
 
-- [Deployment Guide](deployment-guide.md) - Overview of deployment scenarios
-- [Operational Workflows](../implementation/workflows.md) - Step-by-step operational procedures
-- [Testing Strategy](../implementation/testing-strategy.md) - Validation approaches
-- [GitHub Actions Guide](github-actions-guide.md) - CI/CD automation with GitHub
-- [Jenkins Guide](jenkins-guide.md) - CI/CD automation with Jenkins
+- [Deployment Guide](CICD/deployment-guide.md) - Overview of deployment scenarios
+- [Operations Guide](operations-guide.md) - Step-by-step operational procedures
+- [Testing Strategy](specifications/implementation/testing-strategy.md) - Validation approaches
+- [GitHub Actions Guide](CICD/github-actions-guide.md) - CI/CD automation with GitHub
+- [Jenkins Guide](CICD/jenkins-guide.md) - CI/CD automation with Jenkins

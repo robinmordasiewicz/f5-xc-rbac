@@ -20,118 +20,73 @@ This guide provides complete instructions for deploying F5 XC User and Group Syn
 
 ### 1. Configure GitHub Secrets
 
-**Option A: Using Setup Script** (Recommended)
-
-```bash
-# Run setup script with GitHub secrets flag
-./scripts/setup_xc_credentials.sh --p12 ~/Downloads/tenant.p12
-
-# Script will:
-# - Extract certificate and key from P12
-# - Base64-encode credentials
-# - Display GitHub secrets configuration commands
-```
-
-**Option B: Manual Configuration**
+**Required Secrets** (see [Configuration Guide](../configuration.md#environment-variables) for variable descriptions):
 
 Navigate to: `Settings → Secrets → Actions → New repository secret`
 
-Create the following secrets:
+| Secret Name | Description |
+|-------------|-------------|
+| `TENANT_ID` | Your F5 XC tenant ID |
+| `XC_CERT` | Base64-encoded PEM certificate |
+| `XC_CERT_KEY` | Base64-encoded PEM private key |
 
-**For PEM Certificate Authentication**:
+**Setup Options**:
 
-- `TENANT_ID`: your-tenant
-- `XC_CERT`: base64-encoded PEM certificate
-- `XC_CERT_KEY`: base64-encoded PEM private key
+**Option A: Automated** (Recommended)
 
 ```bash
-# Generate base64-encoded secrets
-base64 -i secrets/cert.pem | pbcopy  # macOS
-base64 -w 0 secrets/cert.pem         # Linux
-
-base64 -i secrets/key.pem | pbcopy   # macOS
-base64 -w 0 secrets/key.pem          # Linux
+./scripts/setup_xc_credentials.sh --p12 ~/Downloads/tenant.p12
+# Script extracts, encodes, and displays GitHub secrets configuration
 ```
 
-**For P12 Authentication** (Alternative):
-- `TENANT_ID`: your-tenant
-- `XC_P12`: base64-encoded P12 file
-- `XC_P12_PASSWORD`: P12 passphrase
+**Option B: Manual**
 
 ```bash
-# Generate base64-encoded P12
-base64 -i tenant.p12 | pbcopy  # macOS
-base64 -w 0 tenant.p12         # Linux
+base64 -i secrets/cert.pem | pbcopy  # macOS
+base64 -w 0 secrets/cert.pem         # Linux (copy output)
 ```
 
 ### 2. Create Workflow File
 
-Create `.github/workflows/xc-sync.yml`:
+Copy the example workflow to your repository:
 
-```yaml
-name: XC Group Sync
-
-on:
-  schedule:
-    - cron: '0 2 * * *'  # Daily at 2 AM UTC
-  workflow_dispatch:      # Manual trigger
-  push:
-    paths:
-      - 'User-Database.csv'
-
-jobs:
-  sync:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-
-      - name: Install dependencies
-        run: |
-          pip install -e .
-
-      - name: Decode credentials
-        run: |
-          echo "${{ secrets.XC_CERT }}" | base64 -d > cert.pem
-          echo "${{ secrets.XC_CERT_KEY }}" | base64 -d > key.pem
-
-      - name: Sync groups (dry-run on PR)
-        env:
-          TENANT_ID: ${{ secrets.TENANT_ID }}
-          VOLT_API_CERT_FILE: cert.pem
-          VOLT_API_CERT_KEY_FILE: key.pem
-        run: |
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            xc_user_group_sync sync --csv User-Database.csv --dry-run
-          else
-            xc_user_group_sync sync --csv User-Database.csv
-          fi
+```bash
+cp docs/CICD/examples/xc-sync-workflow.yml .github/workflows/xc-sync.yml
 ```
+
+Or create `.github/workflows/xc-sync.yml` manually. See [xc-sync-workflow.yml](examples/xc-sync-workflow.yml) for the complete example.
+
+**Key workflow features**:
+
+- Scheduled daily execution (2 AM UTC)
+- Manual trigger support
+- Automatic trigger on CSV changes
+- Dry-run mode for pull requests
 
 ## Workflow Behavior
 
 ### Trigger Modes
 
 **Scheduled Execution**:
+
 - Runs daily at 2 AM UTC automatically
 - Uses cron syntax: `'0 2 * * *'`
 - Configurable to any frequency (hourly, weekly, etc.)
 
 **On CSV Change**:
+
 - Triggers when User-Database.csv committed to repository
 - Automatically syncs new data to F5 XC
 - Useful for GitOps-style workflows
 
 **Manual Trigger**:
+
 - Can be triggered manually via GitHub Actions UI
 - Navigate to: `Actions → XC Group Sync → Run workflow`
 - Useful for on-demand synchronization
 
 **Pull Request Validation**:
+
 - Runs dry-run for PR validation
 - Prevents accidental changes to production
 - Shows planned operations in PR comments
@@ -209,16 +164,19 @@ jobs:
 ## Security Considerations
 
 **CSV Security**:
+
 - CSV contains email addresses (potentially sensitive)
 - Consider using private repository
 - Alternative: Fetch CSV from secure storage during workflow
 
 **Credentials Management**:
+
 - Always use GitHub Secrets, never commit credentials
 - Rotate certificates periodically
 - Use environment-specific secrets for production/staging
 
 **Audit Trail**:
+
 - GitHub Actions logs provide complete execution history
 - Review logs regularly for unexpected changes
 - Enable branch protection for production workflows
@@ -226,7 +184,7 @@ jobs:
 ## Related Documentation
 
 - [Deployment Guide](deployment-guide.md) - Overview of all deployment scenarios
-- [Operational Workflows](../implementation/workflows.md) - Step-by-step operational procedures
+- [Operations Guide](../operations-guide.md) - Step-by-step operational procedures
 - [Jenkins Guide](jenkins-guide.md) - Alternative CI/CD with Jenkins
-- [Troubleshooting Guide](troubleshooting-guide.md) - Common issues and resolutions
-- [Testing Strategy](../implementation/testing-strategy.md) - Validation approaches
+- [Troubleshooting Guide](../troubleshooting.md) - Common issues and resolutions
+- [Testing Strategy](../specifications/implementation/testing-strategy.md) - Validation approaches

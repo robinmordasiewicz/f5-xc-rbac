@@ -1,0 +1,59 @@
+pipeline {
+  agent any
+
+  triggers {
+    cron('H 2 * * *')  // Daily at 2 AM
+  }
+
+  environment {
+    TENANT_ID = credentials('xc-tenant-id')
+    VOLT_API_CERT_FILE = credentials('xc-cert')
+    VOLT_API_CERT_KEY_FILE = credentials('xc-cert-key')
+  }
+
+  stages {
+    stage('Setup') {
+      steps {
+        sh '''
+          python3 -m venv .venv
+          . .venv/bin/activate
+          pip install -e .
+        '''
+      }
+    }
+
+    stage('Dry-Run') {
+      steps {
+        sh '''
+          . .venv/bin/activate
+          xc_user_group_sync --csv User-Database.csv --dry-run
+        '''
+      }
+    }
+
+    stage('Sync') {
+      when {
+        branch 'main'
+      }
+      steps {
+        sh '''
+          . .venv/bin/activate
+          xc_user_group_sync --csv User-Database.csv
+        '''
+      }
+    }
+  }
+
+  post {
+    always {
+      archiveArtifacts artifacts: 'logs/*.log', allowEmptyArchive: true
+    }
+    failure {
+      emailext (
+        subject: "XC Group Sync Failed",
+        body: "Sync operation failed. Check Jenkins logs.",
+        to: "ops-team@example.com"
+      )
+    }
+  }
+}
