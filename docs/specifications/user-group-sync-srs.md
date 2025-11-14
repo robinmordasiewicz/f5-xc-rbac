@@ -1459,13 +1459,7 @@ Optional deletion of F5 XC resources (groups and users) not present in CSV, with
 1. **sync**: Synchronize groups and users from CSV to F5 XC
 
    ```bash
-   xc_user_group_sync sync --csv <file> [options]
-   ```
-
-2. **sync_users**: Synchronize users only from CSV to F5 XC (DEPRECATED - use sync)
-
-   ```bash
-   xc_user_group_sync sync_users --csv <file> [options]
+   xc_user_group_sync --csv <file> [options]
    ```
 
 **Command Options**:

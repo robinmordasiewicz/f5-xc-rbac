@@ -111,7 +111,7 @@ curl -I https://${TENANT_ID}.console.ves.volterra.io
 # https://status.f5.com/
 
 # Increase timeout and retries
-xc_user_group_sync sync --csv User-Database.csv \
+xc_user_group_sync --csv User-Database.csv \
   --timeout 60 \
   --max-retries 5
 
@@ -147,7 +147,7 @@ sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keyc
 
 # Option 2: Set custom CA bundle (temporary)
 export REQUESTS_CA_BUNDLE=/path/to/staging-ca.crt
-xc_user_group_sync sync --csv User-Database.csv
+xc_user_group_sync --csv User-Database.csv
 
 # Option 3: Use production environment for testing (if possible)
 export XC_API_URL="https://${TENANT_ID}.console.ves.volterra.io"
@@ -604,10 +604,10 @@ csvcut -c "Entitlement Display Name" User-Database.csv | grep -v "^CN="
 
 ```bash
 # Run with debug logging
-xc_user_group_sync sync --csv User-Database.csv --log-level debug
+xc_user_group_sync --csv User-Database.csv --log-level debug
 
 # Capture full output
-xc_user_group_sync sync --csv User-Database.csv 2>&1 | tee sync-debug.log
+xc_user_group_sync --csv User-Database.csv 2>&1 | tee sync-debug.log
 
 # Search for specific errors
 grep -i error sync-debug.log
@@ -648,10 +648,10 @@ Follow the resolution steps for the identified issue category.
 
 ```bash
 # Test with dry-run
-xc_user_group_sync sync --csv User-Database.csv --dry-run
+xc_user_group_sync --csv User-Database.csv --dry-run
 
 # If dry-run succeeds, execute actual sync
-xc_user_group_sync sync --csv User-Database.csv
+xc_user_group_sync --csv User-Database.csv
 ```
 
 ### Step 5: Document and Escalate (if needed)

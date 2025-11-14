@@ -130,7 +130,7 @@ jobs:
     VOLT_API_P12_FILE: /tmp/cert.p12
     VES_P12_PASSWORD: ${{ secrets.XC_P12_PASSWORD }}
   run: |
-    xc_user_group_sync sync --csv User-Database.csv --prune
+    xc_user_group_sync --csv User-Database.csv --prune
 ```
 
 ### Notification on Failure
