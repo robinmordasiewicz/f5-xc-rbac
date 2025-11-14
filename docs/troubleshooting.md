@@ -258,12 +258,11 @@ for header, value in client.session.headers.items():
     else:
         print(f"  {header}: {value}")
 
-# Check certificate configuration
-if client.session.cert:
-    cert_file, key_file = client.session.cert
-    print(f"\nCertificate Auth:")
-    print(f"  Cert file: {cert_file}")
-    print(f"  Key file: {key_file}")
+# Check P12 authentication status
+print(f"\nP12 Authentication:")
+print(f"  P12 file: {os.getenv('VOLT_API_P12_FILE')}")
+print(f"  Temp cert: {client._temp_cert_file if hasattr(client, '_temp_cert_file') else 'N/A'}")
+print(f"  Temp key: {client._temp_key_file if hasattr(client, '_temp_key_file') else 'N/A'}")
 
 # Test raw API request with detailed output
 import requests

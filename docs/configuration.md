@@ -7,13 +7,9 @@ The tool uses these environment variables for authentication and configuration:
 | Variable | Required | Description | Default |
 |----------|----------|-------------|---------|
 | `TENANT_ID` | Yes | Your F5 XC tenant ID | N/A |
-| `VOLT_API_P12_FILE` | Yes* | Path to P12/PKCS12 certificate file | N/A |
-| `VES_P12_PASSWORD` | Yes* | Password for P12 certificate file | N/A |
-| `XC_API_TOKEN` | Yes** | API token (alternative to P12 auth) | N/A |
-| `XC_API_URL` | No | F5 XC API endpoint URL | `https://{TENANT_ID}.console.ves.volterra.io` |
-
-\* Required for P12 certificate authentication (recommended)
-\*\* Required if not using P12 authentication
+| `VOLT_API_P12_FILE` | Yes | Path to P12/PKCS12 certificate file | N/A |
+| `VES_P12_PASSWORD` | Yes | Password for P12 certificate file | N/A |
+| `XC_API_URL` | No | F5 XC API endpoint URL (for staging) | `https://{TENANT_ID}.console.ves.volterra.io` |
 
 **Note**: The tool supports native P12 authentication. Certificate and private key are extracted at runtime into temporary files and automatically cleaned up on exit.
 
