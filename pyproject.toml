@@ -13,6 +13,7 @@ license = { text = "MIT" }
 dependencies = [
   "click>=8.3.0",
   "cryptography>=42.0.0",
+  "email-validator>=2.0.0",
   "ldap3>=2.9.1",
   "pydantic>=2.12.4",
   "python-dotenv>=1.2.1",
