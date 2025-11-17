@@ -2,8 +2,8 @@
 
 ## User Lifecycle Management for F5 Distributed Cloud Synchronization Tool
 
-**Document Version**: 1.0
-**Date**: 2025-11-13
+**Document Version**: 1.1
+**Date**: 2025-11-17
 **Feature ID**: 059-user-lifecycle
 **Status**: Production Ready
 **IEEE Standard**: IEEE 29148:2018 Compliant
@@ -15,6 +15,7 @@
 | Version | Date | Author | Description |
 |---------|------|--------|-------------|
 | 1.0 | 2025-11-13 | Expert Panel Review | Initial production-ready specification |
+| 1.1 | 2025-11-17 | Development Team | Added corporate proxy and network support (Section 3.7) |
 
 **Distribution List**:
 
@@ -53,6 +54,7 @@
    - 3.4 [CSV Parsing and Validation](#34-csv-parsing-and-validation)
    - 3.5 [Dry-Run Preview Mode](#35-dry-run-preview-mode)
    - 3.6 [Synchronization Reporting](#36-synchronization-reporting)
+   - 3.7 [Corporate Network and Proxy Support](#37-corporate-network-and-proxy-support)
 
 4. [External Interface Requirements](#4-external-interface-requirements)
    - 4.1 [Command Line Interface](#41-command-line-interface)
@@ -754,7 +756,43 @@ User Lifecycle Management
 - **Rationale**: Simplifies implementation; matches existing group sync behavior
 - **Impact**: Cannot manage users across multiple F5 XC namespaces
 
-### 2.5.3 Operational Constraints
+### 2.5.3 Network and Proxy Constraints
+
+**Corporate Proxy Support**:
+
+- **Requirement**: Must support execution through corporate HTTP/HTTPS proxies
+- **Rationale**: Enterprise networks often require outbound traffic through proxies with MITM SSL inspection
+- **Implementation**:
+  - Automatic detection of `HTTP_PROXY`/`HTTPS_PROXY` environment variables
+  - CLI flags (`--proxy`, `--ca-bundle`, `--no-verify`) for explicit configuration
+  - Custom CA certificate bundle support for MITM proxy certificates
+- **Impact**: Enables tool usage in restricted corporate network environments
+
+**SSL/TLS Certificate Verification**:
+
+- **Requirement**: Must support custom CA certificate bundles for SSL verification
+- **Rationale**: Corporate proxies with MITM SSL inspection require trust of proxy CA certificates
+- **Implementation**:
+  - Default: System CA bundle verification enabled
+  - Custom: `REQUESTS_CA_BUNDLE`/`CURL_CA_BUNDLE` environment variables
+  - Override: `--ca-bundle` CLI flag for explicit CA bundle path
+  - Escape hatch: `--no-verify` flag to disable verification (debugging only, not recommended)
+- **Impact**: Allows mTLS client certificate authentication through corporate MITM proxies
+
+**Proxy Authentication**:
+
+- **Support**: HTTP proxy with basic authentication via URL-embedded credentials
+- **Format**: `http://username:password@proxy.example.com:8080`  <!-- pragma: allowlist secret -->
+- **Limitation**: No support for NTLM, Kerberos, or other advanced proxy authentication schemes
+- **Impact**: Sufficient for most corporate proxy deployments; may require proxy bypass for complex auth
+
+**Network Connectivity**:
+
+- **Constraint**: Requires HTTPS connectivity to F5 XC endpoints (*.ves.volterra.io)
+- **Rationale**: F5 XC API accessible only via HTTPS
+- **Impact**: Firewall rules must allow outbound HTTPS (port 443) or appropriate proxy configuration
+
+### 2.5.4 Operational Constraints
 
 **Authentication Method**:
 
@@ -2135,6 +2173,119 @@ class UserSyncStats:
 
 ---
 
+## 3.7 Corporate Network and Proxy Support
+
+**Priority**: P2 (Important)
+**Status**: Implemented
+**Requirement IDs**: FR-020, FR-021, FR-022, FR-023
+
+### 3.7.1 Feature Description
+
+The system supports execution through corporate network proxies with MITM (Man-In-The-Middle) SSL inspection, enabling deployment in restricted enterprise environments. This includes configurable proxy settings, custom CA certificate trust, and flexible SSL verification options to accommodate various corporate security policies while maintaining secure mTLS client certificate authentication.
+
+### 3.7.2 Functional Requirements
+
+**FR-020**: System SHALL support HTTP/HTTPS proxy configuration via environment variables (`HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY`)
+
+**FR-021**: System SHALL support custom CA certificate bundles for SSL verification to accommodate corporate MITM proxies
+
+**FR-022**: System SHALL provide CLI flags (`--proxy`, `--ca-bundle`, `--no-verify`) for explicit proxy and SSL configuration
+
+**FR-023**: System SHALL maintain mTLS client certificate authentication functionality when operating through corporate proxies
+
+### 3.7.3 Proxy Configuration Methods
+
+**Priority Order** (highest to lowest):
+
+1. **CLI Flags**: Explicit command-line arguments override all other settings
+   - `--proxy`: Explicit proxy URL
+   - `--ca-bundle`: Custom CA certificate bundle path
+   - `--no-verify`: Disable SSL verification (debugging only)
+
+2. **Environment Variables**: Standard proxy environment variables
+   - `HTTP_PROXY` / `HTTPS_PROXY`: Proxy URLs for HTTP/HTTPS traffic
+   - `NO_PROXY`: Comma-separated bypass list
+   - `REQUESTS_CA_BUNDLE` / `CURL_CA_BUNDLE`: CA certificate bundle path
+
+3. **System Defaults**: System CA certificate store (when no custom configuration provided)
+
+### 3.7.4 Acceptance Criteria
+
+**AC-020.1**: Tool successfully connects through HTTP proxy when `HTTP_PROXY` environment variable is set
+
+**AC-020.2**: Tool successfully connects through HTTPS proxy when `HTTPS_PROXY` environment variable is set
+
+**AC-020.3**: Tool bypasses proxy for domains listed in `NO_PROXY` environment variable
+
+**AC-021.1**: Tool accepts custom CA certificate bundle via `REQUESTS_CA_BUNDLE` environment variable
+
+**AC-021.2**: Tool accepts custom CA certificate bundle via `--ca-bundle` CLI flag
+
+**AC-021.3**: Tool successfully validates MITM proxy certificates when custom CA bundle is configured
+
+**AC-022.1**: CLI flag `--proxy` overrides environment variable proxy settings
+
+**AC-022.2**: CLI flag `--ca-bundle` overrides environment variable CA bundle settings
+
+**AC-022.3**: CLI flag `--no-verify` disables SSL verification when specified
+
+**AC-023.1**: P12/mTLS client certificate authentication succeeds through corporate proxy
+
+**AC-023.2**: Client certificate is properly presented to F5 XC API even when proxied
+
+### 3.7.5 Error Handling
+
+**Proxy Connection Failures**:
+- **Error**: Unable to connect to proxy
+- **Handling**: Fail with clear error message indicating proxy connectivity issue
+- **Logging**: Log proxy URL (credentials masked) and connection error details
+
+**SSL Verification Failures**:
+- **Error**: SSL certificate verification failed
+- **Handling**: Fail with clear error message indicating certificate trust issue
+- **Logging**: Log certificate details and suggest using `--ca-bundle` flag
+
+**MITM Proxy Interference**:
+- **Error**: HTTP 400/401 from login.ves.volterra.io during OAuth flow
+- **Handling**: Fail with error message suggesting proxy MITM interference
+- **Logging**: Log response details and recommend checking proxy configuration
+
+### 3.7.6 Security Considerations
+
+**SSL Verification**:
+- Default behavior: SSL verification enabled using system CA bundle
+- Custom CA bundles: Only loaded when explicitly configured
+- Verification bypass: Available only via explicit `--no-verify` flag with warning logged
+
+**Credential Security**:
+- Proxy credentials in URLs: Masked in all log output
+- P12 password: Never logged or exposed in error messages
+- Temporary certificates: Created with restrictive permissions, cleaned up on exit
+
+**Network Security**:
+- Proxy communication: Encrypted when using HTTPS proxy URLs
+- Client certificates: Transmitted securely through proxy tunnels
+- No credential caching: Credentials read from environment on each execution
+
+### 3.7.7 Implementation Notes
+
+**requests Library Integration**:
+- Uses Python `requests` library's native proxy support
+- Session-level proxy configuration for connection reuse
+- Automatic proxy authentication from URL-embedded credentials
+
+**CA Bundle Handling**:
+- Environment variable precedence: `REQUESTS_CA_BUNDLE` > `CURL_CA_BUNDLE` > system default
+- CLI flag overrides all environment variables
+- Validation: CA bundle file existence checked before use
+
+**Compatibility**:
+- Works with corporate proxies using basic authentication
+- Compatible with transparent proxies (auto-detected via environment variables)
+- Supports both HTTP and HTTPS proxy protocols
+
+---
+
 ## 4. External Interface Requirements
 
 ## 4.1 Command Line Interface
@@ -2160,6 +2311,9 @@ xc_user_group_sync [OPTIONS]
 | `--prune` | Flag | No | False | Delete F5 XC users AND groups not present in CSV |
 | `--log-level` | Choice | No | INFO | Logging verbosity (DEBUG, INFO, WARNING, ERROR) |
 | `--timeout` | Integer | No | 120 | API request timeout in seconds |
+| `--proxy` | String | No | None | Proxy URL for HTTP/HTTPS requests (e.g., http://proxy:8080) |
+| `--ca-bundle` | Path | No | None | Path to custom CA certificate bundle for SSL verification |
+| `--no-verify` | Flag | No | False | Disable SSL certificate verification (insecure, debugging only) |
 | `--help` | Flag | No | False | Show help message and exit |
 
 **Important Note on `--prune` Flag**:
@@ -2231,8 +2385,11 @@ xc_user_group_sync --csv /path/to/users.csv --prune --dry-run
 | `XC_API_URL` | No | F5 XC API base URL (defaults to production) | `https://example-corp.console.ves.volterra.io` |
 | `VOLT_API_P12_FILE` | Yes | Path to P12/PKCS12 certificate file | `/path/to/cert.p12` |
 | `DOTENV_PATH` | No | Custom path to .env file (overrides default) | `/custom/path/.env` |
-| `HTTP_PROXY` | No | HTTP proxy URL | `http://proxy.example.com:8080` |
-| `HTTPS_PROXY` | No | HTTPS proxy URL | `https://proxy.example.com:8443` |
+| `HTTP_PROXY` | No | HTTP proxy URL for outbound requests | `http://proxy.example.com:8080` |
+| `HTTPS_PROXY` | No | HTTPS proxy URL for outbound requests | `https://proxy.example.com:8443` |
+| `NO_PROXY` | No | Comma-separated list of hosts to bypass proxy | `localhost,127.0.0.1,.local` |
+| `REQUESTS_CA_BUNDLE` | No | Path to CA certificate bundle for SSL verification | `/etc/ssl/certs/ca-bundle.crt` |
+| `CURL_CA_BUNDLE` | No | Alternative CA bundle path (fallback to REQUESTS_CA_BUNDLE) | `/etc/ssl/certs/ca-certificates.crt` |
 
 **P12 Certificate Authentication**:
 

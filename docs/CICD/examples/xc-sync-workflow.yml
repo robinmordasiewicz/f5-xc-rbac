@@ -32,6 +32,10 @@ jobs:
           TENANT_ID: ${{ secrets.TENANT_ID }}
           VOLT_API_P12_FILE: /tmp/cert.p12
           VES_P12_PASSWORD: ${{ secrets.XC_P12_PASSWORD }}
+          # Optional: Proxy configuration for corporate networks
+          # HTTP_PROXY: ${{ secrets.PROXY_URL }}
+          # HTTPS_PROXY: ${{ secrets.PROXY_URL }}
+          # REQUESTS_CA_BUNDLE: ${{ secrets.CA_BUNDLE_PATH }}
         run: |
           if [ "${{ github.event_name }}" == "pull_request" ]; then
             xc_user_group_sync --csv User-Database.csv --dry-run

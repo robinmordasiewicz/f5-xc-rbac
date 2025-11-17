@@ -10,6 +10,11 @@ The tool uses these environment variables for authentication and configuration:
 | `VOLT_API_P12_FILE` | Yes | Path to P12/PKCS12 certificate file | N/A |
 | `VES_P12_PASSWORD` | Yes | Password for P12 certificate file | N/A |
 | `XC_API_URL` | No | F5 XC API endpoint URL (for staging) | `https://{TENANT_ID}.console.ves.volterra.io` |
+| `HTTP_PROXY` | No | HTTP proxy URL | None |
+| `HTTPS_PROXY` | No | HTTPS proxy URL | None |
+| `NO_PROXY` | No | Comma-separated bypass list | None |
+| `REQUESTS_CA_BUNDLE` | No | Path to CA certificate bundle | System CA bundle |
+| `CURL_CA_BUNDLE` | No | Alternative CA bundle path | System CA bundle |
 
 **Note**: The tool supports native P12 authentication. Certificate and private key are extracted at runtime into temporary files and automatically cleaned up on exit.
 
@@ -35,6 +40,71 @@ Load the configuration:
 source secrets/.env
 xc_user_group_sync --csv ./User-Database.csv --dry-run
 ```
+
+## Corporate Proxy Configuration
+
+If your organization uses an outbound proxy (especially with MITM SSL inspection), configure proxy settings:
+
+### Using Environment Variables (Recommended)
+
+```bash
+# Add to secrets/.env
+HTTP_PROXY=http://proxy.example.com:8080
+HTTPS_PROXY=http://proxy.example.com:8080
+NO_PROXY=localhost,127.0.0.1,.local
+
+# For proxies with authentication
+HTTPS_PROXY=http://username:password@proxy.example.com:8080  # pragma: allowlist secret
+
+# For MITM SSL inspection proxies
+REQUESTS_CA_BUNDLE=/path/to/corporate-ca-bundle.crt
+```
+
+### Using CLI Flags
+
+```bash
+# Explicit proxy configuration
+xc_user_group_sync --csv ./User-Database.csv \
+  --proxy "http://proxy.example.com:8080" \
+  --ca-bundle "/path/to/corporate-ca-bundle.crt"
+
+# Disable SSL verification (debugging only, not recommended)
+xc_user_group_sync --csv ./User-Database.csv \
+  --proxy "http://proxy.example.com:8080" \
+  --no-verify
+```
+
+### Getting Your Corporate CA Certificate
+
+**Windows:**
+
+1. Open Certificate Manager (`certmgr.msc`)
+2. Navigate to Trusted Root Certification Authorities
+3. Find your corporate proxy CA certificate
+4. Right-click → All Tasks → Export
+5. Choose Base-64 encoded X.509 format
+
+**macOS:**
+1. Open Keychain Access
+2. Select "System" keychain
+3. Find your corporate proxy CA certificate
+4. File → Export Items
+5. Save as `.crt` file
+
+**Linux:**
+- Check `/etc/ssl/certs/` for CA bundle
+- Or contact your IT department
+
+### Troubleshooting Proxy Issues
+
+If you see errors like `HTTP 400 Bad Request` from `login.ves.volterra.io`:
+
+1. **Confirm proxy is the issue**: Test from home/non-proxied network
+2. **Get corporate CA certificate**: See instructions above
+3. **Configure CA bundle**: Use `--ca-bundle` flag or `REQUESTS_CA_BUNDLE` environment variable
+4. **Verify connectivity**: Test with `curl` using same proxy settings
+
+See [Troubleshooting Guide](troubleshooting.md#issue-4-corporate-proxy-and-mitm-ssl-interception) for detailed resolution steps.
 
 ## CSV Format
 

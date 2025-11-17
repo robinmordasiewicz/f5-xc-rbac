@@ -192,6 +192,67 @@ post {
 }
 ```
 
+### Corporate Proxy Configuration
+
+If your Jenkins agents operate behind a corporate proxy:
+
+**Option 1: Environment Variables** (Recommended for Jenkins agents)
+
+```groovy
+environment {
+  TENANT_ID = credentials('xc-tenant-id')
+  VOLT_API_P12_FILE = credentials('xc-p12')
+  VES_P12_PASSWORD = credentials('xc-p12-password')
+  HTTP_PROXY = 'http://proxy.example.com:8080'
+  HTTPS_PROXY = 'http://proxy.example.com:8080'
+  NO_PROXY = 'localhost,127.0.0.1'
+  REQUESTS_CA_BUNDLE = '/etc/ssl/certs/ca-bundle.crt'
+}
+```
+
+**Option 2: CLI Flags** (For dynamic proxy configuration)
+
+```groovy
+stage('Sync') {
+  steps {
+    sh '''
+      . .venv/bin/activate
+      xc_user_group_sync --csv User-Database.csv \
+        --proxy "http://proxy.example.com:8080" \
+        --ca-bundle "/etc/ssl/certs/corporate-ca.crt"
+    '''
+  }
+}
+```
+
+**Option 3: Jenkins Credentials** (For sensitive proxy credentials)
+
+Add these credentials:
+- ID: `proxy-url`, Kind: Secret text, Content: `http://username:password@proxy.example.com:8080`  <!-- pragma: allowlist secret -->
+- ID: `ca-bundle-path`, Kind: Secret text, Content: `/path/to/corporate-ca.crt`
+
+```groovy
+environment {
+  TENANT_ID = credentials('xc-tenant-id')
+  VOLT_API_P12_FILE = credentials('xc-p12')
+  VES_P12_PASSWORD = credentials('xc-p12-password')
+  HTTPS_PROXY = credentials('proxy-url')
+  REQUESTS_CA_BUNDLE = credentials('ca-bundle-path')
+}
+```
+
+**Jenkins Agent Configuration**: Install corporate CA certificate on agents:
+
+```bash
+# On Jenkins agent (Ubuntu/Debian)
+sudo cp /path/to/corporate-ca.crt /usr/local/share/ca-certificates/
+sudo update-ca-certificates
+
+# On Jenkins agent (RHEL/CentOS)
+sudo cp /path/to/corporate-ca.crt /etc/pki/ca-trust/source/anchors/
+sudo update-ca-trust
+```
+
 ## Pros and Cons
 
 ### Pros
