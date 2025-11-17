@@ -12,16 +12,13 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Getting Started: get-started.md
   - Configuration: configuration.md
   - CLI Reference: cli-reference.md
-  - Operations Guide: operations-guide.md
   - Troubleshooting: troubleshooting.md
-  - Development: development.md
   - CI/CD:
-    - Deployment Guide: CICD/deployment-guide.md
-    - GitHub Actions Guide: CICD/github-actions-guide.md
-    - Jenkins Guide: CICD/jenkins-guide.md
+    - GitLab CI: CICD/gitlab-ci.md
+    - GitHub Actions: CICD/github-actions.md
+    - Jenkins: CICD/jenkins.md
   - Specifications:
     - Overview: specifications/README.md
     - User Group Sync SRS: specifications/user-group-sync-srs.md
