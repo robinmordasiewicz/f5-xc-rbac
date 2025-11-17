@@ -12,7 +12,6 @@ The tool uses these environment variables for authentication and configuration:
 | `XC_API_URL` | No | F5 XC API endpoint URL (for staging) | `https://{TENANT_ID}.console.ves.volterra.io` |
 | `HTTP_PROXY` | No | HTTP proxy URL | None |
 | `HTTPS_PROXY` | No | HTTPS proxy URL | None |
-| `NO_PROXY` | No | Comma-separated bypass list | None |
 | `REQUESTS_CA_BUNDLE` | No | Path to CA certificate bundle | System CA bundle |
 | `CURL_CA_BUNDLE` | No | Alternative CA bundle path | System CA bundle |
 
@@ -51,7 +50,6 @@ If your organization uses an outbound proxy (especially with MITM SSL inspection
 # Add to secrets/.env
 HTTP_PROXY=http://proxy.example.com:8080
 HTTPS_PROXY=http://proxy.example.com:8080
-NO_PROXY=localhost,127.0.0.1,.local
 
 # For proxies with authentication
 HTTPS_PROXY=http://username:password@proxy.example.com:8080  # pragma: allowlist secret

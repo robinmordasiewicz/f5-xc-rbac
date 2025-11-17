@@ -97,7 +97,7 @@ class XCClient:
             self.session.proxies = {"http": proxy, "https": proxy}
             logger.debug(f"Using explicit proxy: {proxy}")
         elif os.getenv("HTTP_PROXY") or os.getenv("HTTPS_PROXY"):
-            # requests.Session automatically uses HTTP_PROXY/HTTPS_PROXY/NO_PROXY
+            # requests.Session automatically uses HTTP_PROXY/HTTPS_PROXY env vars
             # Just log for visibility
             http_proxy = os.getenv("HTTP_PROXY") or os.getenv("http_proxy")
             https_proxy = os.getenv("HTTPS_PROXY") or os.getenv("https_proxy")

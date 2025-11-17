@@ -2185,7 +2185,7 @@ The system supports execution through corporate network proxies with MITM (Man-I
 
 ### 3.7.2 Functional Requirements
 
-**FR-020**: System SHALL support HTTP/HTTPS proxy configuration via environment variables (`HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY`)
+**FR-020**: System SHALL support HTTP/HTTPS proxy configuration via environment variables (`HTTP_PROXY`, `HTTPS_PROXY`)
 
 **FR-021**: System SHALL support custom CA certificate bundles for SSL verification to accommodate corporate MITM proxies
 
@@ -2204,7 +2204,6 @@ The system supports execution through corporate network proxies with MITM (Man-I
 
 2. **Environment Variables**: Standard proxy environment variables
    - `HTTP_PROXY` / `HTTPS_PROXY`: Proxy URLs for HTTP/HTTPS traffic
-   - `NO_PROXY`: Comma-separated bypass list
    - `REQUESTS_CA_BUNDLE` / `CURL_CA_BUNDLE`: CA certificate bundle path
 
 3. **System Defaults**: System CA certificate store (when no custom configuration provided)
@@ -2214,8 +2213,6 @@ The system supports execution through corporate network proxies with MITM (Man-I
 **AC-020.1**: Tool successfully connects through HTTP proxy when `HTTP_PROXY` environment variable is set
 
 **AC-020.2**: Tool successfully connects through HTTPS proxy when `HTTPS_PROXY` environment variable is set
-
-**AC-020.3**: Tool bypasses proxy for domains listed in `NO_PROXY` environment variable
 
 **AC-021.1**: Tool accepts custom CA certificate bundle via `REQUESTS_CA_BUNDLE` environment variable
 
@@ -2387,7 +2384,6 @@ xc_user_group_sync --csv /path/to/users.csv --prune --dry-run
 | `DOTENV_PATH` | No | Custom path to .env file (overrides default) | `/custom/path/.env` |
 | `HTTP_PROXY` | No | HTTP proxy URL for outbound requests | `http://proxy.example.com:8080` |
 | `HTTPS_PROXY` | No | HTTPS proxy URL for outbound requests | `https://proxy.example.com:8443` |
-| `NO_PROXY` | No | Comma-separated list of hosts to bypass proxy | `localhost,127.0.0.1,.local` |
 | `REQUESTS_CA_BUNDLE` | No | Path to CA certificate bundle for SSL verification | `/etc/ssl/certs/ca-bundle.crt` |
 | `CURL_CA_BUNDLE` | No | Alternative CA bundle path (fallback to REQUESTS_CA_BUNDLE) | `/etc/ssl/certs/ca-certificates.crt` |
 
