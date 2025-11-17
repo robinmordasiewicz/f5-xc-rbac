@@ -93,16 +93,7 @@ xc_user_group_sync --csv ./User-Database.csv \
 - Check `/etc/ssl/certs/` for CA bundle
 - Or contact your IT department
 
-### Troubleshooting Proxy Issues
-
-If you see errors like `HTTP 400 Bad Request` from `login.ves.volterra.io`:
-
-1. **Confirm proxy is the issue**: Test from home/non-proxied network
-2. **Get corporate CA certificate**: See instructions above
-3. **Configure CA bundle**: Use `--ca-bundle` flag or `REQUESTS_CA_BUNDLE` environment variable
-4. **Verify connectivity**: Test with `curl` using same proxy settings
-
-See [Troubleshooting Guide](troubleshooting.md#issue-4-corporate-proxy-and-mitm-ssl-interception) for detailed resolution steps.
+For proxy troubleshooting, see [Troubleshooting Guide - Corporate Proxy](troubleshooting.md#issue-4-corporate-proxy-and-mitm-ssl-interception).
 
 ## CSV Format
 
