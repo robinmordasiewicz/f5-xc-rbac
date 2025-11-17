@@ -12,8 +12,7 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Configuration: configuration.md
-  - CLI Reference: cli-reference.md
+  - Usage Guide: usage.md
   - Troubleshooting: troubleshooting.md
   - Contributing: contributing.md
   - CI/CD:
