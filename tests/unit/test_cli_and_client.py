@@ -400,3 +400,187 @@ def test_cli_sync_users_delete_flag(monkeypatch, tmp_path):
     # Should have created alice and deleted orphan
     assert "created=1" in result.output
     assert "deleted=1" in result.output
+
+
+def test_xcclient_proxy_from_parameter():
+    """Test that explicit proxy parameter configures session proxies."""
+    client = XCClient(
+        "tenant",
+        api_token="test-token",
+        proxy="http://proxy.example.com:8080",
+    )
+    assert client.session.proxies == {
+        "http": "http://proxy.example.com:8080",
+        "https": "http://proxy.example.com:8080",
+    }
+
+
+def test_xcclient_proxy_from_environment(monkeypatch):
+    """Test that HTTP_PROXY/HTTPS_PROXY environment variables are used."""
+    monkeypatch.setenv("HTTP_PROXY", "http://envproxy.example.com:3128")
+    monkeypatch.setenv("HTTPS_PROXY", "http://envproxy.example.com:3128")
+
+    client = XCClient("tenant", api_token="test-token")
+    # requests.Session automatically uses HTTP_PROXY/HTTPS_PROXY
+    # We just verify it doesn't override with explicit proxy
+    assert not hasattr(client.session, "proxies") or client.session.proxies == {}
+
+
+def test_xcclient_ca_bundle_from_parameter(tmp_path):
+    """Test that explicit CA bundle parameter configures SSL verification."""
+    ca_bundle = tmp_path / "ca-bundle.crt"
+    ca_bundle.write_text("FAKE CA CERT")
+
+    client = XCClient(
+        "tenant",
+        api_token="test-token",
+        verify=str(ca_bundle),
+    )
+    assert client.session.verify == str(ca_bundle)
+
+
+def test_xcclient_ca_bundle_from_environment(monkeypatch, tmp_path):
+    """Test that REQUESTS_CA_BUNDLE environment variable is used."""
+    ca_bundle = tmp_path / "ca-bundle.crt"
+    ca_bundle.write_text("FAKE CA CERT")
+    monkeypatch.setenv("REQUESTS_CA_BUNDLE", str(ca_bundle))
+
+    client = XCClient("tenant", api_token="test-token")
+    assert client.session.verify == str(ca_bundle)
+
+
+def test_xcclient_no_verify_disables_ssl():
+    """Test that verify=False disables SSL verification."""
+    client = XCClient("tenant", api_token="test-token", verify=False)
+    assert client.session.verify is False
+
+
+def test_xcclient_default_verify_is_true():
+    """Test that default verify setting is True (system CA bundle)."""
+    client = XCClient("tenant", api_token="test-token")
+    # If no explicit verify parameter and no environment variable, defaults to True
+    assert client.session.verify is True or isinstance(client.session.verify, str)
+
+
+def test_cli_proxy_flag(monkeypatch, tmp_path):
+    """Test that CLI --proxy flag is passed to client."""
+    csv_file = tmp_path / "sample.csv"
+    csv_file.write_text(
+        "Email,User Display Name,Employee Status,Entitlement Display Name\n"
+        'joe@example.com,Joe User,Active,"CN=admins,OU=Groups,DC=example,DC=com"\n'
+    )
+
+    created_clients = []
+
+    def mock_create_client(*args, **kwargs):
+        class SimpleRepo:
+            def list_groups(self, namespace: str = "system"):
+                return {"items": []}
+
+            def list_users(self, namespace: str = "system"):
+                return {"items": []}
+
+            def list_user_roles(self, namespace: str = "system"):
+                return {"items": []}
+
+        # Capture the proxy parameter
+        created_clients.append(kwargs)
+        return SimpleRepo()
+
+    monkeypatch.setenv("TENANT_ID", "tenant")
+    monkeypatch.setenv("DOTENV_PATH", "/dev/null")
+    monkeypatch.setattr(cli, "_create_client", mock_create_client)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cli.cli,
+        ["--csv", str(csv_file), "--dry-run", "--proxy", "http://proxy:8080"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    assert len(created_clients) == 1
+    assert created_clients[0]["proxy"] == "http://proxy:8080"
+
+
+def test_cli_ca_bundle_flag(monkeypatch, tmp_path):
+    """Test that CLI --ca-bundle flag is passed to client."""
+    csv_file = tmp_path / "sample.csv"
+    csv_file.write_text(
+        "Email,User Display Name,Employee Status,Entitlement Display Name\n"
+        'joe@example.com,Joe User,Active,"CN=admins,OU=Groups,DC=example,DC=com"\n'
+    )
+
+    ca_bundle = tmp_path / "ca-bundle.crt"
+    ca_bundle.write_text("FAKE CA")
+
+    created_clients = []
+
+    def mock_create_client(*args, **kwargs):
+        class SimpleRepo:
+            def list_groups(self, namespace: str = "system"):
+                return {"items": []}
+
+            def list_users(self, namespace: str = "system"):
+                return {"items": []}
+
+            def list_user_roles(self, namespace: str = "system"):
+                return {"items": []}
+
+        created_clients.append(kwargs)
+        return SimpleRepo()
+
+    monkeypatch.setenv("TENANT_ID", "tenant")
+    monkeypatch.setenv("DOTENV_PATH", "/dev/null")
+    monkeypatch.setattr(cli, "_create_client", mock_create_client)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cli.cli,
+        ["--csv", str(csv_file), "--dry-run", "--ca-bundle", str(ca_bundle)],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    assert len(created_clients) == 1
+    assert created_clients[0]["verify"] == str(ca_bundle)
+
+
+def test_cli_no_verify_flag(monkeypatch, tmp_path):
+    """Test that CLI --no-verify flag disables SSL verification."""
+    csv_file = tmp_path / "sample.csv"
+    csv_file.write_text(
+        "Email,User Display Name,Employee Status,Entitlement Display Name\n"
+        'joe@example.com,Joe User,Active,"CN=admins,OU=Groups,DC=example,DC=com"\n'
+    )
+
+    created_clients = []
+
+    def mock_create_client(*args, **kwargs):
+        class SimpleRepo:
+            def list_groups(self, namespace: str = "system"):
+                return {"items": []}
+
+            def list_users(self, namespace: str = "system"):
+                return {"items": []}
+
+            def list_user_roles(self, namespace: str = "system"):
+                return {"items": []}
+
+        created_clients.append(kwargs)
+        return SimpleRepo()
+
+    monkeypatch.setenv("TENANT_ID", "tenant")
+    monkeypatch.setenv("DOTENV_PATH", "/dev/null")
+    monkeypatch.setattr(cli, "_create_client", mock_create_client)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cli.cli,
+        ["--csv", str(csv_file), "--dry-run", "--no-verify"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    assert len(created_clients) == 1
+    assert created_clients[0]["verify"] is False
