@@ -130,21 +130,3 @@ CN=EADMIN_STD,OU=Groups,DC=example,DC=com
 "Alice Anderson","CN=USER001,OU=Users,DC=example,DC=com","alice@example.com","memberOf","CN=EADMIN_STD,OU=Groups,DC=example,DC=com"
 "Bob Brown","CN=USER002,OU=Users,DC=example,DC=com","bob@example.com","memberOf","CN=EADMIN_STD,OU=Groups,DC=example,DC=com"
 ```
-
-## Security Best Practices
-
-**✅ DO:**
-
-- Store credentials in `secrets/` directory (gitignored)
-- Use repository secrets for CI/CD
-- Set restrictive permissions: `chmod 600` on P12 files
-- Rotate API credentials regularly
-- Use separate credentials for dev/staging/production
-- Use strong passwords for P12 files
-
-**❌ DON'T:**
-
-- Commit `.p12` or `.env` files to git
-- Share credentials in logs or documentation
-- Use production credentials in development
-- Store P12 passwords in plain text outside of secure storage
