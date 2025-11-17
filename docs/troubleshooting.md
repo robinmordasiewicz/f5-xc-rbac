@@ -131,7 +131,73 @@ SSLError: certificate verify failed
 Connection timeout or refused
 ```
 
+**Example Error Messages**:
+
+```text
+# Direct connection blocked by proxy
+requests.exceptions.ConnectTimeout: HTTPSConnectionPool(host='login.ves.volterra.io', port=443):
+Max retries exceeded with url: /auth/realms/ves-io/protocol/openid-connect/auth
+
+# MITM SSL inspection without CA bundle
+requests.exceptions.SSLError: HTTPSConnectionPool(host='login.ves.volterra.io', port=443):
+Max retries exceeded with url: /auth/realms/ves-io/protocol/openid-connect/auth
+(Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED]
+certificate verify failed: self signed certificate in certificate chain (_ssl.c:1129)')))
+
+# Proxy authentication required
+requests.exceptions.ProxyError: HTTPSConnectionPool(host='login.ves.volterra.io', port=443):
+Max retries exceeded with url: /auth/realms/ves-io/protocol/openid-connect/auth
+(Caused by ProxyError('Unable to connect to proxy',
+OSError('Tunnel connection failed: 407 Proxy Authentication Required')))
+```
+
+**Diagnostic Tests**:
+
+Before configuring proxy settings, verify if proxy is required:
+
+```bash
+# Test 1: Direct connection (should work if no proxy needed)
+curl -v --max-time 10 https://login.ves.volterra.io/auth/realms/ves-io/protocol/openid-connect/auth
+
+# Expected output if direct works:
+# * Connected to login.ves.volterra.io (IP) port 443
+# < HTTP/2 400 (or 200, 302, 401, 403 - all indicate successful connection)
+
+# Expected output if proxy needed:
+# * Connection timed out after 10000 milliseconds
+# curl: (28) Connection timed out after 10000 milliseconds
+
+# Test 2: With proxy (if Test 1 fails)
+curl -v --max-time 10 \
+  --proxy http://proxy.example.com:8080 \
+  https://login.ves.volterra.io/auth/realms/ves-io/protocol/openid-connect/auth
+
+# Expected output if proxy works:
+# < HTTP/1.1 400 (or 200, 302, 401, 403 - all indicate successful connection)
+
+# Expected output if MITM SSL inspection:
+# curl: (60) SSL certificate problem: self signed certificate in certificate chain
+
+# Test 3: With proxy and CA bundle (if Test 2 shows SSL error)
+curl -v --max-time 10 \
+  --proxy http://proxy.example.com:8080 \
+  --cacert /path/to/corporate-ca-bundle.crt \
+  https://login.ves.volterra.io/auth/realms/ves-io/protocol/openid-connect/auth
+
+# Expected output if CA bundle correct:
+# < HTTP/1.1 400 (or 200, 302, 401, 403 - all indicate successful connection)
+```
+
+**Interpreting Results**:
+
+- **Test 1 succeeds**: No proxy needed, direct connection works
+- **Test 1 fails with timeout**: Corporate proxy blocking direct access → configure proxy
+- **Test 2 succeeds**: Proxy works without MITM SSL inspection
+- **Test 2 fails with SSL error**: Proxy performs MITM SSL inspection → need CA bundle
+- **Test 3 succeeds**: CA bundle is correct for your corporate proxy
+
 **Possible Causes**:
+
 1. Corporate proxy intercepting HTTPS traffic with MITM (Man-In-The-Middle) SSL inspection
 2. Proxy CA certificate not trusted by Python requests library
 3. Client certificate authentication incompatible with proxy MITM

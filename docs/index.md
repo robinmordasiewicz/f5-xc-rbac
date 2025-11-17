@@ -1,101 +1,130 @@
 # F5 Distributed Cloud User and Group Sync
 
-Automated synchronization tool for managing F5 Distributed Cloud (XC) users and groups from CSV user databases.
+Automated synchronization tool for managing F5 XC users and groups from CSV user databases.
 
-[![Python Version](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/downloads/)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Code Quality](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+Synchronizes users and groups between your CSV database and F5 Distributed Cloud:
 
-## Overview
+- Creates users/groups that exist in CSV but not in F5 XC
+- Updates user attributes and group memberships to match CSV
+- Optionally prunes users/groups not in CSV (with `--prune` flag)
 
-**f5-xc-user-group-sync** is a Python command-line tool that reconciles F5 Distributed Cloud users and groups with your authoritative user database (exported as CSV). This enables automated user lifecycle management and group membership synchronization from existing identity sources like Active Directory or LDAP.
+## Prerequisites
 
-## Key Features
+1. **Python 3.9 or higher** installed
 
-- **🔄 Automated Reconciliation**: Synchronizes users and groups between CSV and F5 XC
-- **✅ Data Validation**: Pre-validates CSV data and user existence before making changes
-- **🔒 Safe Operations**: Dry-run mode to preview changes before applying
-- **🚀 CI/CD Ready**: Sample workflows for GitHub Actions and Jenkins
-- **📊 Detailed Reporting**: Comprehensive statistics and error tracking
-- **🔁 Retry Logic**: Automatic retry with exponential backoff for API failures
-- **🎯 Flexible Control**: Optional pruning for automated cleanup
-- **🧪 Well-Tested**: 195 tests with 93% code coverage
+   ```bash
+   python3 --version  # Should show 3.9 or higher
+   ```
 
-## Getting Started by Role
+2. **F5 XC API credentials** (P12 certificate with password)
+   - Download from: F5 XC Console → Administration → Credentials → API Credentials
+   - Save the `.p12` file securely (e.g., `~/Downloads/your-tenant.p12`)
 
-### 👤 First-Time Users
+3. **CSV export** from your user database
+   - Must include user emails and group memberships in LDAP DN format
 
-**Goal**: Install and run your first synchronization
+## Installation
 
-1. [Installation](get-started.md#installation) - Set up the tool
-2. [Setup Credentials](get-started.md#setup-credentials) - Configure F5 XC access
-3. [Prepare CSV](configuration.md#csv-format) - Format your user database
-4. [Quick Start](get-started.md#quick-start) - Run your first sync
+### Option 1: Local Development Installation
 
-**Next Steps**: [Configuration Guide](configuration.md) for advanced options
+```bash
+# Clone the repository
+git clone https://github.com/robinmordasiewicz/f5-xc-user-group-sync.git
+cd f5-xc-user-group-sync
 
----
+# Create and activate virtual environment
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-### 🔧 DevOps Engineers / Operators
+# Install in development mode
+pip install -e .
 
-**Goal**: Automate user synchronization in production
+# Verify installation
+xc_user_group_sync --help
+```
 
-1. [Operations Guide](operations-guide.md) - Production workflows and best practices
-2. [CI/CD Deployment](CICD/deployment-guide.md) - Automation strategies
-   - [GitHub Actions](CICD/github-actions-guide.md) - Automated workflows
-   - [Jenkins](CICD/jenkins-guide.md) - Pipeline integration
-3. [Troubleshooting](troubleshooting.md) - Common issues and solutions
-4. [CLI Reference](cli-reference.md) - Complete command options
+### Option 2: Direct Installation from Git
 
-**Next Steps**: [Operations Guide](operations-guide.md#pruning-operations) for advanced reconciliation
+```bash
+# Install directly from GitHub
+pip install git+https://github.com/robinmordasiewicz/f5-xc-user-group-sync.git
 
----
+# Verify installation
+xc_user_group_sync --help
+```
 
-### 💻 Contributors / Developers
+## Quick Start
 
-**Goal**: Contribute code and improvements
+### 1. Setup Credentials
 
-1. [Development Setup](development.md#development-setup) - Environment configuration
-2. [Contributing Guide](contributing.md) - Workflow and guidelines
-3. [Quality Standards](quality-standards.md) - Code requirements
-4. [Testing Guide](testing.md) - Writing and running tests
+Use the automated setup script with intelligent proxy detection:
 
-**Next Steps**: Review [Project Structure](development.md#project-structure) and pick an issue
+```bash
+# Auto-detects .p12 file in ~/Downloads
+./scripts/setup_xc_credentials.sh
 
----
+# Or specify P12 file path
+./scripts/setup_xc_credentials.sh --p12 ~/Downloads/your-tenant.p12
 
-## Quick Reference
+# Optionally set GitHub repository secrets for CI/CD
+./scripts/setup_xc_credentials.sh --p12 ~/Downloads/your-tenant.p12 --github-secrets
+```
 
-| Task | Guide | Section |
-|------|-------|---------|
-| Install tool | [Getting Started](get-started.md) | Installation |
-| Configure credentials | [Configuration](configuration.md) | Environment Variables |
-| Format CSV file | [Configuration](configuration.md) | CSV Format |
-| Run first sync | [Getting Started](get-started.md) | Quick Start |
-| Automate with CI/CD | [Deployment Guide](CICD/deployment-guide.md) | Scenarios |
-| Troubleshoot errors | [Troubleshooting](troubleshooting.md) | Common Issues |
-| Contribute code | [Contributing](contributing.md) | Development Workflow |
-| Write tests | [Testing](testing.md) | Writing Tests |
+The script will:
+- Extract tenant ID from the P12 filename
+- Copy P12 file to `secrets/` directory
+- **Test API connectivity** to detect network requirements
+- **Prompt for proxy configuration** if direct connection fails (interactive mode)
+- Create `secrets/.env` with P12 authentication and optional proxy settings
+- Optionally set GitHub repository secrets (with `--github-secrets` flag)
 
-## What Does It Do?
+**Intelligent Proxy Detection**:
+- ✅ **Direct connection works**: No proxy configuration added
+- ⚠️ **Connection fails**: Interactive prompts guide through proxy setup
+  - Asks if you use a corporate proxy
+  - Tests proxy connectivity
+  - Detects MITM SSL inspection needs
+  - Prompts for CA certificate location
+  - Adds proxy settings to `secrets/.env` automatically
 
-This tool performs bidirectional reconciliation between your CSV user database and F5 XC:
+**Note**: The tool uses native P12 authentication. Certificate and key are extracted at runtime into temporary files and automatically cleaned up.
 
-**Synchronization Operations:**
+### 2. Prepare Your CSV File
 
-- ✅ **Creates** users and groups that exist in CSV but not in F5 XC
-- ✅ **Updates** user attributes (name, active status) and group memberships to match CSV
-- ✅ **Prunes** users and groups not in CSV (optional, with `--prune` flag)
+See the [CSV Format](configuration.md#csv-format) section for complete specifications.
 
-**Safety Features:**
+### 3. Test with Dry-Run
 
-- ✅ **Validates** all data before making changes
-- ✅ **Dry-run mode** to preview changes safely
-- ✅ **Error handling** with detailed reporting
-- ✅ **Transaction safety** with atomic operations
+Always test first to preview changes:
+
+```bash
+source secrets/.env
+xc_user_group_sync --csv ./User-Database.csv --dry-run
+```
+
+### 4. Apply Changes
+
+Once satisfied with dry-run results:
+
+```bash
+xc_user_group_sync --csv ./User-Database.csv
+```
+
+See [CLI Reference](cli-reference.md) for all available options including `--prune`, `--log-level`, `--timeout`, and more.
+
+## Documentation
+
+- **[CLI Reference](cli-reference.md)** - Command options
+- **[Configuration](configuration.md)** - Environment variables and CSV format
+- **[Troubleshooting](troubleshooting.md)** - Common issues
+
+### CI/CD Examples
+
+- **[GitHub Actions](CICD/github-actions.md)** - Automated workflow
+- **[GitLab CI](CICD/gitlab-ci.md)** - Pipeline configuration
+- **[Jenkins](CICD/jenkins.md)** - Jenkinsfile example
 
 ## Support
 
-- **GitHub Repository**: [robinmordasiewicz/f5-xc-user-group-sync](https://github.com/robinmordasiewicz/f5-xc-user-group-sync)
+- **Repository**: [github.com/robinmordasiewicz/f5-xc-user-group-sync](https://github.com/robinmordasiewicz/f5-xc-user-group-sync)
 - **Issues**: [GitHub Issues](https://github.com/robinmordasiewicz/f5-xc-user-group-sync/issues)
-- **F5 XC Documentation**: [F5 Distributed Cloud Docs](https://docs.cloud.f5.com/docs/api)
