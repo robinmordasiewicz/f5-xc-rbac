@@ -46,8 +46,7 @@ xc_user_group_sync --csv User-Database.csv --prune
 
 ## Documentation
 
-- [Configuration](configuration.md)
-- [CLI Reference](cli-reference.md)
+- [Usage Guide](usage.md)
 - [Troubleshooting](troubleshooting.md)
 
 ## CI/CD Examples
