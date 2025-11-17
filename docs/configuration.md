@@ -99,34 +99,60 @@ For proxy troubleshooting, see [Troubleshooting Guide - Corporate Proxy](trouble
 
 ### Required Columns
 
-Your CSV must include these exact column headers:
+The tool extracts user and group data from CSV exports. Your CSV **must** include these four required columns (other columns are ignored):
 
-- **User Name** (optional): Display name for the user
-- **Login ID** (required): LDAP Distinguished Name in DN format
-- **Email** (required): User's email address matching their F5 XC profile
-- **Entitlement Attribute** (required): Must contain `memberOf`
-- **Entitlement Display Name** (required): Group LDAP DN
+| Column | Required | Description | Example Value |
+|--------|----------|-------------|---------------|
+| **Email** | Yes | User's email address for F5 XC authentication | `alice.anderson@example.com` |
+| **User Display Name** | Yes | Full name of the user | `Alice Anderson` |
+| **Employee Status** | Yes | User account status | `A` (Active) or `I` (Inactive) |
+| **Entitlement Display Name** | Yes | Group membership in LDAP DN format | `CN=EADMIN_STD,OU=Groups,DC=example,DC=com` |
 
-### LDAP DN Format
+**Note**: Your CSV export may contain additional columns (e.g., Login ID, Manager Name, Cost Center) - these are allowed but not used by the synchronization tool.
 
-Both user and group identifiers must be in LDAP Distinguished Name format:
+### Employee Status Values
 
-**User DN Example:**
+The tool recognizes these status values:
 
-```text
-CN=USER001,OU=Users,DC=example,DC=com
-```
+- **Active users**: `A` or `a` (case-insensitive, whitespace trimmed)
+- **Inactive users**: Any other value (e.g., `I`, `T`, `Active`, `Inactive`, `Terminated`)
 
-**Group DN Example:**
+**Important**: Only the single letter `A` marks users as active. Full words like `Active` are treated as inactive.
+
+### Group DN Format
+
+Group identifiers must be in LDAP Distinguished Name format:
+
+**Single Group Example:**
 
 ```text
 CN=EADMIN_STD,OU=Groups,DC=example,DC=com
 ```
 
+**Multiple Groups:**
+
+Use pipe separator (`|`) for users belonging to multiple groups:
+
+```text
+CN=EADMIN_STD,OU=Groups,DC=example,DC=com|CN=DEVELOPERS,OU=Groups,DC=example,DC=com
+```
+
 ### Sample CSV
 
+**Minimal Format** (only required columns):
+
 ```csv
-"User Name","Login ID","Email","Entitlement Attribute","Entitlement Display Name"
-"Alice Anderson","CN=USER001,OU=Users,DC=example,DC=com","alice@example.com","memberOf","CN=EADMIN_STD,OU=Groups,DC=example,DC=com"
-"Bob Brown","CN=USER002,OU=Users,DC=example,DC=com","bob@example.com","memberOf","CN=EADMIN_STD,OU=Groups,DC=example,DC=com"
+"Email","User Display Name","Employee Status","Entitlement Display Name"
+"alice@example.com","Alice Anderson","A","CN=EADMIN_STD,OU=Groups,DC=example,DC=com"
+"bob@example.com","Bob Brown","A","CN=DEVELOPERS,OU=Groups,DC=example,DC=com"
+"charlie@example.com","Charlie Chen","A","CN=EADMIN_STD,OU=Groups,DC=example,DC=com|CN=DEVELOPERS,OU=Groups,DC=example,DC=com"
 ```
+
+**Typical Export Format** (with additional metadata columns):
+
+```csv
+"User Name","Login ID","User Display Name","Cof Account Type","Application Name","Entitlement Attribute","Entitlement Display Name","Related Application","Sox","Job Level ","Job Title","Created Date","Account Locker","Employee Status","Email","Cost Center","Finc Level 4","Manager EID","Manager Name","Manager Email"
+"USER001","CN=USER001,OU=Developers,OU=All Users,DC=example,DC=com","Alice Anderson","User","Active Directory","memberOf","CN=EADMIN_STD,OU=Groups,DC=example,DC=com","Example App","true","50","Lead Software Engineer","2025-09-23 00:00:00","0","A","alice.anderson@example.com","IT Infrastructure","Network Engineering","MGR001","David Wilson","David.Wilson@example.com"
+```
+
+The tool automatically extracts only the required columns from your export.
