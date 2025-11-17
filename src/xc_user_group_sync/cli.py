@@ -30,6 +30,8 @@ def _create_client(
     api_url: str | None,
     timeout: int,
     max_retries: int,
+    proxy: str | None = None,
+    verify: bool | str | None = None,
 ) -> XCClient:
     """Create authenticated XC client.
 
@@ -43,6 +45,8 @@ def _create_client(
         api_url: Optional API base URL
         timeout: HTTP request timeout in seconds
         max_retries: Maximum number of retries for failed requests
+        proxy: Optional proxy URL (e.g., 'http://proxy.example.com:8080')
+        verify: SSL certificate verification (True/False or path to CA bundle)
 
     Returns:
         Configured XCClient instance
@@ -59,6 +63,8 @@ def _create_client(
             api_url=api_url,
             timeout=timeout,
             max_retries=max_retries,
+            proxy=proxy,
+            verify=verify,
         )
     elif cert_file and key_file:
         return XCClient(
@@ -68,6 +74,8 @@ def _create_client(
             api_url=api_url,
             timeout=timeout,
             max_retries=max_retries,
+            proxy=proxy,
+            verify=verify,
         )
     elif api_token:
         return XCClient(
@@ -76,6 +84,8 @@ def _create_client(
             api_url=api_url,
             timeout=timeout,
             max_retries=max_retries,
+            proxy=proxy,
+            verify=verify,
         )
     else:
         raise click.UsageError(
@@ -208,6 +218,31 @@ def _display_csv_validation(result: CSVValidationResult, dry_run: bool = False) 
 )
 @click.option("--max-retries", type=int, default=3, help="Max retries for API calls")
 @click.option("--timeout", type=int, default=30, help="HTTP timeout (seconds)")
+@click.option(
+    "--proxy",
+    type=str,
+    default=None,
+    help=(
+        "Proxy URL (e.g., http://proxy.example.com:8080). "
+        "Uses HTTP_PROXY/HTTPS_PROXY env vars if not specified"
+    ),
+)
+@click.option(
+    "--ca-bundle",
+    type=click.Path(exists=True, dir_okay=False),
+    default=None,
+    help=(
+        "Path to custom CA bundle for SSL verification "
+        "(for corporate MITM proxies). "
+        "Uses REQUESTS_CA_BUNDLE/CURL_CA_BUNDLE env vars if not specified"
+    ),
+)
+@click.option(
+    "--no-verify",
+    is_flag=True,
+    default=False,
+    help="Disable SSL certificate verification (insecure, not recommended)",
+)
 def cli(
     csv_path: str,
     dry_run: bool,
@@ -215,6 +250,9 @@ def cli(
     log_level: str,
     max_retries: int,
     timeout: int,
+    proxy: str | None,
+    ca_bundle: str | None,
+    no_verify: bool,
 ) -> None:
     """Synchronize F5 XC users and groups from CSV file.
 
@@ -240,6 +278,11 @@ def cli(
         # Full reconciliation including deletions
         xc_user_group_sync --csv User-Database.csv --prune
 
+    Proxy configuration (for corporate networks):
+    - --proxy: Explicit proxy URL or use HTTP_PROXY/HTTPS_PROXY environment variables
+    - --ca-bundle: Custom CA certificate bundle for MITM SSL inspection
+    - --no-verify: Disable SSL verification (insecure, not recommended)
+
     Args:
         csv_path: Path to CSV file with user and group data
         dry_run: If True, log actions without making API changes
@@ -247,6 +290,9 @@ def cli(
         log_level: Logging verbosity level
         max_retries: Maximum retries for failed API requests
         timeout: HTTP timeout in seconds
+        proxy: Optional proxy URL for HTTP/HTTPS requests
+        ca_bundle: Optional path to CA certificate bundle
+        no_verify: If True, disable SSL certificate verification
 
     """
     # Always sync both users and groups - that's the tool's purpose
@@ -272,6 +318,15 @@ def cli(
         p12_password,
     ) = _load_configuration()
 
+    # Determine SSL verification setting
+    # Priority: --no-verify > --ca-bundle > default (True)
+    if no_verify:
+        verify: bool | str | None = False
+    elif ca_bundle:
+        verify = ca_bundle
+    else:
+        verify = None  # Will use environment variables or default to True
+
     # Create authenticated client
     try:
         client = _create_client(
@@ -284,6 +339,8 @@ def cli(
             api_url,
             timeout,
             max_retries,
+            proxy=proxy,
+            verify=verify,
         )
     except click.UsageError:
         raise

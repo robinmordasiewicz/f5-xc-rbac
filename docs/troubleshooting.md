@@ -121,7 +121,90 @@ curl -v --proxy "" https://${TENANT_ID}.console.ves.volterra.io
 
 ---
 
-### Issue 4: Staging SSL Certificate Verification Failures
+### Issue 4: Corporate Proxy and MITM SSL Interception
+
+**Symptoms**:
+
+```text
+HTTP 400 Bad Request for url: https://login.ves.volterra.io/auth/realms/...
+SSLError: certificate verify failed
+Connection timeout or refused
+```
+
+**Possible Causes**:
+1. Corporate proxy intercepting HTTPS traffic with MITM (Man-In-The-Middle) SSL inspection
+2. Proxy CA certificate not trusted by Python requests library
+3. Client certificate authentication incompatible with proxy MITM
+4. Proxy requiring authentication
+
+**Resolution Steps**:
+
+```bash
+# Option 1: Configure proxy via environment variables (recommended)
+export HTTP_PROXY="http://proxy.example.com:8080"
+export HTTPS_PROXY="http://proxy.example.com:8080"
+export NO_PROXY="localhost,127.0.0.1"
+
+# If proxy requires authentication
+export HTTP_PROXY="http://username:password@proxy.example.com:8080"  # pragma: allowlist secret
+export HTTPS_PROXY="http://username:password@proxy.example.com:8080"  # pragma: allowlist secret
+
+# Add corporate CA certificate for MITM proxy
+export REQUESTS_CA_BUNDLE="/path/to/corporate-ca-bundle.crt"
+# or
+export CURL_CA_BUNDLE="/path/to/corporate-ca-bundle.crt"
+
+# Run sync with environment variables
+xc_user_group_sync --csv User-Database.csv
+
+# Option 2: Use CLI flags for explicit control
+xc_user_group_sync --csv User-Database.csv \
+  --proxy "http://proxy.example.com:8080" \
+  --ca-bundle "/path/to/corporate-ca-bundle.crt"
+
+# Option 3: Install corporate CA in system trust store (permanent)
+# Linux:
+sudo cp corporate-ca.crt /usr/local/share/ca-certificates/
+sudo update-ca-certificates
+
+# macOS:
+sudo security add-trusted-cert -d -r trustRoot \
+  -k /Library/Keychains/System.keychain corporate-ca.crt
+
+# Then run without explicit CA bundle
+xc_user_group_sync --csv User-Database.csv
+
+# Debugging: Test proxy connectivity with curl
+curl -x http://proxy.example.com:8080 \
+  --cacert /path/to/corporate-ca-bundle.crt \
+  -v https://login.ves.volterra.io
+
+# Debugging: Verify CA bundle contains correct certificate
+openssl x509 -in /path/to/corporate-ca-bundle.crt -text -noout
+```
+
+**Important Notes for Corporate Networks**:
+
+1. **MITM Proxy Compatibility**: When using P12/mTLS client certificates through a corporate proxy with SSL inspection, the proxy must be configured to allow client certificate authentication pass-through. Some proxy configurations may break mTLS authentication.
+
+2. **Testing from Different Networks**: If authentication works from home/non-proxied networks but fails from corporate networks, this confirms proxy interference. Work with your network team to:
+   - Configure proxy to allow mTLS pass-through for `*.ves.volterra.io` domains
+   - Get the corporate CA certificate for the MITM proxy
+   - Verify proxy doesn't strip or modify client certificates
+
+3. **CA Bundle Sources**: Your corporate CA bundle might be available at:
+   - Windows: Export from certificate store or contact IT
+   - macOS: `/Library/Keychains/System.keychain` (export via Keychain Access)
+   - Linux: Check `/etc/ssl/certs/` or contact IT department
+
+4. **Proxy Bypass**: If technical constraints prevent proper proxy configuration, consider:
+   - Running from a jump host or bastion that doesn't require proxy
+   - Using a VPN that bypasses the corporate proxy
+   - Requesting firewall exceptions for `*.ves.volterra.io` domains
+
+---
+
+### Issue 5: Staging SSL Certificate Verification Failures
 
 **Symptoms**:
 
@@ -668,11 +751,13 @@ If issue persists:
 | Error Message | Likely Cause | Resolution |
 |---------------|--------------|------------|
 | `HTTP 401 Unauthorized` | Invalid credentials | Verify certificate and key files |
+| `HTTP 400 Bad Request` (with login.ves.volterra.io) | Proxy MITM interference | Configure proxy with --proxy and --ca-bundle |
 | `HTTP 429 Too Many Requests` | Rate limiting | Reduce request frequency, increase delays |
 | `HTTP 503 Service Unavailable` | F5 XC API outage | Wait and retry, check F5 status page |
 | `CSVParseError` | Invalid CSV format | Validate CSV structure and encoding |
-| `ConnectionTimeout` | Network issues | Check connectivity, firewall rules |
-| `SSLError` | SSL certificate issues | Verify CA trust, use correct certificates |
+| `ConnectionTimeout` | Network issues or proxy | Check connectivity, proxy settings, firewall rules |
+| `SSLError: certificate verify failed` | Untrusted CA or proxy MITM | Add corporate CA bundle with --ca-bundle |
+| `ProxyError` | Proxy authentication or connectivity | Verify proxy URL and credentials in HTTP_PROXY |
 | `Missing required column` | CSV missing column | Verify CSV has Email and Entitlement columns |
 | `No CN component found` | Malformed LDAP DN | Check LDAP DN format in CSV |
 

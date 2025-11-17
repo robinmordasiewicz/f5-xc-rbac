@@ -16,6 +16,9 @@ xc_user_group_sync [OPTIONS]
 | `--log-level <level>` | Choice | `info` | Logging verbosity: `debug`, `info`, `warn`, `error` |
 | `--timeout <seconds>` | Integer | `30` | HTTP request timeout |
 | `--max-retries <n>` | Integer | `3` | Maximum retries for API errors |
+| `--proxy <url>` | String | None | Proxy URL (e.g., `http://proxy:8080`) |
+| `--ca-bundle <path>` | Path | None | Custom CA certificate bundle for SSL verification |
+| `--no-verify` | Flag | `false` | Disable SSL verification (insecure, debugging only) |
 
 ## Default Behavior
 
@@ -58,6 +61,26 @@ xc_user_group_sync --csv User-Database.csv --max-retries 5
 # Combined: debug with increased retry
 xc_user_group_sync --csv User-Database.csv --log-level debug --max-retries 5 --timeout 60
 ```
+
+### Corporate Proxy Configuration
+
+```bash
+# Using corporate proxy
+xc_user_group_sync --csv User-Database.csv \
+  --proxy "http://proxy.example.com:8080"
+
+# Proxy with custom CA certificate (MITM SSL inspection)
+xc_user_group_sync --csv User-Database.csv \
+  --proxy "http://proxy.example.com:8080" \
+  --ca-bundle "/path/to/corporate-ca.crt"
+
+# Proxy via environment variables (recommended)
+export HTTPS_PROXY="http://proxy.example.com:8080"
+export REQUESTS_CA_BUNDLE="/path/to/corporate-ca.crt"
+xc_user_group_sync --csv User-Database.csv
+```
+
+See [Configuration Guide](configuration.md#corporate-proxy-configuration) for detailed proxy setup.
 
 ## Output Example
 

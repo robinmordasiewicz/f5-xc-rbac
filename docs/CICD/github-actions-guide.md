@@ -149,6 +149,76 @@ jobs:
         webhook_url: ${{ secrets.SLACK_WEBHOOK }}
 ```
 
+### Corporate Proxy Configuration
+
+If your GitHub Actions runners operate behind a corporate proxy:
+
+**Option 1: Environment Variables** (Recommended for self-hosted runners)
+
+```yaml
+- name: Sync to F5 XC
+  env:
+    TENANT_ID: ${{ secrets.TENANT_ID }}
+    VOLT_API_P12_FILE: /tmp/cert.p12
+    VES_P12_PASSWORD: ${{ secrets.XC_P12_PASSWORD }}
+    HTTP_PROXY: http://proxy.example.com:8080
+    HTTPS_PROXY: http://proxy.example.com:8080
+    NO_PROXY: localhost,127.0.0.1
+    REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-bundle.crt
+  run: |
+    xc_user_group_sync --csv User-Database.csv --dry-run
+```
+
+**Option 2: CLI Flags** (For dynamic proxy configuration)
+
+```yaml
+- name: Sync to F5 XC with proxy
+  env:
+    TENANT_ID: ${{ secrets.TENANT_ID }}
+    VOLT_API_P12_FILE: /tmp/cert.p12
+    VES_P12_PASSWORD: ${{ secrets.XC_P12_PASSWORD }}
+  run: |
+    xc_user_group_sync --csv User-Database.csv \
+      --proxy "http://proxy.example.com:8080" \
+      --ca-bundle "/etc/ssl/certs/corporate-ca.crt"
+```
+
+**Option 3: GitHub Secrets** (For sensitive proxy credentials)
+
+Add these secrets:
+- `PROXY_URL`: `http://username:password@proxy.example.com:8080`  <!-- pragma: allowlist secret -->
+- `CA_BUNDLE_PATH`: `/path/to/corporate-ca.crt`
+
+```yaml
+- name: Sync to F5 XC via proxy
+  env:
+    TENANT_ID: ${{ secrets.TENANT_ID }}
+    VOLT_API_P12_FILE: /tmp/cert.p12
+    VES_P12_PASSWORD: ${{ secrets.XC_P12_PASSWORD }}
+    HTTPS_PROXY: ${{ secrets.PROXY_URL }}
+    REQUESTS_CA_BUNDLE: ${{ secrets.CA_BUNDLE_PATH }}
+  run: |
+    xc_user_group_sync --csv User-Database.csv
+```
+
+**Self-Hosted Runners**: Install corporate CA certificate:
+
+```yaml
+- name: Install corporate CA certificate
+  run: |
+    sudo cp /path/to/corporate-ca.crt /usr/local/share/ca-certificates/
+    sudo update-ca-certificates
+
+- name: Sync to F5 XC
+  env:
+    TENANT_ID: ${{ secrets.TENANT_ID }}
+    VOLT_API_P12_FILE: /tmp/cert.p12
+    VES_P12_PASSWORD: ${{ secrets.XC_P12_PASSWORD }}
+    HTTPS_PROXY: http://proxy.example.com:8080
+  run: |
+    xc_user_group_sync --csv User-Database.csv
+```
+
 ## Pros and Cons
 
 ### Pros

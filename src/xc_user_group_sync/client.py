@@ -9,9 +9,10 @@ from __future__ import annotations
 
 import atexit
 import logging
+import os
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 import requests
 from cryptography.hazmat.backends import default_backend
@@ -49,6 +50,8 @@ class XCClient:
         backoff_multiplier: float = 1.0,
         backoff_min: float = 1.0,
         backoff_max: float = 8.0,
+        proxy: Optional[str] = None,
+        verify: Optional[Union[bool, str]] = None,
     ) -> None:
         """Initialize the F5 XC API client.
 
@@ -65,6 +68,15 @@ class XCClient:
             backoff_multiplier: Exponential backoff multiplier
             backoff_min: Minimum backoff time in seconds
             backoff_max: Maximum backoff time in seconds
+            proxy: Optional proxy URL (e.g., 'http://proxy.example.com:8080')
+                If not provided, will use HTTP_PROXY/HTTPS_PROXY env vars
+            verify: SSL certificate verification. Can be:
+                - True: verify using system CA bundle (default)
+                - False: disable verification (not recommended)
+                - str: path to custom CA bundle file
+                  (for corporate MITM proxies)
+                If not provided, will use REQUESTS_CA_BUNDLE or
+                CURL_CA_BUNDLE env vars
 
         Raises:
             ValueError: If no authentication method provided or invalid combination
@@ -78,6 +90,37 @@ class XCClient:
         self.backoff_multiplier = backoff_multiplier
         self.backoff_min = backoff_min
         self.backoff_max = backoff_max
+
+        # Configure proxy settings
+        # Priority: explicit parameter > environment variables > no proxy
+        if proxy:
+            self.session.proxies = {"http": proxy, "https": proxy}
+            logger.debug(f"Using explicit proxy: {proxy}")
+        elif os.getenv("HTTP_PROXY") or os.getenv("HTTPS_PROXY"):
+            # requests.Session automatically uses HTTP_PROXY/HTTPS_PROXY/NO_PROXY
+            # Just log for visibility
+            http_proxy = os.getenv("HTTP_PROXY") or os.getenv("http_proxy")
+            https_proxy = os.getenv("HTTPS_PROXY") or os.getenv("https_proxy")
+            if http_proxy:
+                logger.debug(f"Using HTTP_PROXY from environment: {http_proxy}")
+            if https_proxy:
+                logger.debug(f"Using HTTPS_PROXY from environment: {https_proxy}")
+
+        # Configure SSL/TLS verification
+        # Priority: explicit parameter > environment variables > True (default)
+        if verify is not None:
+            self.session.verify = verify
+            if isinstance(verify, str):
+                logger.debug(f"Using custom CA bundle: {verify}")
+            elif verify is False:
+                logger.warning("SSL verification disabled - this is insecure!")
+        else:
+            # Check for CA bundle in environment
+            ca_bundle = os.getenv("REQUESTS_CA_BUNDLE") or os.getenv("CURL_CA_BUNDLE")
+            if ca_bundle:
+                self.session.verify = ca_bundle
+                logger.debug(f"Using CA bundle from environment: {ca_bundle}")
+            # else: defaults to True (system CA bundle)
 
         # Store temp file paths for cleanup
         self._temp_cert_file: Optional[Path] = None
