@@ -64,8 +64,12 @@ xc_user_group_sync --csv User-Database.csv --log-level debug --max-retries 5 --t
 
 ### Corporate Proxy Configuration
 
+**Automatic Configuration**: The setup script (`scripts/setup_xc_credentials.sh`) automatically detects proxy requirements and configures `secrets/.env` during initial setup. See [Getting Started](get-started.md#1-setup-credentials).
+
+**Manual Configuration Examples**:
+
 ```bash
-# Using corporate proxy
+# Using corporate proxy via CLI flags
 xc_user_group_sync --csv User-Database.csv \
   --proxy "http://proxy.example.com:8080"
 
@@ -78,9 +82,13 @@ xc_user_group_sync --csv User-Database.csv \
 export HTTPS_PROXY="http://proxy.example.com:8080"
 export REQUESTS_CA_BUNDLE="/path/to/corporate-ca.crt"
 xc_user_group_sync --csv User-Database.csv
+
+# Using secrets/.env (automatic from setup script)
+source secrets/.env  # Includes proxy settings
+xc_user_group_sync --csv User-Database.csv
 ```
 
-See [Configuration Guide](configuration.md#corporate-proxy-configuration) for detailed proxy setup.
+For proxy troubleshooting with example errors and diagnostic curl commands, see [Troubleshooting - Issue 4](troubleshooting.md#issue-4-corporate-proxy-and-mitm-ssl-interception).
 
 ## Output Example
 
