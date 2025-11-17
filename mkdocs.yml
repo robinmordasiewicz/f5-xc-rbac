@@ -15,7 +15,7 @@ nav:
   - Configuration: configuration.md
   - CLI Reference: cli-reference.md
   - Troubleshooting: troubleshooting.md
-  - Contributing: CONTRIBUTING.md
+  - Contributing: contributing.md
   - CI/CD:
     - GitLab CI: CICD/gitlab-ci.md
     - GitHub Actions: CICD/github-actions.md
