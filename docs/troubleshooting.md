@@ -209,7 +209,6 @@ curl -v --max-time 10 \
 # Option 1: Configure proxy via environment variables (recommended)
 export HTTP_PROXY="http://proxy.example.com:8080"
 export HTTPS_PROXY="http://proxy.example.com:8080"
-export NO_PROXY="localhost,127.0.0.1"
 
 # If proxy requires authentication
 export HTTP_PROXY="http://username:password@proxy.example.com:8080"  # pragma: allowlist secret
