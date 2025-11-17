@@ -64,7 +64,7 @@ xc_user_group_sync --csv User-Database.csv --log-level debug --max-retries 5 --t
 
 ### Corporate Proxy Configuration
 
-For proxy configuration and troubleshooting, see [Configuration Guide - Corporate Proxy](configuration.md#corporate-proxy-configuration).
+For proxy configuration and troubleshooting, see [Usage Guide - Corporate Proxy](usage.md#corporate-proxy).
 
 ## Output Example
 
