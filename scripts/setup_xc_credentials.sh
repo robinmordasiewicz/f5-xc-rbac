@@ -20,9 +20,17 @@ Options:
 
 This script will:
   - Copy p12 file to ./secrets/ (created if missing)
-  - Write secrets/.env with TENANT_ID, VOLT_API_P12_FILE, and VES_P12_PASSWORD (unless --no-env)
+  - Test API connectivity to detect network requirements
+  - Prompt for proxy configuration if direct connection fails (interactive mode only)
+  - Write secrets/.env with TENANT_ID, VOLT_API_P12_FILE, VES_P12_PASSWORD, and optional proxy settings
   - Optionally set repo secrets via gh CLI (only if --github-secrets is provided)
   - Avoid leftover temporary files
+
+Intelligent Proxy Detection:
+  - If direct API connectivity works: No proxy configuration added
+  - If connectivity fails: Interactive prompts guide through proxy setup
+  - Proxy settings (HTTP_PROXY, HTTPS_PROXY, REQUESTS_CA_BUNDLE) added to secrets/.env only when needed
+  - Non-interactive mode: Skips proxy configuration with manual setup instructions
 
 Note: The tool now supports P12 authentication natively - no cert/key extraction needed!
 USAGE
@@ -192,20 +200,144 @@ TMP_P12=""
 echo "Copied P12 file to $P12_DEST"
 
 if [[ "$WRITE_ENV" == "true" ]]; then
-  # Write secrets/.env with P12 authentication (native P12 support)
+  # Test API connectivity before writing .env
+  echo ""
+  echo "Testing API connectivity..."
+
+  # Determine the correct login URL based on environment
+  if [[ "$XC_API_URL" =~ staging ]]; then
+    LOGIN_URL="https://login.staging.volterra.us"
+  else
+    LOGIN_URL="https://login.ves.volterra.io"
+  fi
+
+  # Test direct connectivity with curl
+  CONNECTIVITY_TEST=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+    --cert-type P12 --cert "$P12_DEST:$P12_PASS" \
+    "$LOGIN_URL/auth/realms/ves-io/protocol/openid-connect/auth" 2>&1 || echo "FAIL")
+
+  PROXY_NEEDED="false"
+  PROXY_URL=""
+  CA_BUNDLE_PATH=""
+
+  if [[ "$CONNECTIVITY_TEST" =~ ^(200|302|400|401|403)$ ]]; then
+    echo "✓ Direct API connectivity successful"
+  else
+    echo "⚠️  Direct API connectivity failed"
+    echo ""
+    echo "This could indicate:"
+    echo "  - Corporate proxy blocking direct internet access"
+    echo "  - Firewall restrictions"
+    echo "  - Network configuration issues"
+    echo ""
+
+    # Check if we're in interactive mode
+    if [[ -t 0 ]]; then
+      read -r -p "Do you use a corporate proxy? (y/n): " USE_PROXY
+
+      if [[ "$USE_PROXY" =~ ^[Yy] ]]; then
+        PROXY_NEEDED="true"
+
+        echo ""
+        echo "Proxy Configuration"
+        echo "==================="
+        read -r -p "Proxy URL (e.g., http://proxy.example.com:8080): " PROXY_URL
+
+        # Test proxy connectivity
+        if [[ -n "$PROXY_URL" ]]; then
+          echo ""
+          echo "Testing proxy connectivity..."
+          PROXY_TEST=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+            --proxy "$PROXY_URL" \
+            --cert-type P12 --cert "$P12_DEST:$P12_PASS" \
+            "$LOGIN_URL/auth/realms/ves-io/protocol/openid-connect/auth" 2>&1 || echo "FAIL")
+
+          if [[ "$PROXY_TEST" =~ ^(200|302|400|401|403)$ ]]; then
+            echo "✓ Proxy connectivity successful"
+          else
+            echo "⚠️  Proxy connectivity failed - may need MITM SSL certificate"
+            echo ""
+            read -r -p "Does your proxy perform MITM SSL inspection? (y/n): " USE_MITM
+
+            if [[ "$USE_MITM" =~ ^[Yy] ]]; then
+              echo ""
+              echo "You'll need to provide the corporate CA certificate."
+              echo "Common locations:"
+              echo "  macOS:   /etc/ssl/cert.pem or Keychain Access export"
+              echo "  Linux:   /etc/ssl/certs/ca-bundle.crt or /etc/pki/tls/certs/ca-bundle.crt"
+              echo "  Windows: certmgr.msc export"
+              echo ""
+              read -r -p "Path to CA bundle (or press Enter to skip): " CA_BUNDLE_PATH
+
+              if [[ -n "$CA_BUNDLE_PATH" && -f "$CA_BUNDLE_PATH" ]]; then
+                echo "✓ CA bundle found: $CA_BUNDLE_PATH"
+              elif [[ -n "$CA_BUNDLE_PATH" ]]; then
+                echo "⚠️  CA bundle not found at: $CA_BUNDLE_PATH"
+                echo "You can add it later to secrets/.env as REQUESTS_CA_BUNDLE"
+                CA_BUNDLE_PATH=""
+              fi
+            fi
+          fi
+        fi
+      fi
+    else
+      # Non-interactive mode - skip proxy configuration
+      echo "Non-interactive mode: skipping proxy configuration"
+      echo "If you need proxy support, manually add to secrets/.env:"
+      echo "  HTTP_PROXY=http://proxy.example.com:8080"
+      echo "  HTTPS_PROXY=http://proxy.example.com:8080"
+      echo "  REQUESTS_CA_BUNDLE=/path/to/ca-bundle.crt"
+    fi
+  fi
+
+  # Write secrets/.env with P12 authentication and optional proxy settings
   ENV_DIR="secrets"
   ENV_PATH="$ENV_DIR/.env"
   TMP_ENV=$(mktemp "$ENV_DIR/.env.XXXXXX")
+
   cat >"$TMP_ENV" <<ENV
 TENANT_ID=$TENANT
 XC_API_URL=$XC_API_URL
 VOLT_API_P12_FILE=$(pwd)/$P12_DEST
 VES_P12_PASSWORD=$P12_PASS
 ENV
+
+  # Add proxy configuration if needed
+  if [[ "$PROXY_NEEDED" == "true" && -n "$PROXY_URL" ]]; then
+    {
+      cat <<PROXY
+
+# Corporate proxy configuration
+HTTP_PROXY=$PROXY_URL
+HTTPS_PROXY=$PROXY_URL
+PROXY
+
+      if [[ -n "$CA_BUNDLE_PATH" ]]; then
+        echo "REQUESTS_CA_BUNDLE=$CA_BUNDLE_PATH"
+      fi
+
+      echo ""
+      echo "# Proxy configuration added by setup script"
+      echo "# To disable: comment out HTTP_PROXY, HTTPS_PROXY, REQUESTS_CA_BUNDLE"
+    } >>"$TMP_ENV"
+  fi
+
   install -m 600 "$TMP_ENV" "$ENV_PATH"
   rm -f "$TMP_ENV" || true
   TMP_ENV=""
-  echo "Wrote $ENV_PATH with TENANT_ID and P12 authentication"
+
+  echo ""
+  echo "✓ Wrote $ENV_PATH with TENANT_ID and P12 authentication"
+
+  if [[ "$PROXY_NEEDED" == "true" ]]; then
+    echo "✓ Added proxy configuration to $ENV_PATH"
+    echo ""
+    echo "Next steps:"
+    echo "  1. source secrets/.env"
+    echo "  2. xc_user_group_sync --csv User-Database.csv --dry-run"
+    echo ""
+    echo "For more proxy configuration options, see docs/configuration.md"
+  fi
 else
   echo "Skipped writing .env (use --no-env to opt out; default writes secrets/.env)" >/dev/null
 fi
