@@ -269,7 +269,178 @@ openssl x509 -in /path/to/corporate-ca-bundle.crt -text -noout
 
 ---
 
-### Issue 5: Staging SSL Certificate Verification Failures
+### Issue 5: mTLS Client Certificate Authentication Through Corporate Proxy
+
+**Symptoms**:
+
+```text
+Error: API error listing users: 400 Bad Request for url:
+https://login.ves.volterra.io/auth/realms/.../protocol/openid-connect/auth
+
+# User redirected to OIDC login page despite P12 certificate configured
+# Token-based authentication works fine through same proxy
+# Authentication works from non-proxied networks
+```
+
+**Root Cause**:
+
+Corporate HTTPS proxies that perform **TLS termination/inspection cannot forward mTLS client certificates** to the destination server. This is a fundamental architectural limitation, not a configuration issue.
+
+**How TLS Inspection Breaks mTLS**:
+
+```text
+Without Proxy (Works):
+  Client --[mTLS cert]--> F5 XC API ✅
+
+With TLS Passthrough Proxy (Works):
+  Client --[mTLS cert]--> Proxy --[mTLS cert]--> F5 XC API ✅
+
+With TLS Terminating Proxy (Fails):
+  Client --[mTLS cert]--> Proxy [terminates TLS]
+  Proxy --[no cert!]--> F5 XC API ❌
+  F5 XC: No certificate → redirects to OIDC login
+```
+
+**Technical Explanation**:
+
+1. **TLS Handshake Separation**:
+   - First handshake: Client ↔ Proxy (client cert presented to proxy)
+   - Second handshake: Proxy ↔ F5 XC (proxy cannot forward client cert - lacks private key)
+
+2. **Certificate Stripping**:
+   - Proxy terminates original TLS connection
+   - Client certificate presented to proxy, not to F5 XC
+   - Proxy cannot create new certificate (wouldn't be trusted by F5 XC)
+
+3. **Authentication Failure**:
+   - F5 XC API expects mTLS client certificate during TLS handshake
+   - No certificate received → authentication fails
+   - System redirects to OIDC login page as fallback
+
+**Why Token Authentication Works**:
+
+- Tokens use HTTP `Authorization` header (application layer)
+- Headers pass through proxy after re-encryption
+- No TLS-layer authentication required
+
+**Verification Tests**:
+
+```bash
+# Test 1: Check if proxy performs TLS inspection
+curl -v https://login.ves.volterra.io 2>&1 | grep -i "issuer"
+
+# If you see your corporate CA as issuer, proxy is doing TLS inspection:
+# * SSL connection using TLSv1.3 / TLS_AES_256_GCM_SHA384
+# * Server certificate:
+# *  issuer: C=US; O=YourCorporation; CN=Corporate Proxy CA
+
+# Test 2: Verify authentication works without proxy
+unset HTTP_PROXY HTTPS_PROXY
+xc_user_group_sync --csv test.csv --dry-run
+
+# Test 3: Verify token auth works through proxy
+export HTTP_PROXY=http://proxy.example.com:8080
+export HTTPS_PROXY=http://proxy.example.com:8080
+export REQUESTS_CA_BUNDLE=/path/to/corporate-ca.crt
+# Use token-based auth instead of P12
+```
+
+**Resolution Steps**:
+
+**Option 1: Use Token-Based Authentication** ✅ Recommended
+
+```bash
+# Token authentication works through TLS-terminating proxies
+# Contact F5 XC support to generate API token
+# Configure environment with token instead of P12
+
+export F5_XC_API_TOKEN="your-api-token"
+export HTTP_PROXY="http://proxy.example.com:8080"
+export HTTPS_PROXY="http://proxy.example.com:8080"
+export REQUESTS_CA_BUNDLE="/path/to/corporate-ca-bundle.crt"
+
+xc_user_group_sync --csv User-Database.csv
+```
+
+**Option 2: Request TLS Passthrough for F5 XC Domains** ⚠️ Requires IT Approval
+
+Work with corporate IT/security team to configure proxy for TLS passthrough:
+
+**Domains to Whitelist**:
+
+```text
+*.ves.volterra.io
+*.console.ves.volterra.io
+login.ves.volterra.io
+```
+
+**Proxy Configuration Requirements**:
+- Configure TCP-level routing (no TLS inspection) for whitelisted domains
+- Preserves end-to-end TLS and client certificate authentication
+- May conflict with security policies requiring inspection
+
+**Implementation Notes**:
+- Some organizations cannot whitelist due to compliance requirements
+- Alternative: Deploy from environment without proxy (see Option 3)
+
+**Option 3: Deploy in Cloud Environment** ✅ Production Recommended
+
+```bash
+# Run from AWS/Azure/GCP without corporate proxy
+# Avoids proxy configuration complexity entirely
+# Recommended for production deployments
+
+# Example: AWS EC2 or Lambda
+# No proxy environment variables needed
+# Direct connectivity to F5 XC APIs
+```
+
+**Option 4: Use Network Without Proxy Enforcement** ⚠️ May Violate Policy
+
+```bash
+# VPN to network segment without proxy requirement
+# Use jump host/bastion with direct internet access
+# Connect from home/mobile network for testing
+
+# Verify with IT before using to ensure compliance
+```
+
+**Not Recommended Solutions**:
+
+- ❌ Custom SSL context implementations (won't fix TLS termination issue)
+- ❌ Disabling SSL verification (security risk)
+- ❌ Using unapproved proxies (policy violation)
+
+**Diagnostic Information to Collect**:
+
+For escalation to IT/network team:
+
+```bash
+# Collect proxy configuration
+env | grep -i proxy
+env | grep -i requests
+
+# Test proxy TLS inspection
+curl -v https://login.ves.volterra.io 2>&1 | grep -E "issuer|subject"
+
+# Verify certificate chain
+openssl s_client -connect login.ves.volterra.io:443 \
+  -proxy proxy.example.com:8080 \
+  -showcerts </dev/null 2>&1 | openssl x509 -text -noout
+
+# Check if mTLS cert reaches F5 XC (it won't with TLS termination)
+```
+
+**Key Insights**:
+
+1. This is an **architectural limitation**, not a bug or misconfiguration
+2. Corporate proxies performing TLS termination **fundamentally cannot** pass mTLS client certificates
+3. Token-based authentication is the appropriate workaround for corporate environments
+4. Production deployments should use cloud environments without proxy complexity
+
+---
+
+### Issue 6: Staging SSL Certificate Verification Failures
 
 **Symptoms**:
 
@@ -816,7 +987,7 @@ If issue persists:
 | Error Message | Likely Cause | Resolution |
 |---------------|--------------|------------|
 | `HTTP 401 Unauthorized` | Invalid credentials | Verify certificate and key files |
-| `HTTP 400 Bad Request` (with login.ves.volterra.io) | Proxy MITM interference | Configure proxy with --proxy and --ca-bundle |
+| `HTTP 400 Bad Request` (with login.ves.volterra.io) | Proxy MITM stripping mTLS cert | Use token auth or TLS passthrough (Issue 5) |
 | `HTTP 429 Too Many Requests` | Rate limiting | Reduce request frequency, increase delays |
 | `HTTP 503 Service Unavailable` | F5 XC API outage | Wait and retry, check F5 status page |
 | `CSVParseError` | Invalid CSV format | Validate CSV structure and encoding |

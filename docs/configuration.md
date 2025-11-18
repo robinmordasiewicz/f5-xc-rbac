@@ -42,7 +42,46 @@ xc_user_group_sync --csv ./User-Database.csv --dry-run
 
 ## Corporate Proxy Configuration
 
-If your organization uses an outbound proxy (especially with MITM SSL inspection), configure proxy settings:
+If your organization uses an outbound proxy (especially with MITM SSL inspection), configure proxy settings.
+
+### ⚠️ Important: mTLS Authentication and Proxy Compatibility
+
+**Supported Proxy Types**:
+
+- ✅ **TLS Passthrough Proxies**: Allow client certificates to pass through without inspection
+- ✅ **Token-Based Authentication**: Works with all proxy types (recommended for corporate environments)
+
+**Unsupported Proxy Types**:
+
+- ❌ **TLS Terminating/Inspecting Proxies with mTLS**: Corporate proxies that perform SSL/TLS inspection (MITM) **cannot** forward P12 client certificates to F5 XC
+
+**Why mTLS Fails with TLS Inspection**:
+
+When a corporate proxy performs TLS termination/inspection:
+1. Client presents mTLS certificate to the proxy (not to F5 XC)
+2. Proxy terminates the TLS connection and re-encrypts with a separate connection to F5 XC
+3. Client certificate cannot be forwarded (proxy lacks the matching private key)
+4. F5 XC receives no client certificate → authentication fails → redirects to OIDC login
+
+**Recommended Solutions**:
+
+1. **Use Token-Based Authentication** (works through all proxies):
+
+   ```bash
+   # Use API tokens instead of P12 certificates
+   # Contact F5 XC support for API token generation
+   ```
+
+2. **Request TLS Passthrough** for F5 XC domains (requires IT approval):
+   - Configure proxy to NOT inspect traffic to `*.ves.volterra.io` and `*.console.ves.volterra.io`
+   - Preserves end-to-end TLS and mTLS authentication
+   - May require security policy exception
+
+3. **Deploy in Cloud Environment** (production recommended):
+   - Run from AWS/Azure/GCP without corporate proxy
+   - Avoids proxy configuration complexity entirely
+
+See [Troubleshooting - mTLS Proxy Authentication](#issue-5-mtls-client-certificate-authentication-through-corporate-proxy) for detailed analysis.
 
 ### Using Environment Variables (Recommended)
 
@@ -54,7 +93,7 @@ HTTPS_PROXY=http://proxy.example.com:8080
 # For proxies with authentication
 HTTPS_PROXY=http://username:password@proxy.example.com:8080  # pragma: allowlist secret
 
-# For MITM SSL inspection proxies
+# For MITM SSL inspection proxies (token auth only)
 REQUESTS_CA_BUNDLE=/path/to/corporate-ca-bundle.crt
 ```
 
