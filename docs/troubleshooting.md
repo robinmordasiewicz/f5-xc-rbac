@@ -950,54 +950,6 @@ grep -i "failed" sync-debug.log
 
 ---
 
-## Issue Resolution Workflow
-
-### Step 1: Identify the Issue Category
-
-**Authentication Issues**:
-- Symptoms: HTTP 401, "Authentication failed"
-- Quick Check: Verify certificate validity and expiration
-
-**CSV Issues**:
-- Symptoms: "CSVParseError", "Missing required column"
-- Quick Check: Validate CSV structure and encoding
-
-**Network Issues**:
-- Symptoms: Connection timeout, "RequestException"
-- Quick Check: Test network connectivity and F5 XC status
-
-**Configuration Issues**:
-- Symptoms: "Configuration not found", missing environment variables
-- Quick Check: Verify .env file and environment variables
-
-### Step 2: Run Diagnostic Commands
-
-Use the appropriate diagnostic commands from the sections above to gather information about the issue.
-
-### Step 3: Apply Resolution Steps
-
-Follow the resolution steps for the identified issue category.
-
-### Step 4: Verify Resolution
-
-```bash
-# Test with dry-run
-xc_user_group_sync --csv User-Database.csv --dry-run
-
-# If dry-run succeeds, execute actual sync
-xc_user_group_sync --csv User-Database.csv
-```
-
-### Step 5: Document and Escalate (if needed)
-
-If issue persists:
-1. Capture full debug output
-2. Document steps taken
-3. Check for known issues in repository
-4. Contact F5 support or open GitHub issue
-
----
-
 ## Common Error Messages Reference
 
 | Error Message | Likely Cause | Resolution |
