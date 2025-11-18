@@ -124,7 +124,7 @@ Or add GitHub secrets: `PROXY_URL`, `CA_BUNDLE_PATH`  <!-- pragma: allowlist sec
 **Workflow fails with SSL error**:
 - Verify P12 certificate base64 encoding
 - Check `XC_P12_PASSWORD` matches certificate
-- See [Troubleshooting Guide](../troubleshooting.md#issue-4-corporate-proxy-and-mitm-ssl-interception)
+- See [Troubleshooting Guide](../troubleshooting.md#issue-4-corporate-proxy-configuration-and-authentication)
 
 **No changes applied**:
 - Check CSV format matches requirements

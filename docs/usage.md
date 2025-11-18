@@ -296,4 +296,4 @@ For detailed troubleshooting guidance, see the [Troubleshooting Guide](troublesh
 
 - Authentication failures → See [Troubleshooting Guide - Authentication](troubleshooting.md#issue-1-authentication-failures)
 - CSV parsing errors → See [Troubleshooting Guide - CSV Parsing](troubleshooting.md#issue-2-csv-parsing-errors)
-- Corporate proxy issues → See [Troubleshooting Guide - Corporate Proxy](troubleshooting.md#issue-4-corporate-proxy-and-mitm-ssl-interception)
+- Corporate proxy issues → See [Troubleshooting Guide - Corporate Proxy](troubleshooting.md#issue-4-corporate-proxy-configuration-and-authentication)

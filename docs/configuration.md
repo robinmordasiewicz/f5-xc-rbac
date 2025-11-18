@@ -132,7 +132,7 @@ xc_user_group_sync --csv ./User-Database.csv \
 - Check `/etc/ssl/certs/` for CA bundle
 - Or contact your IT department
 
-For proxy troubleshooting, see [Troubleshooting Guide - Corporate Proxy](troubleshooting.md#issue-4-corporate-proxy-and-mitm-ssl-interception).
+For proxy troubleshooting, see [Troubleshooting Guide - Corporate Proxy](troubleshooting.md#issue-4-corporate-proxy-configuration-and-authentication).
 
 ## CSV Format
 

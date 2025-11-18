@@ -70,7 +70,6 @@
    6.4 [Data Validation Rules](#64-data-validation-rules)
 
 7. [Development Requirements](#7-development-requirements)
-   See [`development/quality-standards.md`](development/quality-standards.md) for complete FR-DEV and SC-DEV requirements
 
 8. [Quality Attributes](#8-quality-attributes)
    8.1 [Testability](#81-testability)
@@ -83,14 +82,9 @@
    9.3 [Appendix C: Glossary](#93-appendix-c-glossary)
    9.4 [Appendix D: Change History](#94-appendix-d-change-history)
 
-**Implementation Guidance** (extracted to focused documents):
-- [`implementation/roadmap.md`](implementation/roadmap.md) - Feature priorities and phased implementation
-- [`implementation/workflows.md`](implementation/workflows.md) - Operational procedures (setup, sync, prune)
+**Implementation Guidance**:
+
 - [`implementation/testing-strategy.md`](implementation/testing-strategy.md) - Unit, integration, and E2E testing
-- [`guides/deployment-guide.md`](guides/deployment-guide.md) - Deployment scenarios overview
-- [`guides/github-actions-guide.md`](guides/github-actions-guide.md) - GitHub Actions configuration
-- [`guides/jenkins-guide.md`](guides/jenkins-guide.md) - Jenkins pipeline configuration
-- [`guides/troubleshooting-guide.md`](guides/troubleshooting-guide.md) - Diagnostic commands and resolutions
 
 ---
 
