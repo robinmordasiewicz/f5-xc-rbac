@@ -381,7 +381,7 @@ This feature will be considered successful when:
 
 **Technology Stack**:
 
-- Python 3.9+ (targeting Python 3.12)
+- Python 3.10+ (targeting Python 3.12)
 - Pydantic for data validation
 - Tenacity for retry logic with exponential backoff
 - Click for CLI framework
@@ -634,7 +634,7 @@ User Lifecycle Management
 **Runtime Environment**:
 
 - **Operating Systems**: Linux, macOS, Windows
-- **Python Version**: Python 3.9 minimum, Python 3.12 recommended
+- **Python Version**: Python 3.10 minimum, Python 3.12 recommended
 - **Package Management**: pip or pipx for installation
 - **Execution Context**: Command-line terminal or shell
 
@@ -714,7 +714,7 @@ User Lifecycle Management
 
 **Programming Language**:
 
-- **Constraint**: Must be implemented in Python 3.9+
+- **Constraint**: Must be implemented in Python 3.10+
 - **Rationale**: Existing codebase is Python-based; maintains consistency
 - **Impact**: Limits use of newer Python 3.12+ features in initial implementation
 
@@ -848,7 +848,7 @@ User Lifecycle Management
 
 - F5 XC API credentials are configured correctly before tool execution
 - Network connectivity to F5 XC API is available during synchronization
-- Python 3.9+ is installed and accessible in PATH
+- Python 3.10+ is installed and accessible in PATH
 - Required Python dependencies are installed
 
 **User Permissions**:
