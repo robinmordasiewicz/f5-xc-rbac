@@ -81,7 +81,7 @@ When a corporate proxy performs TLS termination/inspection:
    - Run from AWS/Azure/GCP without corporate proxy
    - Avoids proxy configuration complexity entirely
 
-See [Troubleshooting - mTLS Proxy Authentication](#issue-5-mtls-client-certificate-authentication-through-corporate-proxy) for detailed analysis.
+See [Troubleshooting - Section 4.2: mTLS Proxy Authentication](troubleshooting.md#section-42-mtls-authentication-through-tls-terminating-proxies) for detailed analysis.
 
 ### Using Environment Variables (Recommended)
 
