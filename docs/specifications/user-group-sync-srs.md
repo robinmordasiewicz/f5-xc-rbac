@@ -506,7 +506,7 @@ The tool requires specific CSV structure from Active Directory exports:
 
 #### C5: Compatibility Constraints
 
-- **Python Version**: Python 3.9 minimum (3.12 recommended for latest features)
+- **Python Version**: Python 3.10 minimum (3.12 recommended for latest features)
 - **OpenSSL Compatibility**: Must handle both OpenSSL 1.x and 3.x (legacy algorithm support)
 - **Shell Compatibility**: Setup scripts require POSIX-compliant shell (bash, zsh)
 - **CI/CD Platform**: Examples provided for GitHub Actions; adaptable to other platforms
@@ -573,7 +573,7 @@ The tool requires specific CSV structure from Active Directory exports:
 - **GitHub CLI (optional)**: Automated secrets configuration
 
 **D4: Runtime Environment**
-- **Python 3.9+**: Interpreter with required packages installed
+- **Python 3.10+**: Interpreter with required packages installed
 - **Operating System**: Linux, macOS, or WSL2 with POSIX compatibility
 - **Network**: Outbound HTTPS connectivity to F5 XC endpoints
 - **Filesystem**: Read/write permissions for configuration and log files

@@ -17,7 +17,7 @@ Automated synchronization tool for managing F5 Distributed Cloud (XC) users and 
 
 ## Tech Stack
 
-- **Python**: 3.9+ (target: 3.12)
+- **Python**: 3.10+ (target: 3.12)
 - **Dependencies**:
   - `click`: CLI framework
   - `ldap3`: LDAP DN parsing

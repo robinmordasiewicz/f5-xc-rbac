@@ -2,7 +2,7 @@
 
 ## Active Technologies
 
-- Python 3.9+ (target: Python 3.12)
+- Python 3.10+ (target: Python 3.12)
 
 ## Project Structure
 
@@ -51,7 +51,7 @@ xc_user_group_sync --csv User-Database.csv --prune  # Full reconciliation with c
 
 ## Code Style
 
-Python 3.9+ (target: Python 3.12): Follow standard conventions
+Python 3.10+ (target: Python 3.12): Follow standard conventions
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

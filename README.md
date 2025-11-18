@@ -18,4 +18,4 @@ MIT License - see [LICENSE](LICENSE) file.
 
 ---
 
-**Maintainer**: Robin Mordasiewicz | **Python**: 3.9+ | **Status**: Active Development
+**Maintainer**: Robin Mordasiewicz | **Python**: 3.10+ | **Status**: Active Development

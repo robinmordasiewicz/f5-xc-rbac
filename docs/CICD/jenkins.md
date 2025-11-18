@@ -127,6 +127,6 @@ environment {
 - Review Jenkins build logs
 
 **Python not found**:
-- Ensure Jenkins agent has Python 3.9+
+- Ensure Jenkins agent has Python 3.10+
 - Install Python on Jenkins agents
 - Update agent configuration
