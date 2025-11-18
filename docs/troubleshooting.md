@@ -121,14 +121,31 @@ curl -v --proxy "" https://${TENANT_ID}.console.ves.volterra.io
 
 ---
 
-### Issue 4: Corporate Proxy and MITM SSL Interception
+### Issue 4: Corporate Proxy Configuration and Authentication
+
+This section covers all proxy-related issues including connectivity, SSL verification, and authentication-specific limitations.
+
+#### Quick Diagnostic Guide
+
+Determine which subsection addresses your issue:
+
+- **Connection timeouts or refused?** → See [Section 4.1](#section-41-proxy-connectivity-and-ssl-verification)
+- **SSL certificate verification errors?** → See [Section 4.1](#section-41-proxy-connectivity-and-ssl-verification)
+- **Proxy authentication required (407)?** → See [Section 4.1](#section-41-proxy-connectivity-and-ssl-verification)
+- **OIDC login redirect with mTLS/P12 auth?** → See [Section 4.2](#section-42-mtls-authentication-through-tls-terminating-proxies)
+- **Token auth works but mTLS doesn't?** → See [Section 4.2](#section-42-mtls-authentication-through-tls-terminating-proxies)
+
+---
+
+#### Section 4.1: Proxy Connectivity and SSL Verification
 
 **Symptoms**:
 
 ```text
-HTTP 400 Bad Request for url: https://login.ves.volterra.io/auth/realms/...
-SSLError: certificate verify failed
 Connection timeout or refused
+SSLError: certificate verify failed
+HTTP 407 Proxy Authentication Required
+HTTP 400 Bad Request (general connectivity issues)
 ```
 
 **Example Error Messages**:
@@ -200,8 +217,8 @@ curl -v --max-time 10 \
 
 1. Corporate proxy intercepting HTTPS traffic with MITM (Man-In-The-Middle) SSL inspection
 2. Proxy CA certificate not trusted by Python requests library
-3. Client certificate authentication incompatible with proxy MITM
-4. Proxy requiring authentication
+3. Proxy requiring authentication
+4. Firewall blocking direct HTTPS access
 
 **Resolution Steps**:
 
@@ -248,28 +265,27 @@ curl -x http://proxy.example.com:8080 \
 openssl x509 -in /path/to/corporate-ca-bundle.crt -text -noout
 ```
 
-**Important Notes for Corporate Networks**:
+**Getting Your Corporate CA Certificate**:
 
-1. **MITM Proxy Compatibility**: When using P12/mTLS client certificates through a corporate proxy with SSL inspection, the proxy must be configured to allow client certificate authentication pass-through. Some proxy configurations may break mTLS authentication.
+Your corporate CA bundle might be available at:
 
-2. **Testing from Different Networks**: If authentication works from home/non-proxied networks but fails from corporate networks, this confirms proxy interference. Work with your network team to:
-   - Configure proxy to allow mTLS pass-through for `*.ves.volterra.io` domains
-   - Get the corporate CA certificate for the MITM proxy
-   - Verify proxy doesn't strip or modify client certificates
+- **Windows**: Export from certificate store (`certmgr.msc`) or contact IT
+- **macOS**: `/Library/Keychains/System.keychain` (export via Keychain Access)
+- **Linux**: Check `/etc/ssl/certs/` or contact IT department
 
-3. **CA Bundle Sources**: Your corporate CA bundle might be available at:
-   - Windows: Export from certificate store or contact IT
-   - macOS: `/Library/Keychains/System.keychain` (export via Keychain Access)
-   - Linux: Check `/etc/ssl/certs/` or contact IT department
+**Important Notes**:
 
-4. **Proxy Bypass**: If technical constraints prevent proper proxy configuration, consider:
-   - Running from a jump host or bastion that doesn't require proxy
-   - Using a VPN that bypasses the corporate proxy
-   - Requesting firewall exceptions for `*.ves.volterra.io` domains
+- This configuration works for **both token and mTLS authentication**
+- If using mTLS (P12) auth and still getting OIDC redirects after proxy configuration, see [Section 4.2](#section-42-mtls-authentication-through-tls-terminating-proxies)
+- For proxy bypass options (VPN, jump host, firewall exceptions), see [Section 4.2 Option 4](#option-4-use-network-without-proxy-enforcement)
 
 ---
 
-### Issue 5: mTLS Client Certificate Authentication Through Corporate Proxy
+#### Section 4.2: mTLS Authentication Through TLS-Terminating Proxies
+
+**Prerequisites**: Complete [Section 4.1](#section-41-proxy-connectivity-and-ssl-verification) proxy configuration first.
+
+**When to Read This Section**: If your proxy is configured correctly per Section 4.1, but you're still getting OIDC login redirects specifically when using mTLS (P12) client certificate authentication.
 
 **Symptoms**:
 
@@ -440,7 +456,7 @@ openssl s_client -connect login.ves.volterra.io:443 \
 
 ---
 
-### Issue 6: Staging SSL Certificate Verification Failures
+### Issue 5: Staging SSL Certificate Verification Failures
 
 **Symptoms**:
 
@@ -987,7 +1003,7 @@ If issue persists:
 | Error Message | Likely Cause | Resolution |
 |---------------|--------------|------------|
 | `HTTP 401 Unauthorized` | Invalid credentials | Verify certificate and key files |
-| `HTTP 400 Bad Request` (with login.ves.volterra.io) | Proxy MITM stripping mTLS cert | Use token auth or TLS passthrough (Issue 5) |
+| `HTTP 400 Bad Request` (with login.ves.volterra.io) | Proxy MITM stripping mTLS cert | Use token auth or TLS passthrough (Issue 4.2) |
 | `HTTP 429 Too Many Requests` | Rate limiting | Reduce request frequency, increase delays |
 | `HTTP 503 Service Unavailable` | F5 XC API outage | Wait and retry, check F5 status page |
 | `CSVParseError` | Invalid CSV format | Validate CSV structure and encoding |
