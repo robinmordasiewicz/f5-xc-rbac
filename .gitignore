@@ -13,6 +13,9 @@ Thumbs.db
 *.swo
 *~
 
+# AI assistant local data (may contain sensitive project-specific info)
+.serena/
+
 # Logs
 *.log
 
